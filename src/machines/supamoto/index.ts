@@ -23,6 +23,7 @@ export { knowMoreMachine } from "./information/index.js";
 export { accountMenuMachine } from "./account-menu/index.js";
 export { loginMachine } from "./account-login/index.js";
 export { accountCreationMachine } from "./account-creation/index.js";
+export { userServicesMachine } from "./user-services/userServicesMachine.js";
 
 export * from "./guards/index.js";
 export * from "./utils/navigation-mixin.js";

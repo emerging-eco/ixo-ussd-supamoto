@@ -11,6 +11,7 @@ import { loginMachine, LoginOutput } from "./account-login/loginMachine.js";
 import { navigationGuards } from "./guards/index.js";
 import { knowMoreMachine } from "./information/index.js";
 import { withNavigation } from "./utils/navigation-mixin.js";
+import { userServicesMachine } from "./user-services/userServicesMachine.js";
 
 /**
  * Supamoto State Machine - Simplified Architecture
@@ -68,6 +69,7 @@ export const supamotoMachine = setup({
     accountMenuMachine,
     loginMachine,
     accountCreationMachine,
+    userServicesMachine,
   },
 
   actions: {
@@ -334,7 +336,7 @@ export const supamotoMachine = setup({
         }),
         onDone: [
           {
-            target: "preMenu",
+            target: "userMainMenu",
             guard: ({ event }) =>
               (event.output as any)?.result === LoginOutput.LOGIN_SUCCESS,
             actions: [
@@ -467,20 +469,34 @@ export const supamotoMachine = setup({
       },
     },
 
-    // Placeholder for user services - redirect to main menu
+    // User services - delegates to userServicesMachine
     userMainMenu: {
-      entry: assign(() => ({
-        message:
-          "User services are currently under development.\n1. Return to main menu",
-      })),
       on: {
-        INPUT: [
-          {
-            target: "preMenu",
-            guard: "isInput1",
-            actions: "clearErrors",
-          },
-        ],
+        INPUT: {
+          actions: [sendTo("userServicesChild", ({ event }) => event)],
+        },
+      },
+      invoke: {
+        id: "userServicesChild",
+        src: "userServicesMachine",
+        input: ({ context }) => ({
+          sessionId: context.sessionId,
+          phoneNumber: context.phoneNumber,
+          serviceCode: context.serviceCode,
+        }),
+        onDone: {
+          target: "preMenu",
+          actions: "clearErrors",
+        },
+        onError: {
+          target: "error",
+          actions: "setError",
+        },
+        onSnapshot: {
+          actions: assign(({ event }) => ({
+            message: event.snapshot.context.message,
+          })),
+        },
       },
     },
 
