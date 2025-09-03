@@ -10,6 +10,9 @@ import {
   loginWithVault,
   findUserRoom,
   getProfileAccountFromRoom,
+  getContractDetailsFromRoom,
+  getOrdersFromRoom,
+  getVouchersFromRoom,
 } from "../../../services/ixo/matrix-reader.js";
 
 /**
@@ -24,6 +27,7 @@ export interface UserServicesContext {
   sessionId: string;
   phoneNumber: string;
   serviceCode: string;
+  pin?: string;
   message: string;
   error?: string;
 }
@@ -49,6 +53,7 @@ export const userServicesMachine = setup({
       sessionId: string;
       phoneNumber: string;
       serviceCode: string;
+      pin?: string;
     },
   },
   actors: {
@@ -86,7 +91,117 @@ export const userServicesMachine = setup({
         return { source: "db" as const, profile: record };
       }
     ),
+    fetchContractDetailsService: fromPromise(
+      async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
+        if (config.FEATURES.MATRIX_READ_ENABLED && input.pin) {
+          try {
+            const login = await loginWithVault({
+              phoneNumber: input.phoneNumber,
+              pin: input.pin,
+            });
+            const room = await findUserRoom({
+              mxClient: login.mxClient,
+              userAddress: login.address,
+              did: login.did,
+            });
+            if (room.roomId) {
+              return await getContractDetailsFromRoom({
+                mxClient: login.mxClient,
+                roomId: room.roomId,
+              });
+            }
+          } catch {}
+        }
+        return null;
+      }
+    ),
+    fetchOrdersService: fromPromise(
+      async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
+        if (config.FEATURES.MATRIX_READ_ENABLED && input.pin) {
+          try {
+            const login = await loginWithVault({
+              phoneNumber: input.phoneNumber,
+              pin: input.pin,
+            });
+            const room = await findUserRoom({
+              mxClient: login.mxClient,
+              userAddress: login.address,
+              did: login.did,
+            });
+            if (room.roomId) {
+              return await getOrdersFromRoom({
+                mxClient: login.mxClient,
+                roomId: room.roomId,
+              });
+            }
+          } catch {}
+        }
+        return [] as any[];
+      }
+    ),
+    fetchVouchersService: fromPromise(
+      async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
+        if (config.FEATURES.MATRIX_READ_ENABLED && input.pin) {
+          try {
+            const login = await loginWithVault({
+              phoneNumber: input.phoneNumber,
+              pin: input.pin,
+            });
+            const room = await findUserRoom({
+              mxClient: login.mxClient,
+              userAddress: login.address,
+              did: login.did,
+            });
+            if (room.roomId) {
+              return await getVouchersFromRoom({
+                mxClient: login.mxClient,
+                roomId: room.roomId,
+              });
+            }
+          } catch {}
+        }
+        return [] as any[];
+      }
+    ),
   },
+  /*
+    fetchContractDetailsService: fromPromise(async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
+      if (config.FEATURES.MATRIX_READ_ENABLED && input.pin) {
+        try {
+          const login = await loginWithVault({ phoneNumber: input.phoneNumber, pin: input.pin });
+          const room = await findUserRoom({ mxClient: login.mxClient, userAddress: login.address, did: login.did });
+          if (room.roomId) {
+            return await getContractDetailsFromRoom({ mxClient: login.mxClient, roomId: room.roomId });
+          }
+        } catch {}
+      }
+      return null;
+    }),
+    fetchOrdersService: fromPromise(async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
+      if (config.FEATURES.MATRIX_READ_ENABLED && input.pin) {
+        try {
+          const login = await loginWithVault({ phoneNumber: input.phoneNumber, pin: input.pin });
+          const room = await findUserRoom({ mxClient: login.mxClient, userAddress: login.address, did: login.did });
+          if (room.roomId) {
+            return await getOrdersFromRoom({ mxClient: login.mxClient, roomId: room.roomId });
+          }
+        } catch {}
+      }
+      return [] as any[];
+    }),
+    fetchVouchersService: fromPromise(async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
+      if (config.FEATURES.MATRIX_READ_ENABLED && input.pin) {
+        try {
+          const login = await loginWithVault({ phoneNumber: input.phoneNumber, pin: input.pin });
+          const room = await findUserRoom({ mxClient: login.mxClient, userAddress: login.address, did: login.did });
+          if (room.roomId) {
+            return await getVouchersFromRoom({ mxClient: login.mxClient, roomId: room.roomId });
+          }
+        } catch {}
+      }
+      return [] as any[];
+    }),
+*/
   actions: {
     setMenuMessage: assign(() => ({ message: menuMessage })),
     setError: assign({
@@ -119,6 +234,7 @@ export const userServicesMachine = setup({
     sessionId: input?.sessionId || "",
     phoneNumber: input?.phoneNumber || "",
     serviceCode: input?.serviceCode || "",
+    pin: input?.pin,
     message: menuMessage,
     error: undefined,
   }),
@@ -175,7 +291,7 @@ export const userServicesMachine = setup({
         src: "fetchAccountDetailsService",
         input: ({ context }) => ({
           phoneNumber: context.phoneNumber,
-          pin: process.env.DEMO_PIN,
+          pin: context.pin,
         }),
         onDone: {
           actions: assign(({ event }) => {
@@ -232,10 +348,31 @@ export const userServicesMachine = setup({
       },
     },
     accountContract: {
-      entry: assign(() => ({
-        message:
-          "[Stub] Showing Contract Details (from Matrix room state).\n1. Back",
-      })),
+      entry: assign(() => ({ message: "Loading contract details..." })),
+      invoke: {
+        id: "fetchContractDetails",
+        src: "fetchContractDetailsService",
+        input: ({ context }) => ({
+          phoneNumber: context.phoneNumber,
+          pin: context.pin,
+        }),
+        onDone: {
+          actions: assign(({ event }) => {
+            const c = (event.output as any) || {};
+            const contractId = c?.contractId ?? "-";
+            const plan = c?.plan ?? "-";
+            const status = c?.status ?? "-";
+            return {
+              message: `Contract Details\nContract ID: ${contractId}\nPlan: ${plan}\nStatus: ${status}\n\n1. Back`,
+            };
+          }),
+        },
+        onError: {
+          actions: assign(() => ({
+            message: "Failed to load contract details.\n\n1. Back",
+          })),
+        },
+      },
       on: {
         INPUT: withNavigation([{ target: "account", guard: "isInput1" }], {
           backTarget: "account",
@@ -296,9 +433,28 @@ export const userServicesMachine = setup({
       },
     },
     confirmOrderReceipt: {
-      entry: assign(() => ({
-        message: "[Stub] Confirm Order Receipt not yet implemented.\n1. Back",
-      })),
+      entry: assign(() => ({ message: "Loading order confirmations..." })),
+      invoke: {
+        id: "fetchOrders",
+        src: "fetchOrdersService",
+        input: ({ context }) => ({
+          phoneNumber: context.phoneNumber,
+          pin: context.pin,
+        }),
+        onDone: {
+          actions: assign(({ event }) => {
+            const orders = (event.output as any[]) || [];
+            const latest = orders[0];
+            const status = latest?.status ?? "-";
+            return { message: `Order Status\nLatest: ${status}\n\n1. Back` };
+          }),
+        },
+        onError: {
+          actions: assign(() => ({
+            message: "Failed to load order status.\n\n1. Back",
+          })),
+        },
+      },
       on: {
         INPUT: withNavigation([{ target: "orders", guard: "isInput1" }], {
           backTarget: "orders",
@@ -344,9 +500,29 @@ export const userServicesMachine = setup({
       },
     },
     confirmBeansReceipt: {
-      entry: assign(() => ({
-        message: "[Stub] Confirm Beans Receipt not yet implemented.\n1. Back",
-      })),
+      entry: assign(() => ({ message: "Loading voucher confirmations..." })),
+      invoke: {
+        id: "fetchVouchers",
+        src: "fetchVouchersService",
+        input: ({ context }) => ({
+          phoneNumber: context.phoneNumber,
+          pin: context.pin,
+        }),
+        onDone: {
+          actions: assign(({ event }) => {
+            const vouchers = (event.output as any[]) || [];
+            const count = vouchers.length;
+            return {
+              message: `Vouchers\nRecent confirmations: ${count}\n\n1. Back`,
+            };
+          }),
+        },
+        onError: {
+          actions: assign(() => ({
+            message: "Failed to load vouchers.\n\n1. Back",
+          })),
+        },
+      },
       on: {
         INPUT: withNavigation([{ target: "vouchers", guard: "isInput1" }], {
           backTarget: "vouchers",

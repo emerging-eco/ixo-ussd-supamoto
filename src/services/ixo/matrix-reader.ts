@@ -20,6 +20,8 @@ export interface MatrixLoginResult {
   mxClient: any; // MatrixClient (typed in matrix.ts)
   userId: string;
   baseUrl: string;
+  address?: string;
+  did?: string;
   roomId?: string;
   roomAlias?: string;
 }
@@ -142,7 +144,13 @@ export async function loginWithVault(
     deviceId: auth.deviceId,
   });
 
-  return { mxClient, userId: auth.userId, baseUrl: auth.baseUrl };
+  return {
+    mxClient,
+    userId: auth.userId,
+    baseUrl: auth.baseUrl,
+    address: vaultRow?.address,
+    did: vaultRow?.did,
+  };
 }
 
 export async function findUserRoom(params: {

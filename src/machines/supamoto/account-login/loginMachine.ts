@@ -33,6 +33,7 @@ export interface LoginContext {
   error?: string;
   customerId?: string;
   customer?: CustomerRecord;
+  sessionPin?: string; // ephemeral, used for Matrix vault decryption in-session
   pinAttempts: number;
   nextParentState: LoginOutput;
 }
@@ -266,6 +267,7 @@ export const loginMachine = setup({
     result: context.nextParentState,
     customerId: context.customerId,
     customer: context.customer,
+    sessionPin: context.sessionPin,
   }),
   states: {
     customerIdEntry: {
@@ -381,6 +383,9 @@ export const loginMachine = setup({
             {
               target: "verifyingPin",
               guard: "isValidPin",
+              actions: assign(({ event }) => ({
+                sessionPin: event.type === "INPUT" ? event.input.trim() : "",
+              })),
             },
             {
               actions: assign({

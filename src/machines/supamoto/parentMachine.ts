@@ -36,6 +36,7 @@ export interface SupamotoMachineContext {
   currentBalance?: number;
   isAuthenticated: boolean;
   sessionStartTime: string;
+  sessionPin?: string; // ephemeral; used for Matrix vault decryption in-session
   error?: string;
   validationError?: string;
   // USSD Response
@@ -355,6 +356,8 @@ export const supamotoMachine = setup({
                 return {
                   customerName: output?.customer?.fullName || "Existing User",
                   isAuthenticated: true,
+                  // Thread session PIN for Matrix vault decryption in user services
+                  sessionPin: output?.sessionPin,
                 };
               }),
             ],
@@ -492,6 +495,7 @@ export const supamotoMachine = setup({
           sessionId: context.sessionId,
           phoneNumber: context.phoneNumber,
           serviceCode: context.serviceCode,
+          pin: context.sessionPin,
         }),
         onDone: {
           target: "preMenu",
