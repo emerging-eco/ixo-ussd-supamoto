@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { createActor } from "xstate";
 import { userServicesMachine } from "./userServicesMachine.js";
 
@@ -37,4 +37,3 @@ describe("userServicesMachine", () => {
     expect(actor.getSnapshot().value).toBe("routeToMain");
   });
 });
-

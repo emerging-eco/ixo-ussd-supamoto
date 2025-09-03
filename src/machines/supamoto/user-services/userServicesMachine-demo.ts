@@ -54,4 +54,3 @@ setTimeout(() => {
   console.log("\n⏰ Demo timeout - exiting");
   process.exit(0);
 }, 15000);
-
