@@ -51,7 +51,8 @@ export type SupamotoMachineEvent =
   | { type: "ERROR"; error: string };
 
 import { messages } from "../../constants/branding.js";
-const preMenuMessage = `${messages.welcome()}\n1. Know More\n2. Account Menu\n*. Exit`;
+const buildPreMenuMessage = (isAuthenticated: boolean) =>
+  `${messages.welcome()}\n1. Know More\n2. Account Menu${isAuthenticated ? "\n3. User Services" : ""}\n*. Exit`;
 export const supamotoMachine = setup({
   types: {
     context: {} as SupamotoMachineContext,
@@ -83,14 +84,14 @@ export const supamotoMachine = setup({
       validationError: undefined,
     })),
 
-    setPhoneAndService: assign(({ event }) => ({
+    setPhoneAndService: assign(({ event, context }) => ({
       phoneNumber: event.type === "DIAL_USSD" ? event.phoneNumber : "",
       serviceCode: event.type === "DIAL_USSD" ? event.serviceCode : "",
-      message: preMenuMessage,
+      message: buildPreMenuMessage(!!context.isAuthenticated),
     })),
 
-    setPreMenuMessage: assign(() => ({
-      message: preMenuMessage,
+    setPreMenuMessage: assign(({ context }) => ({
+      message: buildPreMenuMessage(!!context.isAuthenticated),
     })),
 
     setAgentIdEntryMessage: assign(() => ({
@@ -175,6 +176,9 @@ export const supamotoMachine = setup({
       navigationGuards.isInput("2")(null as any, event as any),
     isInput3: ({ event }) =>
       navigationGuards.isInput("3")(null as any, event as any),
+    isInput3AndAuthenticated: ({ event, context }) =>
+      navigationGuards.isInput("3")(null as any, event as any) &&
+      !!context.isAuthenticated,
 
     // Basic input validation guards
     isValidAgentIdInput: ({ event }) =>
@@ -190,7 +194,7 @@ export const supamotoMachine = setup({
     serviceCode: input?.serviceCode || "",
     isAuthenticated: false,
     sessionStartTime: "",
-    message: preMenuMessage,
+    message: buildPreMenuMessage(false),
   }),
 
   states: {
@@ -220,6 +224,11 @@ export const supamotoMachine = setup({
               actions: "clearErrors",
             },
             {
+              target: "userMainMenu",
+              guard: "isInput3AndAuthenticated",
+              actions: "clearErrors",
+            },
+            {
               target: "closeSession",
               guard: "isBack",
             },
@@ -229,8 +238,8 @@ export const supamotoMachine = setup({
             },
             {
               target: "preMenu",
-              actions: assign(() => ({
-                message: `Invalid selection. Please choose 1 or 2.\n\n${preMenuMessage}`,
+              actions: assign(({ context }) => ({
+                message: `Invalid selection. Please choose ${context.isAuthenticated ? "1, 2 or 3" : "1 or 2"}.\n\n${buildPreMenuMessage(!!context.isAuthenticated)}`,
               })),
             },
           ],
