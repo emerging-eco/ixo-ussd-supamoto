@@ -5,6 +5,12 @@ import {
   dataService,
   type CustomerRecord,
 } from "../../../services/database-storage.js";
+import { config } from "../../../config.js";
+import {
+  loginWithVault,
+  findUserRoom,
+  getProfileAccountFromRoom,
+} from "../../../services/ixo/matrix-reader.js";
 
 /**
  * User Services Machine - Post-login user menu and simple stubs
@@ -50,6 +56,34 @@ export const userServicesMachine = setup({
       async ({ input }: { input: { phoneNumber: string } }) => {
         const record = await dataService.getCustomerByPhone(input.phoneNumber);
         return record;
+      }
+    ),
+    fetchAccountDetailsService: fromPromise(
+      async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
+        if (config.FEATURES.MATRIX_READ_ENABLED && input.pin) {
+          try {
+            const login = await loginWithVault({
+              phoneNumber: input.phoneNumber,
+              pin: input.pin,
+            });
+            const room = await findUserRoom({
+              mxClient: login.mxClient,
+              userAddress: undefined,
+              did: undefined,
+            });
+            if (room.roomId) {
+              const profile = await getProfileAccountFromRoom({
+                mxClient: login.mxClient,
+                roomId: room.roomId,
+              });
+              if (profile) {
+                return { source: "matrix" as const, profile };
+              }
+            }
+          } catch {}
+        }
+        const record = await dataService.getCustomerByPhone(input.phoneNumber);
+        return { source: "db" as const, profile: record };
       }
     ),
   },
@@ -137,18 +171,35 @@ export const userServicesMachine = setup({
     accountDetails: {
       entry: assign(() => ({ message: "Loading account details..." })),
       invoke: {
-        id: "fetchCustomer",
-        src: "fetchCustomerService",
-        input: ({ context }) => ({ phoneNumber: context.phoneNumber }),
+        id: "fetchAccountDetails",
+        src: "fetchAccountDetailsService",
+        input: ({ context }) => ({
+          phoneNumber: context.phoneNumber,
+          pin: process.env.DEMO_PIN,
+        }),
         onDone: {
           actions: assign(({ event }) => {
-            const customer = event.output as CustomerRecord | null;
-            const name = customer?.fullName ?? "-";
-            const customerId = customer?.customerId ?? "-";
-            const email = customer?.email ?? "-";
-            return {
-              message: `Account Details\nName: ${name}\nCustomer ID: ${customerId}\nEmail: ${email}\n\n1. Back`,
+            const result = event.output as {
+              source: "matrix" | "db";
+              profile: any;
             };
+            if (result.source === "matrix") {
+              const p = result.profile || {};
+              const name = p.name ?? "-";
+              const customerId = p.customer_id ?? "-";
+              const email = p.email ?? "-";
+              return {
+                message: `Account Details\nName: ${name}\nCustomer ID: ${customerId}\nEmail: ${email}\n\n1. Back`,
+              };
+            } else {
+              const customer = result.profile as CustomerRecord | null;
+              const name = customer?.fullName ?? "-";
+              const customerId = customer?.customerId ?? "-";
+              const email = customer?.email ?? "-";
+              return {
+                message: `Account Details\nName: ${name}\nCustomer ID: ${customerId}\nEmail: ${email}\n\n1. Back`,
+              };
+            }
           }),
         },
         onError: {

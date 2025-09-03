@@ -192,6 +192,9 @@ export const config = {
   METRICS: {
     ENABLED: process.env.METRICS_ENABLED === "true",
   },
+  FEATURES: {
+    MATRIX_READ_ENABLED: process.env.MATRIX_READ_ENABLED === "true",
+  },
   SERVER: {
     DISABLE_REQUEST_LOGGING:
       process.env.SERVER_DISABLE_REQUEST_LOGGING === "true",
