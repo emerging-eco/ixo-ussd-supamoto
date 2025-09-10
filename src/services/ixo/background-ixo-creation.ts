@@ -13,6 +13,14 @@ import { createModuleLogger } from "../logger.js";
 import { createIxoAccount } from "./ixo-profile.js";
 import { MatrixResult } from "./matrix-storage.js";
 
+import { getIxoConfig } from "./config.js";
+// LEADGEN defaults (can be overridden by env)
+process.env.LEADGEN_COLLECTION_ID ??= "410";
+process.env.LEADGEN_TEMPLATE_URL ??=
+  "https://devmx.ixo.earth/_matrix/media/v3/download/devmx.ixo.earth/LWCamzPswXpgrfwyyJvcjzoK";
+import { submitClaim } from "./ixo-claims.js";
+import { sha256 } from "@cosmjs/crypto";
+import { toHex } from "@cosmjs/encoding";
 const logger = createModuleLogger("background-ixo");
 
 export interface BackgroundIxoParams {
@@ -78,6 +86,66 @@ export async function createIxoAccountBackground(
     // Step 2: Save to database
     const dbResult = await saveIxoAccountData(ixoResult, params);
 
+    // Step 3: Submit LeadGeneration Claim (non-blocking failure)
+    try {
+      const config = getIxoConfig();
+      // Build deterministic claimId from customerId + template URL to avoid duplicates
+      const templateUrl =
+        process.env.LEADGEN_TEMPLATE_URL ||
+        "https://devmx.ixo.earth/_matrix/media/v3/download/devmx.ixo.earth/LWCamzPswXpgrfwyyJvcjzoK";
+      const claimId = toHex(
+        sha256(new TextEncoder().encode(`${params.customerId}|${templateUrl}`))
+      );
+
+      const claimValue: any = {
+        collectionId: process.env.LEADGEN_COLLECTION_ID || "410",
+        claimId,
+        agentDid: ixoResult.did,
+        agentAddress: ixoResult.address,
+        // you may set adminAddress if required by collection admin checks
+        // adminAddress: ixoResult.address,
+        useIntent: false,
+        // Optionally include Coin amounts if collection requires payments override
+        amount: [],
+        cw20Payment: [],
+        // Additional metadata can be included via protocol VC/evidence referencing the templateUrl
+        // e.g., evidenceCid / metadata reference stored elsewhere
+      };
+
+      if (!claimValue.collectionId) {
+        logger.warn(
+          { customerId: params.customerId },
+          "LEADGEN_COLLECTION_ID is not set — skipping LeadGeneration claim submission"
+        );
+      } else {
+        const result = await submitClaim({
+          mnemonic: ixoResult.mnemonic,
+          chainRpcUrl: config.chainRpcUrl,
+          claim: claimValue,
+          memo: `LeadGeneration for ${params.customerId}`,
+          feegranter: config.feegrantGranter,
+        });
+        logger.info(
+          {
+            customerId: params.customerId,
+            txHash: result.transactionHash,
+            height: result.height,
+          },
+          "LeadGeneration claim submitted"
+        );
+      }
+    } catch (claimError) {
+      logger.warn(
+        {
+          error:
+            claimError instanceof Error
+              ? claimError.message
+              : String(claimError),
+          customerId: params.customerId,
+        },
+        "LeadGeneration claim submission failed (non-critical)"
+      );
+    }
     const duration = Date.now() - startTime;
 
     logger.info(
