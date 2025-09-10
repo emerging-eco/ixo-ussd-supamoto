@@ -9,7 +9,19 @@ const logger = createModuleLogger("ixo-claims");
 export const typeUrlMsgSubmitClaim =
   "/ixo.claims.v1beta1.MsgSubmitClaim" as const;
 
-export type MsgSubmitClaim = ixo.claims.v1beta1.MsgSubmitClaim;
+// Minimal shape for claim value we construct and accept
+export interface SubmitClaimValue {
+  collectionId: string;
+  claimId?: string;
+  agentDid: string;
+  agentAddress: string;
+  adminAddress?: string;
+  useIntent?: boolean;
+  amount?: any[]; // Coin[]
+  cw20Payment?: any[]; // CW20Payment[]
+  // Allow extra fields to flow through to fromPartial
+  [k: string]: unknown;
+}
 
 export interface SubmitClaimParams {
   /** Mnemonic of the submitting agent (derived account will be used as signer) */
@@ -17,7 +29,7 @@ export interface SubmitClaimParams {
   /** RPC URL for the IXO chain (e.g. from CHAIN_RPC_URL constant) */
   chainRpcUrl: string;
   /** Claim payload value. If Partial, it will be converted with fromPartial */
-  claim: Partial<MsgSubmitClaim> | MsgSubmitClaim;
+  claim: Partial<SubmitClaimValue> | SubmitClaimValue;
   /** Fee amount in uixo (defaults to 5000 uixo) */
   feeAmountInUixo?: string;
   /** Gas limit (defaults to 200000) */
@@ -28,7 +40,7 @@ export interface SubmitClaimParams {
   feegranter?: string;
 }
 
-export function buildMsgSubmitClaim(value: Partial<MsgSubmitClaim>) {
+export function buildMsgSubmitClaim(value: Partial<SubmitClaimValue>) {
   return {
     typeUrl: typeUrlMsgSubmitClaim,
     value: ixo.claims.v1beta1.MsgSubmitClaim.fromPartial(value as any),
