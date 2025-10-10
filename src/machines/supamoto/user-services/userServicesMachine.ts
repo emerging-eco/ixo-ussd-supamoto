@@ -588,6 +588,8 @@ export const userServicesMachine = setup({
         INPUT: withNavigation([], {
           backTarget: "menu",
           exitTarget: "routeToMain",
+          enableBack: true,
+          enableExit: true,
         }),
       },
     },

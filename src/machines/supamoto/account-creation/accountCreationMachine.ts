@@ -332,7 +332,9 @@ export const accountCreationMachine = setup({
           ],
           {
             backTarget: "nameEntry",
-            exitTarget: "cancelled",
+            exitTarget: "routeToMain",
+            enableBack: true,
+            enableExit: true,
           }
         ),
         ERROR: {
@@ -360,7 +362,9 @@ export const accountCreationMachine = setup({
           ],
           {
             backTarget: "emailEntry",
-            exitTarget: "cancelled",
+            exitTarget: "routeToMain",
+            enableBack: true,
+            enableExit: true,
           }
         ),
         ERROR: {
@@ -388,7 +392,9 @@ export const accountCreationMachine = setup({
           ],
           {
             backTarget: "pinEntry",
-            exitTarget: "cancelled",
+            exitTarget: "routeToMain",
+            enableBack: true,
+            enableExit: true,
           }
         ),
         ERROR: {
@@ -444,46 +450,30 @@ export const accountCreationMachine = setup({
     },
 
     cancelled: {
-      entry: "setCancelMessage",
+      entry: [
+        "setCancelMessage",
+        assign(() => ({
+          nextParentState: AccountCreationOutput.CANCELLED,
+        })),
+      ],
       on: {
-        INPUT: withNavigation(
-          [
-            {
-              target: "routeToMain",
-              actions: assign(() => ({
-                nextParentState: AccountCreationOutput.CANCELLED,
-              })),
-            },
-          ],
-          {
-            enableBack: false,
-            enableExit: false,
-            backTarget: "routeToMain",
-            exitTarget: "routeToMain",
-          }
-        ),
+        INPUT: {
+          target: "routeToMain",
+        },
       },
     },
 
     error: {
-      entry: "setError",
+      entry: [
+        "setError",
+        assign(() => ({
+          nextParentState: AccountCreationOutput.ERROR,
+        })),
+      ],
       on: {
-        INPUT: withNavigation(
-          [
-            {
-              target: "routeToMain",
-              actions: assign(() => ({
-                nextParentState: AccountCreationOutput.ERROR,
-              })),
-            },
-          ],
-          {
-            enableBack: false,
-            enableExit: false,
-            backTarget: "routeToMain",
-            exitTarget: "routeToMain",
-          }
-        ),
+        INPUT: {
+          target: "routeToMain",
+        },
       },
     },
 

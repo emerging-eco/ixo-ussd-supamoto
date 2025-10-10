@@ -148,6 +148,8 @@ export const knowMoreMachine = setup({
         INPUT: withNavigation([], {
           backTarget: "infoMenu",
           exitTarget: "routeToMain",
+          enableBack: true,
+          enableExit: true,
         }),
       },
     },

@@ -11,6 +11,7 @@ import { loginMachine, LoginOutput } from "./account-login/loginMachine.js";
 import { navigationGuards } from "./guards/index.js";
 import { knowMoreMachine } from "./information/index.js";
 import { withNavigation } from "./utils/navigation-mixin.js";
+import { NavigationPatterns } from "./utils/navigation-patterns.js";
 import { userServicesMachine } from "./user-services/userServicesMachine.js";
 
 /**
@@ -230,24 +231,13 @@ export const supamotoMachine = setup({
               actions: "clearErrors",
             },
             {
-              target: "closeSession",
-              guard: "isBack",
-            },
-            {
-              target: "closeSession",
-              guard: "isExit",
-            },
-            {
               target: "preMenu",
               actions: assign(({ context }) => ({
                 message: `Invalid selection. Please choose ${context.isAuthenticated ? "1, 2 or 3" : "1 or 2"}.\n\n${buildPreMenuMessage(!!context.isAuthenticated)}`,
               })),
             },
           ],
-          {
-            enableBack: false, // No back from main menu
-            enableExit: true, // But allow exit
-          }
+          NavigationPatterns.mainMenu // Uses predefined pattern: no back, exit to closeSession
         ),
         ERROR: {
           target: "error",
@@ -457,27 +447,25 @@ export const supamotoMachine = setup({
     accountCreationSuccess: {
       entry: assign(() => ({
         message:
-          "Account created successfully!\n\nYou can now:\n1. Return to main menu",
+          "Account created successfully!\n\nYou can now:\n1. Return to main menu\n0. Back",
         isEnd: false,
       })),
       on: {
-        INPUT: [
+        INPUT: withNavigation(
+          [
+            {
+              target: "preMenu",
+              guard: "isInput1",
+              actions: "clearErrors",
+            },
+          ],
           {
-            target: "preMenu",
-            guard: "isInput1",
-            actions: "clearErrors",
-          },
-          {
-            target: "preMenu",
-            guard: "isInput2",
-            actions: "clearErrors",
-          },
-          {
-            target: "preMenu",
-            guard: "isBack",
-            actions: "clearErrors",
-          },
-        ],
+            backTarget: "preMenu",
+            exitTarget: "closeSession",
+            enableBack: true,
+            enableExit: true,
+          }
+        ),
       },
     },
 
@@ -531,11 +519,10 @@ export const supamotoMachine = setup({
     error: {
       entry: "setErrorMessage",
       on: {
-        INPUT: withNavigation([], {
-          backTarget: "preMenu", // Always go back to main menu from error
-          enableBack: true,
-          enableExit: true,
-        }),
+        INPUT: withNavigation(
+          [],
+          NavigationPatterns.error // Uses predefined pattern: back to preMenu, exit to closeSession
+        ),
         DIAL_USSD: {
           target: "preMenu",
           actions: ["resetSession", "setPhoneAndService", "clearErrors"],
