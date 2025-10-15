@@ -9,6 +9,16 @@ import type { FastifyInstance } from "fastify";
 import { sessionService } from "../services/session.js";
 
 export async function ussdRoutes(fastify: FastifyInstance) {
+  // Health check endpoint for USSD API
+  fastify.get("/api/health", async (request, reply) => {
+    reply.send({
+      status: "ok",
+      service: "ussd",
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    });
+  });
+
   fastify.post("/api/ussd", async (request, reply) => {
     try {
       const { sessionId, serviceCode, phoneNumber, text } = request.body as {

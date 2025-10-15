@@ -59,6 +59,7 @@ describe("loginMachine", () => {
     preferredLanguage: "eng",
     lastCompletedAction: "",
     householdId: undefined,
+    role: "customer" as const,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

@@ -9,6 +9,9 @@ import { accountMenuMachine } from "./supamoto/account-menu/accountMenuMachine.j
 import { loginMachine } from "./supamoto/account-login/loginMachine.js";
 import { accountCreationMachine } from "./supamoto/account-creation/accountCreationMachine.js";
 
+// Customer activation machine
+import { customerActivationMachine } from "./supamoto/activation/customerActivationMachine.js";
+
 export type StateMachine = typeof supamotoMachine;
 
 export function getStateMachine(): StateMachine {
@@ -22,4 +25,5 @@ export {
   accountMenuMachine,
   loginMachine,
   accountCreationMachine,
+  customerActivationMachine,
 };

@@ -1,4 +1,4 @@
-import { setup, assign, fromPromise } from "xstate";
+import { setup, assign, fromPromise, sendTo } from "xstate";
 import { withNavigation } from "../utils/navigation-mixin.js";
 import { navigationGuards } from "../guards/navigation.guards.js";
 import {
@@ -14,6 +14,10 @@ import {
   getOrdersFromRoom,
   getVouchersFromRoom,
 } from "../../../services/ixo/matrix-reader.js";
+import {
+  customerActivationMachine,
+  CustomerActivationOutput,
+} from "../activation/customerActivationMachine.js";
 
 /**
  * User Services Machine - Post-login user menu and simple stubs
@@ -28,6 +32,7 @@ export interface UserServicesContext {
   phoneNumber: string;
   serviceCode: string;
   pin?: string;
+  customerRole?: "customer" | "lead_generator" | "call_center" | "admin"; // Role-based access control
   message: string;
   error?: string;
 }
@@ -36,14 +41,24 @@ export type UserServicesEvent =
   | { type: "INPUT"; input: string }
   | { type: "ERROR"; error: string };
 
-const menuMessage =
-  "User Services\n" +
-  "1. Account\n" +
-  "2. Balances\n" +
-  "3. Orders\n" +
-  "4. Vouchers\n" +
-  "5. Agent Tools\n" +
-  "0. Back";
+/**
+ * Build menu message based on user role
+ * Agent Tools (option 5) is only shown to authorized personnel
+ */
+const buildMenuMessage = (role?: string): string => {
+  const isAgent =
+    role === "lead_generator" || role === "call_center" || role === "admin";
+
+  return (
+    "User Services\n" +
+    "1. Account\n" +
+    "2. Balances\n" +
+    "3. Orders\n" +
+    "4. Vouchers\n" +
+    (isAgent ? "5. Agent Tools\n" : "") +
+    "0. Back"
+  );
+};
 
 export const userServicesMachine = setup({
   types: {
@@ -54,6 +69,7 @@ export const userServicesMachine = setup({
       phoneNumber: string;
       serviceCode: string;
       pin?: string;
+      customerRole?: "customer" | "lead_generator" | "call_center" | "admin"; // Role for access control
     },
   },
   actors: {
@@ -163,6 +179,7 @@ export const userServicesMachine = setup({
         return [] as any[];
       }
     ),
+    customerActivationMachine,
   },
   /*
     fetchContractDetailsService: fromPromise(async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
@@ -203,7 +220,9 @@ export const userServicesMachine = setup({
     }),
 */
   actions: {
-    setMenuMessage: assign(() => ({ message: menuMessage })),
+    setMenuMessage: assign(({ context }) => ({
+      message: buildMenuMessage(context.customerRole),
+    })),
     setError: assign({
       error: ({ event }) =>
         event.type === "ERROR" ? event.error : "An error occurred",
@@ -222,6 +241,16 @@ export const userServicesMachine = setup({
       navigationGuards.isInput("4")(null as any, event as any),
     isInput5: ({ event }) =>
       navigationGuards.isInput("5")(null as any, event as any),
+    // Combined guard: input is 5 AND user has agent role
+    isInput5AndIsAgent: ({ event, context }) => {
+      if (!navigationGuards.isInput("5")(null as any, event as any)) {
+        return false;
+      }
+      const role = context.customerRole;
+      return (
+        role === "lead_generator" || role === "call_center" || role === "admin"
+      );
+    },
     isBack: ({ event }) =>
       navigationGuards.isBackCommand(null as any, event as any),
     isExit: ({ event }) =>
@@ -235,7 +264,8 @@ export const userServicesMachine = setup({
     phoneNumber: input?.phoneNumber || "",
     serviceCode: input?.serviceCode || "",
     pin: input?.pin,
-    message: menuMessage,
+    customerRole: input?.customerRole || "customer", // Default to customer role
+    message: buildMenuMessage(input?.customerRole), // Dynamic menu based on role
     error: undefined,
   }),
   states: {
@@ -249,7 +279,23 @@ export const userServicesMachine = setup({
             { target: "balances", guard: "isInput2" },
             { target: "orders", guard: "isInput3" },
             { target: "vouchers", guard: "isInput4" },
-            { target: "agent", guard: "isInput5" },
+            { target: "agent", guard: "isInput5AndIsAgent" }, // Role-based access control
+            {
+              // Handle unauthorized Agent Tools access attempt
+              target: "menu",
+              guard: "isInput5", // Input is 5 but not an agent
+              actions: assign(({ context }) => {
+                // Log unauthorized access attempt
+                console.warn(
+                  `[SECURITY] Unauthorized Agent Tools access attempt - Phone: ${context.phoneNumber.slice(-4)}, Role: ${context.customerRole || "unknown"}`
+                );
+                return {
+                  message:
+                    "Access denied. Agent Tools are only available to authorized personnel.\n\n" +
+                    buildMenuMessage(context.customerRole),
+                };
+              }),
+            },
           ],
           {
             backTarget: "routeToMain",
@@ -537,13 +583,18 @@ export const userServicesMachine = setup({
     agent: {
       entry: assign(() => ({
         message:
-          "Agent Tools\n1. Check funds in escrow\n2. Check BEAN vouchers\n0. Back",
+          "Agent Tools\n" +
+          "1. Check funds in escrow\n" +
+          "2. Check BEAN vouchers\n" +
+          "3. Activate Customer\n" +
+          "0. Back",
       })),
       on: {
         INPUT: withNavigation(
           [
             { target: "agentEscrow", guard: "isInput1" },
             { target: "agentBean", guard: "isInput2" },
+            { target: "agentActivateCustomer", guard: "isInput3" },
           ],
           {
             backTarget: "menu",
@@ -578,6 +629,49 @@ export const userServicesMachine = setup({
           enableBack: true,
           enableExit: true,
         }),
+      },
+    },
+    agentActivateCustomer: {
+      on: {
+        INPUT: {
+          actions: sendTo("activationChild", ({ event }) => event),
+        },
+      },
+      invoke: {
+        id: "activationChild",
+        src: "customerActivationMachine",
+        input: ({ context }) => ({
+          sessionId: context.sessionId,
+          phoneNumber: context.phoneNumber,
+          serviceCode: context.serviceCode,
+          isLeadGenerator: true,
+        }),
+        onDone: [
+          {
+            target: "agent",
+            guard: ({ event }) =>
+              (event.output as any)?.result ===
+              CustomerActivationOutput.COMPLETE,
+          },
+          {
+            target: "agent",
+            guard: ({ event }) =>
+              (event.output as any)?.result ===
+              CustomerActivationOutput.CANCELLED,
+          },
+          {
+            target: "agent",
+          },
+        ],
+        onError: {
+          target: "error",
+          actions: "setError",
+        },
+        onSnapshot: {
+          actions: assign(({ event }) => ({
+            message: event.snapshot.context.message,
+          })),
+        },
       },
     },
 

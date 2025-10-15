@@ -33,6 +33,7 @@ export interface CustomerRecord {
   preferredLanguage: string;
   lastCompletedAction: string;
   householdId?: number;
+  role: "customer" | "lead_generator" | "call_center" | "admin"; // Role-based access control
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,6 +66,43 @@ export interface MatrixVaultRecord {
   encryptedData: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Customer Activation and Eligibility Types
+export interface TempPinRecord {
+  id: number;
+  customerId: string;
+  phoneNumber: string;
+  tempPin: string;
+  createdAt: Date;
+  expiresAt: Date;
+  used: boolean;
+  usedAt?: Date;
+}
+
+export interface EligibilityRecord {
+  id: number;
+  customerId: string;
+  phoneNumber: string;
+  isEligible: boolean;
+  verificationDate: Date;
+  claimId?: string;
+  claimStatus?: string;
+  claimSubmittedAt?: Date;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DistributionOTPRecord {
+  id: number;
+  customerId: string;
+  otpCode: string;
+  createdAt: Date;
+  expiresAt: Date;
+  used: boolean;
+  usedAt?: Date;
+  verifiedBy?: string;
 }
 
 /**
@@ -206,6 +244,7 @@ class DataService {
             preferred_language: customerData.preferredLanguage,
             date_added: new Date(),
             last_completed_action: customerData.lastCompletedAction,
+            role: "customer", // Default role for new customers
             created_at: new Date(),
             updated_at: new Date(),
           })
@@ -242,6 +281,7 @@ class DataService {
           preferredLanguage: customer.preferred_language || "eng",
           lastCompletedAction: customer.last_completed_action || "",
           householdId: customer.household_id || undefined,
+          role: customer.role || "customer",
           createdAt: customer.created_at,
           updatedAt: customer.updated_at,
         };
@@ -284,6 +324,7 @@ class DataService {
           "customers.preferred_language",
           "customers.last_completed_action",
           "customers.household_id",
+          "customers.role",
           "customers.created_at",
           "customers.updated_at",
         ])
@@ -317,6 +358,7 @@ class DataService {
         preferredLanguage: result.preferred_language || "eng",
         lastCompletedAction: result.last_completed_action || "",
         householdId: result.household_id || undefined,
+        role: result.role || "customer",
         createdAt: result.created_at,
         updatedAt: result.updated_at,
       };
@@ -400,6 +442,7 @@ class DataService {
           "customers.preferred_language",
           "customers.last_completed_action",
           "customers.household_id",
+          "customers.role",
           "customers.created_at",
           "customers.updated_at",
         ])
@@ -432,6 +475,7 @@ class DataService {
         preferredLanguage: result.preferred_language || "eng",
         lastCompletedAction: result.last_completed_action || "",
         householdId: result.household_id || undefined,
+        role: result.role || "customer",
         createdAt: result.created_at,
         updatedAt: result.updated_at,
       };
@@ -579,6 +623,387 @@ class DataService {
           did: walletData.did,
         },
         "Failed to create wallet record"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Customer Activation and Eligibility Methods
+   */
+
+  /**
+   * Store temporary PIN for customer activation
+   * Uses upsert pattern to handle retries
+   */
+  async setTempPin(
+    customerId: string,
+    phoneNumber: string,
+    tempPin: string
+  ): Promise<void> {
+    const db = databaseManager.getKysely();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+    logger.info(
+      { customerId: customerId.slice(-4), phoneNumber: phoneNumber.slice(-4) },
+      "Setting temporary PIN for customer activation"
+    );
+
+    try {
+      await db
+        .insertInto("temp_pins")
+        .values({
+          customer_id: customerId,
+          phone_number: phoneNumber,
+          temp_pin: tempPin,
+          expires_at: expiresAt,
+          created_at: new Date(),
+          used: false,
+        })
+        .onConflict(oc =>
+          oc.columns(["customer_id", "phone_number"]).doUpdateSet({
+            temp_pin: tempPin,
+            expires_at: expiresAt,
+            used: false,
+            created_at: new Date(),
+          })
+        )
+        .execute();
+
+      logger.info(
+        { customerId: customerId.slice(-4), expiresAt },
+        "Temporary PIN set successfully"
+      );
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: customerId.slice(-4),
+        },
+        "Failed to set temporary PIN"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Verify and consume temporary PIN
+   * Returns true if PIN is valid and not expired
+   */
+  async verifyTempPin(
+    customerId: string,
+    phoneNumber: string,
+    pin: string
+  ): Promise<boolean> {
+    const db = databaseManager.getKysely();
+
+    logger.debug(
+      { customerId: customerId.slice(-4), phoneNumber: phoneNumber.slice(-4) },
+      "Verifying temporary PIN"
+    );
+
+    try {
+      const record = await db
+        .selectFrom("temp_pins")
+        .selectAll()
+        .where("customer_id", "=", customerId)
+        .where("phone_number", "=", phoneNumber)
+        .where("temp_pin", "=", pin)
+        .where("used", "=", false)
+        .where("expires_at", ">", new Date())
+        .executeTakeFirst();
+
+      if (!record) {
+        logger.warn(
+          { customerId: customerId.slice(-4) },
+          "Temporary PIN verification failed - invalid or expired"
+        );
+        return false;
+      }
+
+      // Mark as used
+      await db
+        .updateTable("temp_pins")
+        .set({ used: true, used_at: new Date() })
+        .where("id", "=", record.id)
+        .execute();
+
+      logger.info(
+        { customerId: customerId.slice(-4) },
+        "Temporary PIN verified successfully"
+      );
+
+      return true;
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: customerId.slice(-4),
+        },
+        "Failed to verify temporary PIN"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Record eligibility verification (for audit trail)
+   * Stores both Yes and No responses
+   */
+  async recordEligibility(
+    customerId: string,
+    phoneNumber: string,
+    isEligible: boolean,
+    notes?: string
+  ): Promise<EligibilityRecord> {
+    const db = databaseManager.getKysely();
+
+    logger.info(
+      {
+        customerId: customerId.slice(-4),
+        phoneNumber: phoneNumber.slice(-4),
+        isEligible,
+      },
+      "Recording eligibility verification"
+    );
+
+    try {
+      const result = await db
+        .insertInto("eligibility_verifications")
+        .values({
+          customer_id: customerId,
+          phone_number: phoneNumber,
+          is_eligible: isEligible,
+          verification_date: new Date(),
+          notes: notes || null,
+          created_at: new Date(),
+          updated_at: new Date(),
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      logger.info(
+        { customerId: customerId.slice(-4), recordId: result.id },
+        "Eligibility verification recorded"
+      );
+
+      return {
+        id: result.id!,
+        customerId: result.customer_id,
+        phoneNumber: result.phone_number,
+        isEligible: result.is_eligible,
+        verificationDate: result.verification_date,
+        claimId: result.claim_id || undefined,
+        claimStatus: result.claim_status || undefined,
+        claimSubmittedAt: result.claim_submitted_at || undefined,
+        notes: result.notes || undefined,
+        createdAt: result.created_at,
+        updatedAt: result.updated_at,
+      };
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: customerId.slice(-4),
+        },
+        "Failed to record eligibility verification"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Update eligibility record with claim information
+   */
+  async updateEligibilityWithClaim(
+    eligibilityId: number,
+    claimId: string,
+    claimStatus: string
+  ): Promise<void> {
+    const db = databaseManager.getKysely();
+
+    logger.info(
+      { eligibilityId, claimId, claimStatus },
+      "Updating eligibility record with claim information"
+    );
+
+    try {
+      await db
+        .updateTable("eligibility_verifications")
+        .set({
+          claim_id: claimId,
+          claim_status: claimStatus,
+          claim_submitted_at: new Date(),
+          updated_at: new Date(),
+        })
+        .where("id", "=", eligibilityId)
+        .execute();
+
+      logger.info({ eligibilityId, claimId }, "Eligibility record updated");
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          eligibilityId,
+        },
+        "Failed to update eligibility record"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Generate and store OTP for bean distribution
+   */
+  async generateDistributionOTP(customerId: string): Promise<string> {
+    const db = databaseManager.getKysely();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    logger.info(
+      { customerId: customerId.slice(-4) },
+      "Generating distribution OTP"
+    );
+
+    try {
+      await db
+        .insertInto("distribution_otps")
+        .values({
+          customer_id: customerId,
+          otp_code: otp,
+          expires_at: expiresAt,
+          created_at: new Date(),
+          used: false,
+        })
+        .execute();
+
+      logger.info(
+        { customerId: customerId.slice(-4), expiresAt },
+        "Distribution OTP generated"
+      );
+
+      return otp;
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: customerId.slice(-4),
+        },
+        "Failed to generate distribution OTP"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Verify distribution OTP
+   * Returns true if OTP is valid and not expired
+   */
+  async verifyDistributionOTP(
+    customerId: string,
+    otp: string,
+    verifiedBy?: string
+  ): Promise<boolean> {
+    const db = databaseManager.getKysely();
+
+    logger.debug(
+      { customerId: customerId.slice(-4) },
+      "Verifying distribution OTP"
+    );
+
+    try {
+      const record = await db
+        .selectFrom("distribution_otps")
+        .selectAll()
+        .where("customer_id", "=", customerId)
+        .where("otp_code", "=", otp)
+        .where("used", "=", false)
+        .where("expires_at", ">", new Date())
+        .executeTakeFirst();
+
+      if (!record) {
+        logger.warn(
+          { customerId: customerId.slice(-4) },
+          "Distribution OTP verification failed - invalid or expired"
+        );
+        return false;
+      }
+
+      // Mark as used
+      await db
+        .updateTable("distribution_otps")
+        .set({
+          used: true,
+          used_at: new Date(),
+          verified_by: verifiedBy || null,
+        })
+        .where("id", "=", record.id)
+        .execute();
+
+      logger.info(
+        { customerId: customerId.slice(-4) },
+        "Distribution OTP verified successfully"
+      );
+
+      return true;
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: customerId.slice(-4),
+        },
+        "Failed to verify distribution OTP"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Assign an agent role to a customer
+   * Used by administrators to grant agent permissions
+   */
+  async assignAgentRole(
+    customerId: string,
+    role: "lead_generator" | "call_center" | "admin",
+    assignedBy: string
+  ): Promise<void> {
+    const db = databaseManager.getKysely();
+
+    logger.info(
+      {
+        customerId: customerId.slice(-4),
+        newRole: role,
+        assignedBy: assignedBy.slice(-4),
+      },
+      "Assigning agent role to customer"
+    );
+
+    try {
+      await db
+        .updateTable("customers")
+        .set({
+          role: role,
+          updated_at: new Date(),
+        })
+        .where("customer_id", "=", customerId)
+        .execute();
+
+      logger.info(
+        {
+          customerId: customerId.slice(-4),
+          newRole: role,
+          assignedBy: assignedBy.slice(-4),
+        },
+        "Agent role assigned successfully"
+      );
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: customerId.slice(-4),
+          role: role,
+        },
+        "Failed to assign agent role"
       );
       throw error;
     }

@@ -195,6 +195,12 @@ export const config = {
   FEATURES: {
     MATRIX_READ_ENABLED: process.env.MATRIX_READ_ENABLED === "true",
   },
+  SMS: {
+    ENABLED: process.env.SMS_ENABLED === "true",
+    API_KEY: process.env.AFRICASTALKING_API_KEY,
+    USERNAME: process.env.AFRICASTALKING_USERNAME || "sandbox",
+    SENDER_ID: process.env.AFRICASTALKING_SENDER_ID,
+  },
   SERVER: {
     DISABLE_REQUEST_LOGGING:
       process.env.SERVER_DISABLE_REQUEST_LOGGING === "true",

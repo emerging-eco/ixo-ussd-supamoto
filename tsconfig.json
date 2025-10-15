@@ -18,12 +18,16 @@
     "isolatedModules": true,
     "types": ["vitest/globals", "node", "@ixo/impactxclient-sdk"]
   },
-  "include": ["src/**/*", "test/**/*"],
+  "include": ["src/**/*", "test/**/*", "src/types/**/*.d.ts"],
   "exclude": [
     "node_modules",
     "dist",
     "src/reference/**/*",
     "src/**/*-demo.ts",
     "src/services/ixo-account.ts"
-  ]
+  ],
+  "ts-node": {
+    "transpileOnly": true,
+    "files": true
+  }
 }

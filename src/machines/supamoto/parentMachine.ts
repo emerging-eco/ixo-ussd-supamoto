@@ -13,6 +13,10 @@ import { knowMoreMachine } from "./information/index.js";
 import { withNavigation } from "./utils/navigation-mixin.js";
 import { NavigationPatterns } from "./utils/navigation-patterns.js";
 import { userServicesMachine } from "./user-services/userServicesMachine.js";
+import {
+  customerActivationMachine,
+  CustomerActivationOutput,
+} from "./activation/customerActivationMachine.js";
 
 /**
  * Supamoto State Machine - Simplified Architecture
@@ -34,6 +38,7 @@ export interface SupamotoMachineContext {
   phoneNumber: string;
   serviceCode: string;
   customerName?: string;
+  customerRole?: "customer" | "lead_generator" | "call_center" | "admin"; // Role-based access control
   currentBalance?: number;
   isAuthenticated: boolean;
   sessionStartTime: string;
@@ -73,6 +78,7 @@ export const supamotoMachine = setup({
     loginMachine,
     accountCreationMachine,
     userServicesMachine,
+    customerActivationMachine,
   },
 
   actions: {
@@ -298,6 +304,12 @@ export const supamotoMachine = setup({
                 ?.result === AccountMenuOutput.CREATE_SELECTED,
           },
           {
+            target: "customerActivation",
+            guard: ({ event }) =>
+              (event as { output?: { result: AccountMenuOutput } }).output
+                ?.result === AccountMenuOutput.ACTIVATE_SELECTED,
+          },
+          {
             target: "preMenu",
             guard: ({ event }) =>
               (event as { output?: { result: AccountMenuOutput } }).output
@@ -345,6 +357,7 @@ export const supamotoMachine = setup({
                 const output = event.output as any;
                 return {
                   customerName: output?.customer?.fullName || "Existing User",
+                  customerRole: output?.customer?.role || "customer", // Store role for access control
                   isAuthenticated: true,
                   // Thread session PIN for Matrix vault decryption in user services
                   sessionPin: output?.sessionPin,
@@ -469,6 +482,54 @@ export const supamotoMachine = setup({
       },
     },
 
+    // Customer Activation - handles customer-side activation flow
+    customerActivation: {
+      on: {
+        INPUT: {
+          actions: sendTo("customerActivationChild", ({ event }) => event),
+        },
+      },
+      invoke: {
+        id: "customerActivationChild",
+        src: "customerActivationMachine",
+        input: ({ context }) => ({
+          sessionId: context.sessionId,
+          phoneNumber: context.phoneNumber,
+          serviceCode: context.serviceCode,
+          isLeadGenerator: false, // Customer-facing flow
+        }),
+        onDone: [
+          {
+            target: "preMenu",
+            guard: ({ event }) =>
+              (event.output as any)?.result ===
+              CustomerActivationOutput.COMPLETE,
+            actions: ["clearErrors"],
+          },
+          {
+            target: "accountMenu",
+            guard: ({ event }) =>
+              (event.output as any)?.result ===
+              CustomerActivationOutput.CANCELLED,
+            actions: ["clearErrors"],
+          },
+          {
+            target: "preMenu",
+            actions: ["clearErrors"],
+          },
+        ],
+        onError: {
+          target: "error",
+          actions: "setError",
+        },
+        onSnapshot: {
+          actions: assign(({ event }) => ({
+            message: event.snapshot.context.message,
+          })),
+        },
+      },
+    },
+
     // User services - delegates to userServicesMachine
     userMainMenu: {
       on: {
@@ -484,6 +545,7 @@ export const supamotoMachine = setup({
           phoneNumber: context.phoneNumber,
           serviceCode: context.serviceCode,
           pin: context.sessionPin,
+          customerRole: context.customerRole, // Pass role for access control
         }),
         onDone: {
           target: "preMenu",

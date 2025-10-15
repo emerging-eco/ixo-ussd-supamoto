@@ -104,6 +104,7 @@ export interface Database {
     date_added: Date;
     last_completed_action: string | null;
     household_id: number | null;
+    role: "customer" | "lead_generator" | "call_center" | "admin"; // Role-based access control
     created_at: Date;
     updated_at: Date;
   };
@@ -138,5 +139,38 @@ export interface Database {
     encrypted_password: string;
     created_at: Date;
     updated_at: Date;
+  };
+  temp_pins: {
+    id?: number;
+    customer_id: string;
+    phone_number: string;
+    temp_pin: string;
+    created_at: Date;
+    expires_at: Date;
+    used: boolean;
+    used_at: Date | null;
+  };
+  eligibility_verifications: {
+    id?: number;
+    customer_id: string;
+    phone_number: string;
+    is_eligible: boolean;
+    verification_date: Date;
+    claim_id: string | null;
+    claim_status: string | null;
+    claim_submitted_at: Date | null;
+    notes: string | null;
+    created_at: Date;
+    updated_at: Date;
+  };
+  distribution_otps: {
+    id?: number;
+    customer_id: string;
+    otp_code: string;
+    created_at: Date;
+    expires_at: Date;
+    used: boolean;
+    used_at: Date | null;
+    verified_by: string | null;
   };
 }
