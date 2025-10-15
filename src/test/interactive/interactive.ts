@@ -15,7 +15,7 @@ import readline from "readline";
 
 // --- Setup ---
 
-const SERVER_URL = "http://127.0.0.1:3000/api/ussd";
+const SERVER_URL = "http://127.0.0.1:3005/api/ussd";
 // const SERVER_URL = "https://ixo-ussd-server.onrender.com/api/ussd";
 // const SERVER_URL = "https://ixo-ussd-server-production.up.railway.app/api/ussd";
 const sessionId = `interactive-test-${Date.now()}`;

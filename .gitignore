@@ -13,7 +13,7 @@ npm-debug.log
 
 # env files
 *.env
-*.env.*
+*.env.local
 
 #logs
 logs/
