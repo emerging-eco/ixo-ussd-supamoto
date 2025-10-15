@@ -173,4 +173,58 @@ export interface Database {
     used_at: Date | null;
     verified_by: string | null;
   };
+  lg_delivery_intents: {
+    id?: number;
+    customer_id: string;
+    lg_customer_id: string;
+    intent_registered_at: Date;
+    has_bean_voucher: boolean;
+    voucher_status: string | null;
+    voucher_check_response: any; // JSONB
+    created_at: Date;
+  };
+  bean_distribution_otps: {
+    id?: number;
+    customer_id: string;
+    lg_customer_id: string;
+    intent_id: number | null;
+    otp: string;
+    generated_at: Date;
+    expires_at: Date;
+    used_at: Date | null;
+    is_valid: boolean;
+    created_at: Date;
+  };
+  bean_delivery_confirmations: {
+    id?: number;
+    customer_id: string;
+    lg_customer_id: string;
+    otp_id: number | null;
+    lg_confirmed_at: Date | null;
+    customer_confirmed_at: Date | null;
+    customer_confirmed_receipt: boolean | null;
+    token_transferred_at: Date | null;
+    confirmation_deadline: Date;
+    created_at: Date;
+    updated_at: Date;
+  };
+  household_claims: {
+    id?: number;
+    customer_id: string;
+    is_1000_day_household: boolean;
+    claim_submitted_at: Date;
+    claim_processed_at: Date | null;
+    claim_status: string | null;
+    bean_voucher_allocated: boolean;
+    claims_bot_response: any; // JSONB
+    created_at: Date;
+  };
+  audit_log: {
+    id?: number;
+    event_type: string;
+    customer_id: string | null;
+    lg_customer_id: string | null;
+    details: any; // JSONB
+    created_at: Date;
+  };
 }

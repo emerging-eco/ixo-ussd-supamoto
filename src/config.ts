@@ -221,6 +221,20 @@ export const config = {
     stateBotUrl: process.env.MATRIX_STATE_BOT_URL,
   },
   USSD_MACHINE_TYPE: process.env.USSD_MACHINE_TYPE || "supamoto",
+  USSD: {
+    // Service code is accessed via: config.ZM.SERVICE_CODES[0]
+    OTP_VALIDITY_MINUTES: parseInt(
+      process.env.OTP_VALIDITY_MINUTES || "10",
+      10
+    ),
+    MAX_PIN_ATTEMPTS: parseInt(process.env.MAX_PIN_ATTEMPTS || "3", 10),
+    DELIVERY_CONFIRMATION_DAYS: parseInt(
+      process.env.DELIVERY_CONFIRMATION_DAYS || "7",
+      10
+    ),
+    SMS_RETRY_ATTEMPTS: parseInt(process.env.SMS_RETRY_ATTEMPTS || "3", 10),
+    SMS_RETRY_DELAYS_SECONDS: [0, 10, 30], // Immediate, 10s, 30s for 3 attempts
+  },
 } as const;
 
 // Type for the config object

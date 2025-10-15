@@ -1,11 +1,11 @@
 ```mermaid
 sequenceDiagram
+  participant ixo-multiclient-sdk as ixo-multiclient-sdk
   actor SUPA as SupaMoto main account
   participant subscriptions-service-supamoto as subscriptions-service-supamoto
   participant ixo-matrix-supamoto-bot as ixo-matrix-supamoto-bot
   participant ixo-matrix-supamoto-claims-bot as ixo-matrix-supamoto-claims-bot
   participant jambo-supamoto as jambo-supamoto
-  participant ixo-multiclient-sdk as ixo-multiclient-sdk
   participant ixo-ussd-supamoto as ixo-ussd-supamoto
   actor Customer as Customer
   actor LG as Lead Generator

@@ -3,11 +3,11 @@
 
 -- Add role column with default value 'customer'
 ALTER TABLE customers 
-ADD COLUMN role VARCHAR(20) DEFAULT 'customer' 
+ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'customer' 
 CHECK (role IN ('customer', 'lead_generator', 'call_center', 'admin'));
 
 -- Create index for performance (role-based queries will be common)
-CREATE INDEX idx_customers_role ON customers(role);
+CREATE INDEX IF NOT EXISTS idx_customers_role ON customers(role);
 
 -- Add comment for documentation
 COMMENT ON COLUMN customers.role IS 'User role: customer (default), lead_generator (can use Agent Tools), call_center (can use Agent Tools + support functions), admin (full access)';

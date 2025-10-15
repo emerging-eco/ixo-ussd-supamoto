@@ -18,6 +18,7 @@ import {
   customerActivationMachine,
   CustomerActivationOutput,
 } from "../activation/customerActivationMachine.js";
+import { customerToolsMachine } from "../customer-tools/customerToolsMachine.js";
 
 /**
  * User Services Machine - Post-login user menu and simple stubs
@@ -32,6 +33,7 @@ export interface UserServicesContext {
   phoneNumber: string;
   serviceCode: string;
   pin?: string;
+  customerId?: string; // Customer ID for child machines
   customerRole?: "customer" | "lead_generator" | "call_center" | "admin"; // Role-based access control
   message: string;
   error?: string;
@@ -43,21 +45,19 @@ export type UserServicesEvent =
 
 /**
  * Build menu message based on user role
- * Agent Tools (option 5) is only shown to authorized personnel
+ * Shows ONLY Customer Tools for customers OR ONLY Agent Tools for agents (never both)
  */
 const buildMenuMessage = (role?: string): string => {
   const isAgent =
     role === "lead_generator" || role === "call_center" || role === "admin";
 
-  return (
-    "User Services\n" +
-    "1. Account\n" +
-    "2. Balances\n" +
-    "3. Orders\n" +
-    "4. Vouchers\n" +
-    (isAgent ? "5. Agent Tools\n" : "") +
-    "0. Back"
-  );
+  if (isAgent) {
+    // Agent users see only Agent Tools
+    return "Services\n" + "1. Agent Tools\n" + "0. Back";
+  } else {
+    // Customer users see only Customer Tools
+    return "Services\n" + "1. Customer Tools\n" + "0. Back";
+  }
 };
 
 export const userServicesMachine = setup({
@@ -69,6 +69,7 @@ export const userServicesMachine = setup({
       phoneNumber: string;
       serviceCode: string;
       pin?: string;
+      customerId?: string; // Customer ID for child machines
       customerRole?: "customer" | "lead_generator" | "call_center" | "admin"; // Role for access control
     },
   },
@@ -180,6 +181,7 @@ export const userServicesMachine = setup({
       }
     ),
     customerActivationMachine,
+    customerToolsMachine,
   },
   /*
     fetchContractDetailsService: fromPromise(async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
@@ -239,17 +241,14 @@ export const userServicesMachine = setup({
       navigationGuards.isInput("3")(null as any, event as any),
     isInput4: ({ event }) =>
       navigationGuards.isInput("4")(null as any, event as any),
-    isInput5: ({ event }) =>
-      navigationGuards.isInput("5")(null as any, event as any),
-    // Combined guard: input is 5 AND user has agent role
-    isInput5AndIsAgent: ({ event, context }) => {
-      if (!navigationGuards.isInput("5")(null as any, event as any)) {
-        return false;
-      }
+    isAgent: ({ context }) => {
       const role = context.customerRole;
       return (
         role === "lead_generator" || role === "call_center" || role === "admin"
       );
+    },
+    isCustomer: ({ context }) => {
+      return context.customerRole === "customer";
     },
     isBack: ({ event }) =>
       navigationGuards.isBackCommand(null as any, event as any),
@@ -264,37 +263,43 @@ export const userServicesMachine = setup({
     phoneNumber: input?.phoneNumber || "",
     serviceCode: input?.serviceCode || "",
     pin: input?.pin,
+    customerId: input?.customerId,
     customerRole: input?.customerRole || "customer", // Default to customer role
     message: buildMenuMessage(input?.customerRole), // Dynamic menu based on role
     error: undefined,
   }),
   states: {
-    // Top-level user services menu
+    // Top-level services menu - routes to Customer Tools or Agent Tools based on role
     menu: {
       entry: ["setMenuMessage", "clearErrors"],
       on: {
         INPUT: withNavigation(
           [
-            { target: "account", guard: "isInput1" },
-            { target: "balances", guard: "isInput2" },
-            { target: "orders", guard: "isInput3" },
-            { target: "vouchers", guard: "isInput4" },
-            { target: "agent", guard: "isInput5AndIsAgent" }, // Role-based access control
             {
-              // Handle unauthorized Agent Tools access attempt
-              target: "menu",
-              guard: "isInput5", // Input is 5 but not an agent
-              actions: assign(({ context }) => {
-                // Log unauthorized access attempt
-                console.warn(
-                  `[SECURITY] Unauthorized Agent Tools access attempt - Phone: ${context.phoneNumber.slice(-4)}, Role: ${context.customerRole || "unknown"}`
-                );
-                return {
-                  message:
-                    "Access denied. Agent Tools are only available to authorized personnel.\n\n" +
-                    buildMenuMessage(context.customerRole),
-                };
-              }),
+              target: "customerTools",
+              guard: ({
+                event,
+                context,
+              }: {
+                event: UserServicesEvent;
+                context: UserServicesContext;
+              }) =>
+                navigationGuards.isInput("1")(null as any, event as any) &&
+                context.customerRole === "customer",
+            },
+            {
+              target: "agent",
+              guard: ({
+                event,
+                context,
+              }: {
+                event: UserServicesEvent;
+                context: UserServicesContext;
+              }) =>
+                navigationGuards.isInput("1")(null as any, event as any) &&
+                (context.customerRole === "lead_generator" ||
+                  context.customerRole === "call_center" ||
+                  context.customerRole === "admin"),
             },
           ],
           {
@@ -308,274 +313,31 @@ export const userServicesMachine = setup({
       },
     },
 
-    // Account submenu
-    account: {
-      entry: assign(() => ({
-        message:
-          "Account\n1. Show my Account Details\n2. Edit my Account Details\n3. Show my Contract Details\n0. Back",
-      })),
+    // Customer Tools - delegates to customerToolsMachine
+    customerTools: {
       on: {
-        INPUT: withNavigation(
-          [
-            { target: "accountDetails", guard: "isInput1" },
-            { target: "accountEdit", guard: "isInput2" },
-            { target: "accountContract", guard: "isInput3" },
-          ],
-          {
-            backTarget: "menu",
-            exitTarget: "routeToMain",
-            enableBack: true,
-            enableExit: true,
-          }
-        ),
+        INPUT: {
+          actions: sendTo("customerToolsChild", ({ event }) => event),
+        },
       },
-    },
-    accountDetails: {
-      entry: assign(() => ({ message: "Loading account details..." })),
       invoke: {
-        id: "fetchAccountDetails",
-        src: "fetchAccountDetailsService",
+        id: "customerToolsChild",
+        src: "customerToolsMachine",
         input: ({ context }) => ({
+          sessionId: context.sessionId,
           phoneNumber: context.phoneNumber,
-          pin: context.pin,
+          serviceCode: context.serviceCode,
+          customerId: context.customerId || "",
         }),
         onDone: {
-          actions: assign(({ event }) => {
-            const result = event.output as {
-              source: "matrix" | "db";
-              profile: any;
-            };
-            if (result.source === "matrix") {
-              const p = result.profile || {};
-              const name = p.name ?? "-";
-              const customerId = p.customer_id ?? "-";
-              const email = p.email ?? "-";
-              return {
-                message: `Account Details\nName: ${name}\nCustomer ID: ${customerId}\nEmail: ${email}\n\n1. Back`,
-              };
-            } else {
-              const customer = result.profile as CustomerRecord | null;
-              const name = customer?.fullName ?? "-";
-              const customerId = customer?.customerId ?? "-";
-              const email = customer?.email ?? "-";
-              return {
-                message: `Account Details\nName: ${name}\nCustomer ID: ${customerId}\nEmail: ${email}\n\n1. Back`,
-              };
-            }
-          }),
+          target: "menu",
         },
         onError: {
-          actions: assign(() => ({
-            message:
-              "Failed to load account details. Please try again.\n\n1. Back",
-          })),
-        },
-      },
-      on: {
-        INPUT: withNavigation([{ target: "account", guard: "isInput1" }], {
-          backTarget: "account",
-          exitTarget: "routeToMain",
-          enableBack: true,
-          enableExit: true,
-        }),
-      },
-    },
-    accountEdit: {
-      entry: assign(() => ({
-        message: "[Stub] Edit Account Details not yet implemented.\n1. Back",
-      })),
-      on: {
-        INPUT: withNavigation([{ target: "account", guard: "isInput1" }], {
-          backTarget: "account",
-          exitTarget: "routeToMain",
-          enableBack: true,
-          enableExit: true,
-        }),
-      },
-    },
-    accountContract: {
-      entry: assign(() => ({ message: "Loading contract details..." })),
-      invoke: {
-        id: "fetchContractDetails",
-        src: "fetchContractDetailsService",
-        input: ({ context }) => ({
-          phoneNumber: context.phoneNumber,
-          pin: context.pin,
-        }),
-        onDone: {
-          actions: assign(({ event }) => {
-            const c = (event.output as any) || {};
-            const contractId = c?.contractId ?? "-";
-            const plan = c?.plan ?? "-";
-            const status = c?.status ?? "-";
-            return {
-              message: `Contract Details\nContract ID: ${contractId}\nPlan: ${plan}\nStatus: ${status}\n\n1. Back`,
-            };
+          target: "error",
+          actions: assign({
+            error: "Customer Tools error. Please try again.",
           }),
         },
-        onError: {
-          actions: assign(() => ({
-            message: "Failed to load contract details.\n\n1. Back",
-          })),
-        },
-      },
-      on: {
-        INPUT: withNavigation([{ target: "account", guard: "isInput1" }], {
-          backTarget: "account",
-          exitTarget: "routeToMain",
-          enableBack: true,
-          enableExit: true,
-        }),
-      },
-    },
-
-    // Balances
-    balances: {
-      entry: assign(() => ({
-        message: "Balances\nSUPA: 0.0\nBEAN: 0\n\n1. Back",
-      })),
-      on: {
-        INPUT: withNavigation([{ target: "menu", guard: "isInput1" }], {
-          backTarget: "menu",
-          exitTarget: "routeToMain",
-          enableBack: true,
-          enableExit: true,
-        }),
-      },
-    },
-
-    // Orders submenu
-    orders: {
-      entry: assign(() => ({
-        message:
-          "Orders\n1. Place order (pellets/accessories)\n2. Confirm receipt\n0. Back",
-      })),
-      on: {
-        INPUT: withNavigation(
-          [
-            { target: "placeOrder", guard: "isInput1" },
-            { target: "confirmOrderReceipt", guard: "isInput2" },
-          ],
-          {
-            backTarget: "menu",
-            exitTarget: "routeToMain",
-            enableBack: true,
-            enableExit: true,
-          }
-        ),
-      },
-    },
-    placeOrder: {
-      entry: assign(() => ({
-        message: "[Stub] Place Order flow not yet implemented.\n1. Back",
-      })),
-      on: {
-        INPUT: withNavigation([{ target: "orders", guard: "isInput1" }], {
-          backTarget: "orders",
-          exitTarget: "routeToMain",
-          enableBack: true,
-          enableExit: true,
-        }),
-      },
-    },
-    confirmOrderReceipt: {
-      entry: assign(() => ({ message: "Loading order confirmations..." })),
-      invoke: {
-        id: "fetchOrders",
-        src: "fetchOrdersService",
-        input: ({ context }) => ({
-          phoneNumber: context.phoneNumber,
-          pin: context.pin,
-        }),
-        onDone: {
-          actions: assign(({ event }) => {
-            const orders = (event.output as any[]) || [];
-            const latest = orders[0];
-            const status = latest?.status ?? "-";
-            return { message: `Order Status\nLatest: ${status}\n\n1. Back` };
-          }),
-        },
-        onError: {
-          actions: assign(() => ({
-            message: "Failed to load order status.\n\n1. Back",
-          })),
-        },
-      },
-      on: {
-        INPUT: withNavigation([{ target: "orders", guard: "isInput1" }], {
-          backTarget: "orders",
-          exitTarget: "routeToMain",
-          enableBack: true,
-          enableExit: true,
-        }),
-      },
-    },
-
-    // Vouchers submenu
-    vouchers: {
-      entry: assign(() => ({
-        message:
-          "Vouchers\n1. Redeem BEAN vouchers\n2. Confirm receipt of beans\n0. Back",
-      })),
-      on: {
-        INPUT: withNavigation(
-          [
-            { target: "redeemVouchers", guard: "isInput1" },
-            { target: "confirmBeansReceipt", guard: "isInput2" },
-          ],
-          {
-            backTarget: "menu",
-            exitTarget: "routeToMain",
-            enableBack: true,
-            enableExit: true,
-          }
-        ),
-      },
-    },
-    redeemVouchers: {
-      entry: assign(() => ({
-        message: "[Stub] Redeem BEAN vouchers not yet implemented.\n1. Back",
-      })),
-      on: {
-        INPUT: withNavigation([{ target: "vouchers", guard: "isInput1" }], {
-          backTarget: "vouchers",
-          exitTarget: "routeToMain",
-          enableBack: true,
-          enableExit: true,
-        }),
-      },
-    },
-    confirmBeansReceipt: {
-      entry: assign(() => ({ message: "Loading voucher confirmations..." })),
-      invoke: {
-        id: "fetchVouchers",
-        src: "fetchVouchersService",
-        input: ({ context }) => ({
-          phoneNumber: context.phoneNumber,
-          pin: context.pin,
-        }),
-        onDone: {
-          actions: assign(({ event }) => {
-            const vouchers = (event.output as any[]) || [];
-            const count = vouchers.length;
-            return {
-              message: `Vouchers\nRecent confirmations: ${count}\n\n1. Back`,
-            };
-          }),
-        },
-        onError: {
-          actions: assign(() => ({
-            message: "Failed to load vouchers.\n\n1. Back",
-          })),
-        },
-      },
-      on: {
-        INPUT: withNavigation([{ target: "vouchers", guard: "isInput1" }], {
-          backTarget: "vouchers",
-          exitTarget: "routeToMain",
-          enableBack: true,
-          enableExit: true,
-        }),
       },
     },
 
@@ -584,17 +346,19 @@ export const userServicesMachine = setup({
       entry: assign(() => ({
         message:
           "Agent Tools\n" +
-          "1. Check funds in escrow\n" +
-          "2. Check BEAN vouchers\n" +
-          "3. Activate Customer\n" +
+          "1. Activate a Customer\n" +
+          "2. Register Intent to Deliver Beans\n" +
+          "3. Submit Customer OTP\n" +
+          "4. Confirm Bean Delivery\n" +
           "0. Back",
       })),
       on: {
         INPUT: withNavigation(
           [
-            { target: "agentEscrow", guard: "isInput1" },
-            { target: "agentBean", guard: "isInput2" },
-            { target: "agentActivateCustomer", guard: "isInput3" },
+            { target: "agentActivateCustomer", guard: "isInput1" },
+            { target: "agentRegisterIntent", guard: "isInput2" },
+            { target: "agentSubmitOTP", guard: "isInput3" },
+            { target: "agentConfirmDelivery", guard: "isInput4" },
           ],
           {
             backTarget: "menu",
@@ -603,32 +367,6 @@ export const userServicesMachine = setup({
             enableExit: true,
           }
         ),
-      },
-    },
-    agentEscrow: {
-      entry: assign(() => ({
-        message: "[Stub] Escrow funds check not yet implemented.\n1. Back",
-      })),
-      on: {
-        INPUT: withNavigation([{ target: "agent", guard: "isInput1" }], {
-          backTarget: "agent",
-          exitTarget: "routeToMain",
-          enableBack: true,
-          enableExit: true,
-        }),
-      },
-    },
-    agentBean: {
-      entry: assign(() => ({
-        message: "[Stub] BEAN vouchers check not yet implemented.\n1. Back",
-      })),
-      on: {
-        INPUT: withNavigation([{ target: "agent", guard: "isInput1" }], {
-          backTarget: "agent",
-          exitTarget: "routeToMain",
-          enableBack: true,
-          enableExit: true,
-        }),
       },
     },
     agentActivateCustomer: {
@@ -672,6 +410,52 @@ export const userServicesMachine = setup({
             message: event.snapshot.context.message,
           })),
         },
+      },
+    },
+
+    // Agent: Register Intent to Deliver Beans
+    agentRegisterIntent: {
+      entry: assign(() => ({
+        message:
+          "[Stub] Register Intent to Deliver Beans not yet implemented.\n\n1. Back",
+      })),
+      on: {
+        INPUT: withNavigation([{ target: "agent", guard: "isInput1" }], {
+          backTarget: "agent",
+          exitTarget: "routeToMain",
+          enableBack: true,
+          enableExit: true,
+        }),
+      },
+    },
+
+    // Agent: Submit Customer OTP
+    agentSubmitOTP: {
+      entry: assign(() => ({
+        message: "[Stub] Submit Customer OTP not yet implemented.\n\n1. Back",
+      })),
+      on: {
+        INPUT: withNavigation([{ target: "agent", guard: "isInput1" }], {
+          backTarget: "agent",
+          exitTarget: "routeToMain",
+          enableBack: true,
+          enableExit: true,
+        }),
+      },
+    },
+
+    // Agent: Confirm Bean Delivery
+    agentConfirmDelivery: {
+      entry: assign(() => ({
+        message: "[Stub] Confirm Bean Delivery not yet implemented.\n\n1. Back",
+      })),
+      on: {
+        INPUT: withNavigation([{ target: "agent", guard: "isInput1" }], {
+          backTarget: "agent",
+          exitTarget: "routeToMain",
+          enableBack: true,
+          enableExit: true,
+        }),
       },
     },
 

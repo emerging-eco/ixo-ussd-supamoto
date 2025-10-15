@@ -130,7 +130,13 @@ export class USSDResponseService {
    */
   private autoFormatMessage(message: string, state: string): string {
     // Don't add back option if message already has navigation
-    if (message.includes("0. Back") || message.includes("*. Exit")) {
+    // This includes messages with "1. Continue" which are typically
+    // processing/verification states that shouldn't have "0. Back"
+    if (
+      message.includes("0. Back") ||
+      message.includes("*. Exit") ||
+      message.includes("1. Continue")
+    ) {
       return message;
     }
     console.log("State:", state);
@@ -157,9 +163,19 @@ export class USSDResponseService {
 
   /**
    * Check if current state is a verifying/processing state
+   * These states should not have "0. Back" added automatically
+   * because they represent system processing or confirmation screens
    */
   private isVerifyingState(stateValue: any): boolean {
-    const verifyingStates = ["verifyingWallet", "verifyingAgent", "processing"];
+    const verifyingStates = [
+      "verifyingWallet",
+      "verifyingAgent",
+      "processing",
+      "verifyingCustomerId", // Login: verifying customer ID
+      "verifyingPin", // Login: verifying PIN
+      "loginSuccess", // Login: success confirmation
+      "sendingActivationSMS", // Activation: sending SMS
+    ];
     return verifyingStates.includes(stateValue);
   }
 

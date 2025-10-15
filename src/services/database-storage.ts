@@ -94,6 +94,66 @@ export interface EligibilityRecord {
   updatedAt: Date;
 }
 
+// Bean Distribution Types
+export interface LGDeliveryIntentRecord {
+  id: number;
+  customerId: string;
+  lgCustomerId: string;
+  intentRegisteredAt: Date;
+  hasBeanVoucher: boolean;
+  voucherStatus: string | null;
+  voucherCheckResponse: any; // JSONB
+  createdAt: Date;
+}
+
+export interface BeanDistributionOTPRecord {
+  id: number;
+  customerId: string;
+  lgCustomerId: string;
+  intentId: number | null;
+  otp: string;
+  generatedAt: Date;
+  expiresAt: Date;
+  usedAt: Date | null;
+  isValid: boolean;
+  createdAt: Date;
+}
+
+export interface BeanDeliveryConfirmationRecord {
+  id: number;
+  customerId: string;
+  lgCustomerId: string;
+  otpId: number | null;
+  lgConfirmedAt: Date | null;
+  customerConfirmedAt: Date | null;
+  customerConfirmedReceipt: boolean | null;
+  tokenTransferredAt: Date | null;
+  confirmationDeadline: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface HouseholdClaimRecord {
+  id: number;
+  customerId: string;
+  is1000DayHousehold: boolean;
+  claimSubmittedAt: Date;
+  claimProcessedAt: Date | null;
+  claimStatus: string | null;
+  beanVoucherAllocated: boolean;
+  claimsBotResponse: any; // JSONB
+  createdAt: Date;
+}
+
+export interface AuditLogRecord {
+  id: number;
+  eventType: string;
+  customerId: string | null;
+  lgCustomerId: string | null;
+  details: any; // JSONB
+  createdAt: Date;
+}
+
 export interface DistributionOTPRecord {
   id: number;
   customerId: string;
@@ -959,6 +1019,43 @@ class DataService {
   }
 
   /**
+   * Update customer PIN
+   */
+  async updateCustomerPin(
+    customerId: string,
+    encryptedPin: string
+  ): Promise<void> {
+    const db = databaseManager.getKysely();
+
+    logger.info({ customerId: customerId.slice(-4) }, "Updating customer PIN");
+
+    try {
+      await db
+        .updateTable("customers")
+        .set({
+          encrypted_pin: encryptedPin,
+          updated_at: new Date(),
+        })
+        .where("customer_id", "=", customerId)
+        .execute();
+
+      logger.info(
+        { customerId: customerId.slice(-4) },
+        "Customer PIN updated successfully"
+      );
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: customerId.slice(-4),
+        },
+        "Failed to update customer PIN"
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Assign an agent role to a customer
    * Used by administrators to grant agent permissions
    */
@@ -1004,6 +1101,609 @@ class DataService {
           role: role,
         },
         "Failed to assign agent role"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Create LG delivery intent record
+   */
+  async createLGIntent(
+    customerId: string,
+    lgCustomerId: string,
+    hasBeanVoucher: boolean,
+    voucherStatus: string,
+    voucherCheckResponse: any
+  ): Promise<LGDeliveryIntentRecord> {
+    const db = databaseManager.getKysely();
+
+    logger.info(
+      {
+        customerId: customerId.slice(-4),
+        lgCustomerId: lgCustomerId.slice(-4),
+        hasBeanVoucher,
+      },
+      "Creating LG delivery intent"
+    );
+
+    try {
+      const result = await db
+        .insertInto("lg_delivery_intents")
+        .values({
+          customer_id: customerId,
+          lg_customer_id: lgCustomerId,
+          intent_registered_at: new Date(),
+          has_bean_voucher: hasBeanVoucher,
+          voucher_status: voucherStatus,
+          voucher_check_response: JSON.stringify(voucherCheckResponse),
+          created_at: new Date(),
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      return {
+        id: result.id!,
+        customerId: result.customer_id,
+        lgCustomerId: result.lg_customer_id,
+        intentRegisteredAt: result.intent_registered_at,
+        hasBeanVoucher: result.has_bean_voucher,
+        voucherStatus: result.voucher_status,
+        voucherCheckResponse: result.voucher_check_response,
+        createdAt: result.created_at,
+      };
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: customerId.slice(-4),
+        },
+        "Failed to create LG delivery intent"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Create OTP for bean distribution
+   */
+  async createOTP(
+    customerId: string,
+    lgCustomerId: string,
+    intentId: number,
+    otp: string,
+    validityMinutes: number
+  ): Promise<BeanDistributionOTPRecord> {
+    const db = databaseManager.getKysely();
+
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + validityMinutes * 60 * 1000);
+
+    logger.info(
+      {
+        customerId: customerId.slice(-4),
+        lgCustomerId: lgCustomerId.slice(-4),
+        validityMinutes,
+      },
+      "Creating bean distribution OTP"
+    );
+
+    try {
+      const result = await db
+        .insertInto("bean_distribution_otps")
+        .values({
+          customer_id: customerId,
+          lg_customer_id: lgCustomerId,
+          intent_id: intentId,
+          otp: otp,
+          generated_at: now,
+          expires_at: expiresAt,
+          used_at: null,
+          is_valid: true,
+          created_at: now,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      return {
+        id: result.id!,
+        customerId: result.customer_id,
+        lgCustomerId: result.lg_customer_id,
+        intentId: result.intent_id,
+        otp: result.otp,
+        generatedAt: result.generated_at,
+        expiresAt: result.expires_at,
+        usedAt: result.used_at,
+        isValid: result.is_valid,
+        createdAt: result.created_at,
+      };
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: customerId.slice(-4),
+        },
+        "Failed to create OTP"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Validate OTP for bean distribution
+   */
+  async validateOTP(
+    customerId: string,
+    otp: string
+  ): Promise<BeanDistributionOTPRecord | null> {
+    const db = databaseManager.getKysely();
+
+    logger.info(
+      { customerId: customerId.slice(-4) },
+      "Validating bean distribution OTP"
+    );
+
+    try {
+      const result = await db
+        .selectFrom("bean_distribution_otps")
+        .selectAll()
+        .where("customer_id", "=", customerId)
+        .where("otp", "=", otp)
+        .where("is_valid", "=", true)
+        .where("used_at", "is", null)
+        .executeTakeFirst();
+
+      if (!result) {
+        logger.warn(
+          { customerId: customerId.slice(-4) },
+          "OTP not found or already used"
+        );
+        return null;
+      }
+
+      // Check if expired
+      const now = new Date();
+      if (now > result.expires_at) {
+        logger.warn({ customerId: customerId.slice(-4) }, "OTP has expired");
+        // Mark as invalid
+        await db
+          .updateTable("bean_distribution_otps")
+          .set({ is_valid: false })
+          .where("id", "=", result.id!)
+          .execute();
+        return null;
+      }
+
+      return {
+        id: result.id!,
+        customerId: result.customer_id,
+        lgCustomerId: result.lg_customer_id,
+        intentId: result.intent_id,
+        otp: result.otp,
+        generatedAt: result.generated_at,
+        expiresAt: result.expires_at,
+        usedAt: result.used_at,
+        isValid: result.is_valid,
+        createdAt: result.created_at,
+      };
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: customerId.slice(-4),
+        },
+        "Failed to validate OTP"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Mark OTP as used
+   */
+  async markOTPAsUsed(otpId: number): Promise<void> {
+    const db = databaseManager.getKysely();
+
+    logger.info({ otpId }, "Marking OTP as used");
+
+    try {
+      await db
+        .updateTable("bean_distribution_otps")
+        .set({
+          used_at: new Date(),
+          is_valid: false,
+        })
+        .where("id", "=", otpId)
+        .execute();
+
+      logger.info({ otpId }, "OTP marked as used");
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          otpId,
+        },
+        "Failed to mark OTP as used"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Create delivery confirmation record
+   */
+  async createDeliveryConfirmation(
+    customerId: string,
+    lgCustomerId: string,
+    otpId: number,
+    deadlineDays: number
+  ): Promise<BeanDeliveryConfirmationRecord> {
+    const db = databaseManager.getKysely();
+
+    const now = new Date();
+    const deadline = new Date(
+      now.getTime() + deadlineDays * 24 * 60 * 60 * 1000
+    );
+
+    logger.info(
+      {
+        customerId: customerId.slice(-4),
+        lgCustomerId: lgCustomerId.slice(-4),
+        deadlineDays,
+      },
+      "Creating delivery confirmation record"
+    );
+
+    try {
+      const result = await db
+        .insertInto("bean_delivery_confirmations")
+        .values({
+          customer_id: customerId,
+          lg_customer_id: lgCustomerId,
+          otp_id: otpId,
+          lg_confirmed_at: null,
+          customer_confirmed_at: null,
+          customer_confirmed_receipt: null,
+          token_transferred_at: null,
+          confirmation_deadline: deadline,
+          created_at: now,
+          updated_at: now,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      return {
+        id: result.id!,
+        customerId: result.customer_id,
+        lgCustomerId: result.lg_customer_id,
+        otpId: result.otp_id,
+        lgConfirmedAt: result.lg_confirmed_at,
+        customerConfirmedAt: result.customer_confirmed_at,
+        customerConfirmedReceipt: result.customer_confirmed_receipt,
+        tokenTransferredAt: result.token_transferred_at,
+        confirmationDeadline: result.confirmation_deadline,
+        createdAt: result.created_at,
+        updatedAt: result.updated_at,
+      };
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: customerId.slice(-4),
+        },
+        "Failed to create delivery confirmation"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Update delivery confirmation
+   */
+  async updateDeliveryConfirmation(
+    confirmationId: number,
+    updates: {
+      lgConfirmedAt?: Date;
+      customerConfirmedAt?: Date;
+      customerConfirmedReceipt?: boolean;
+      tokenTransferredAt?: Date;
+    }
+  ): Promise<void> {
+    const db = databaseManager.getKysely();
+
+    logger.info({ confirmationId, updates }, "Updating delivery confirmation");
+
+    try {
+      const updateData: any = {
+        updated_at: new Date(),
+      };
+
+      if (updates.lgConfirmedAt !== undefined) {
+        updateData.lg_confirmed_at = updates.lgConfirmedAt;
+      }
+      if (updates.customerConfirmedAt !== undefined) {
+        updateData.customer_confirmed_at = updates.customerConfirmedAt;
+      }
+      if (updates.customerConfirmedReceipt !== undefined) {
+        updateData.customer_confirmed_receipt =
+          updates.customerConfirmedReceipt;
+      }
+      if (updates.tokenTransferredAt !== undefined) {
+        updateData.token_transferred_at = updates.tokenTransferredAt;
+      }
+
+      await db
+        .updateTable("bean_delivery_confirmations")
+        .set(updateData)
+        .where("id", "=", confirmationId)
+        .execute();
+
+      logger.info({ confirmationId }, "Delivery confirmation updated");
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          confirmationId,
+        },
+        "Failed to update delivery confirmation"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Get delivery confirmation by customer and LG
+   */
+  async getDeliveryConfirmation(
+    customerId: string,
+    lgCustomerId: string
+  ): Promise<BeanDeliveryConfirmationRecord | null> {
+    const db = databaseManager.getKysely();
+
+    logger.info(
+      {
+        customerId: customerId.slice(-4),
+        lgCustomerId: lgCustomerId.slice(-4),
+      },
+      "Getting delivery confirmation"
+    );
+
+    try {
+      const result = await db
+        .selectFrom("bean_delivery_confirmations")
+        .selectAll()
+        .where("customer_id", "=", customerId)
+        .where("lg_customer_id", "=", lgCustomerId)
+        .orderBy("created_at", "desc")
+        .executeTakeFirst();
+
+      if (!result) {
+        return null;
+      }
+
+      return {
+        id: result.id!,
+        customerId: result.customer_id,
+        lgCustomerId: result.lg_customer_id,
+        otpId: result.otp_id,
+        lgConfirmedAt: result.lg_confirmed_at,
+        customerConfirmedAt: result.customer_confirmed_at,
+        customerConfirmedReceipt: result.customer_confirmed_receipt,
+        tokenTransferredAt: result.token_transferred_at,
+        confirmationDeadline: result.confirmation_deadline,
+        createdAt: result.created_at,
+        updatedAt: result.updated_at,
+      };
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: customerId.slice(-4),
+        },
+        "Failed to get delivery confirmation"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Create household claim
+   */
+  async createHouseholdClaim(
+    customerId: string,
+    is1000DayHousehold: boolean
+  ): Promise<HouseholdClaimRecord> {
+    const db = databaseManager.getKysely();
+
+    logger.info(
+      {
+        customerId: customerId.slice(-4),
+        is1000DayHousehold,
+      },
+      "Creating household claim"
+    );
+
+    try {
+      const result = await db
+        .insertInto("household_claims")
+        .values({
+          customer_id: customerId,
+          is_1000_day_household: is1000DayHousehold,
+          claim_submitted_at: new Date(),
+          claim_processed_at: null,
+          claim_status: "PENDING",
+          bean_voucher_allocated: false,
+          claims_bot_response: null,
+          created_at: new Date(),
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      return {
+        id: result.id!,
+        customerId: result.customer_id,
+        is1000DayHousehold: result.is_1000_day_household,
+        claimSubmittedAt: result.claim_submitted_at,
+        claimProcessedAt: result.claim_processed_at,
+        claimStatus: result.claim_status,
+        beanVoucherAllocated: result.bean_voucher_allocated,
+        claimsBotResponse: result.claims_bot_response,
+        createdAt: result.created_at,
+      };
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: customerId.slice(-4),
+        },
+        "Failed to create household claim"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Update household claim
+   */
+  async updateHouseholdClaim(
+    claimId: number,
+    updates: {
+      claimProcessedAt?: Date;
+      claimStatus?: string;
+      beanVoucherAllocated?: boolean;
+      claimsBotResponse?: any;
+    }
+  ): Promise<void> {
+    const db = databaseManager.getKysely();
+
+    logger.info({ claimId, updates }, "Updating household claim");
+
+    try {
+      const updateData: any = {};
+
+      if (updates.claimProcessedAt !== undefined) {
+        updateData.claim_processed_at = updates.claimProcessedAt;
+      }
+      if (updates.claimStatus !== undefined) {
+        updateData.claim_status = updates.claimStatus;
+      }
+      if (updates.beanVoucherAllocated !== undefined) {
+        updateData.bean_voucher_allocated = updates.beanVoucherAllocated;
+      }
+      if (updates.claimsBotResponse !== undefined) {
+        updateData.claims_bot_response = JSON.stringify(
+          updates.claimsBotResponse
+        );
+      }
+
+      await db
+        .updateTable("household_claims")
+        .set(updateData)
+        .where("id", "=", claimId)
+        .execute();
+
+      logger.info({ claimId }, "Household claim updated");
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          claimId,
+        },
+        "Failed to update household claim"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Create audit log entry
+   */
+  async createAuditLog(params: {
+    eventType: string;
+    customerId?: string;
+    lgCustomerId?: string;
+    details: any;
+  }): Promise<AuditLogRecord> {
+    const db = databaseManager.getKysely();
+
+    logger.info(
+      {
+        eventType: params.eventType,
+        customerId: params.customerId?.slice(-4),
+        lgCustomerId: params.lgCustomerId?.slice(-4),
+      },
+      "Creating audit log entry"
+    );
+
+    try {
+      const result = await db
+        .insertInto("audit_log")
+        .values({
+          event_type: params.eventType,
+          customer_id: params.customerId || null,
+          lg_customer_id: params.lgCustomerId || null,
+          details: JSON.stringify(params.details),
+          created_at: new Date(),
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      return {
+        id: result.id!,
+        eventType: result.event_type,
+        customerId: result.customer_id,
+        lgCustomerId: result.lg_customer_id,
+        details: result.details,
+        createdAt: result.created_at,
+      };
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          eventType: params.eventType,
+        },
+        "Failed to create audit log entry"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Check if confirmation is within deadline
+   */
+  async checkConfirmationDeadline(confirmationId: number): Promise<boolean> {
+    const db = databaseManager.getKysely();
+
+    logger.info({ confirmationId }, "Checking confirmation deadline");
+
+    try {
+      const result = await db
+        .selectFrom("bean_delivery_confirmations")
+        .select(["confirmation_deadline"])
+        .where("id", "=", confirmationId)
+        .executeTakeFirst();
+
+      if (!result) {
+        logger.warn({ confirmationId }, "Confirmation not found");
+        return false;
+      }
+
+      const now = new Date();
+      const isWithinDeadline = now <= result.confirmation_deadline;
+
+      logger.info(
+        { confirmationId, isWithinDeadline },
+        "Confirmation deadline checked"
+      );
+
+      return isWithinDeadline;
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          confirmationId,
+        },
+        "Failed to check confirmation deadline"
       );
       throw error;
     }

@@ -9,19 +9,19 @@ import { NavigationPatterns } from "../utils/navigation-patterns.js";
  * Simple router machine that handles the account menu choice:
  * - Option 1: Login (existing users)
  * - Option 2: Create Account (new users)
- * - Option 3: Activate Account (customers with activation SMS)
+ *
+ * Customer activation is handled exclusively through Agent Tools (Lead Generator flow).
  *
  * This machine acts as a dispatcher to the appropriate child machines
  * based on user selection.
  *
  * Entry Points: START
- * Exit Points: LOGIN_SELECTED, CREATE_SELECTED, ACTIVATE_SELECTED, CANCELLED
+ * Exit Points: LOGIN_SELECTED, CREATE_SELECTED, CANCELLED
  */
 
 export enum AccountMenuOutput {
   LOGIN_SELECTED = "LOGIN_SELECTED",
   CREATE_SELECTED = "CREATE_SELECTED",
-  ACTIVATE_SELECTED = "ACTIVATE_SELECTED",
   UNDEFINED = "UNDEFINED",
 }
 
@@ -38,7 +38,7 @@ export type AccountMenuEvent =
   | { type: "INPUT"; input: string }
   | { type: "ERROR"; error: string };
 
-const showMenuMessage = `Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n3. Activate my account\n0. Back`;
+const showMenuMessage = `Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back`;
 
 export const accountMenuMachine = setup({
   types: {
@@ -84,8 +84,6 @@ export const accountMenuMachine = setup({
       navigationGuards.isInput("1")(null as any, event as any),
     isInput2: ({ event }) =>
       navigationGuards.isInput("2")(null as any, event as any),
-    isInput3: ({ event }) =>
-      navigationGuards.isInput("3")(null as any, event as any),
 
     // Navigation guards
     isBack: ({ event }) =>
@@ -125,15 +123,6 @@ export const accountMenuMachine = setup({
               guard: "isInput2",
               actions: [
                 assign({ nextParentState: AccountMenuOutput.CREATE_SELECTED }),
-              ],
-            },
-            {
-              target: "routeToMain",
-              guard: "isInput3",
-              actions: [
-                assign({
-                  nextParentState: AccountMenuOutput.ACTIVATE_SELECTED,
-                }),
               ],
             },
             {

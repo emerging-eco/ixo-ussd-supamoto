@@ -21,6 +21,8 @@ import { encryptPin } from "../../../utils/encryption.js";
 import { navigationGuards } from "../guards/navigation.guards.js";
 import { withNavigation } from "../utils/navigation-mixin.js";
 import { NavigationPatterns } from "../utils/navigation-patterns.js";
+import { sendSMSWithRetry } from "../../../services/sms.js";
+import { accountLockedSMS } from "../../../templates/sms/index.js";
 
 const logger = createModuleLogger("loginMachine");
 
@@ -67,9 +69,16 @@ export const CUSTOMER_NOT_FOUND_MSG =
   "Customer ID not found. Please check and try again or contact support.";
 export const PIN_FIELD_EMPTY_MSG =
   "Your account needs PIN setup. Please contact support.";
-export const INCORRECT_PIN_MSG = "Incorrect PIN. Please try again.";
+export const INCORRECT_PIN_MSG = (attempt: number) => {
+  if (attempt === 1) {
+    return "Incorrect PIN. Please try again. (Attempt 1 of 3)";
+  } else if (attempt === 2) {
+    return "Incorrect PIN. Please try again. (Attempt 2 of 3)\nWARNING: Your account will be locked after one more failed attempt.";
+  }
+  return "Incorrect PIN. Please try again.";
+};
 export const MAX_ATTEMPTS_MSG =
-  "Maximum PIN attempts exceeded. Your PIN has been reset for security reasons. Please contact support.";
+  "Your USSD account has been locked due to 3 failed PIN attempts. Contact your LG or the SupaMoto call centre to reset your PIN.";
 export const VERIFYING_MSG = "Verifying Customer ID...\n1. Continue";
 export const VERIFYING_PIN_MSG = "Verifying PIN...\n1. Continue";
 export const LOGIN_SUCCESS_MSG = (
@@ -152,6 +161,7 @@ const pinVerificationService = fromPromise(
       customer: CustomerRecord;
       attempts: number;
       customerId: string;
+      phoneNumber: string;
     };
   }) => {
     logger.info(
@@ -186,13 +196,51 @@ const pinVerificationService = fromPromise(
     }
 
     if (!isValid) {
-      // If this is the 3rd attempt, clear the PIN
+      // If this is the 3rd attempt, clear the PIN, send SMS, and create audit log
       if (input.attempts >= 3) {
         logger.warn(
           { customerId: input.customerId.slice(-4) },
           "Max PIN attempts exceeded, clearing PIN"
         );
+
+        // Clear the PIN (set to NULL)
         await dataService.clearCustomerPin(input.customerId);
+
+        // Create audit log entry
+        await dataService.createAuditLog({
+          eventType: "ACCOUNT_LOCKED",
+          customerId: input.customerId,
+          details: {
+            reason: "FAILED_PIN_ATTEMPTS",
+            attempts: 3,
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        // Send SMS notification with retry logic
+        try {
+          await sendSMSWithRetry(
+            {
+              to: input.phoneNumber,
+              message: accountLockedSMS(input.customerId),
+            },
+            {
+              eventType: "ACCOUNT_LOCKED",
+              customerId: input.customerId,
+            }
+          );
+        } catch (smsError) {
+          logger.error(
+            {
+              error:
+                smsError instanceof Error ? smsError.message : String(smsError),
+              customerId: input.customerId.slice(-4),
+            },
+            "Failed to send account locked SMS"
+          );
+          // Don't throw - we still want to lock the account even if SMS fails
+        }
+
         throw new Error("MAX_ATTEMPTS_EXCEEDED");
       }
       throw new Error("INCORRECT_PIN");
@@ -388,9 +436,9 @@ export const loginMachine = setup({
               })),
             },
             {
-              actions: assign({
-                message: `${INCORRECT_PIN_MSG}\n\n${PIN_PROMPT}`,
-              }),
+              actions: assign(({ context }) => ({
+                message: `${INCORRECT_PIN_MSG(context.pinAttempts)}\n\n${PIN_PROMPT}`,
+              })),
             },
           ],
           NavigationPatterns.loginChild
@@ -422,6 +470,7 @@ export const loginMachine = setup({
           customer: context.customer!,
           attempts: context.pinAttempts + 1,
           customerId: context.customerId!,
+          phoneNumber: context.phoneNumber,
         }),
         onDone: {
           // No target state is set in this step. The next state is determined by the guards in the on: block
@@ -452,7 +501,7 @@ export const loginMachine = setup({
                 const newAttempts = context.pinAttempts + 1;
                 return {
                   pinAttempts: newAttempts,
-                  message: `${INCORRECT_PIN_MSG} (${newAttempts}/3)\n\n${PIN_PROMPT}`,
+                  message: `${INCORRECT_PIN_MSG(newAttempts)}\n\n${PIN_PROMPT}`,
                 };
               }),
             ],

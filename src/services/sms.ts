@@ -96,25 +96,66 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
       to: [to],
       message,
       from: config.SMS.SENDER_ID,
+      enqueue: true, // Queue for delivery (recommended for reliability)
     });
 
     logger.info(
       { to: to.slice(-4), result },
-      "SMS sent successfully via Africa's Talking"
+      "SMS API response received from Africa's Talking"
     );
 
     // Africa's Talking returns an array of recipients
     const recipient = result.SMSMessageData?.Recipients?.[0];
 
-    if (recipient?.status === "Success") {
+    if (!recipient) {
+      logger.error(
+        { to: to.slice(-4), result },
+        "No recipient data in SMS response"
+      );
+      return {
+        success: false,
+        error: "No recipient data in response",
+      };
+    }
+
+    // Check status code (101 = Success, 102 = Queued)
+    // Both are considered successful delivery
+    const statusCode = recipient.statusCode;
+    const isSuccess =
+      statusCode === 101 || // Success
+      statusCode === 102 || // Queued
+      recipient.status === "Success" || // Fallback to string status
+      recipient.status === "Queued";
+
+    if (isSuccess) {
+      logger.info(
+        {
+          to: to.slice(-4),
+          messageId: recipient.messageId,
+          statusCode,
+          cost: recipient.cost,
+        },
+        "SMS sent successfully"
+      );
       return {
         success: true,
         messageId: recipient.messageId,
       };
     } else {
+      // Handle error status codes
+      const errorMessage = getErrorMessage(statusCode, recipient.status);
+      logger.warn(
+        {
+          to: to.slice(-4),
+          statusCode,
+          status: recipient.status,
+          error: errorMessage,
+        },
+        "SMS send failed with error status"
+      );
       return {
         success: false,
-        error: recipient?.status || "Unknown error",
+        error: errorMessage,
       };
     }
   } catch (error) {
@@ -130,10 +171,34 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
 }
 
 /**
- * Generate a random 6-digit PIN or OTP
+ * Get human-readable error message for Africa's Talking status codes
+ */
+function getErrorMessage(statusCode: number, status: string): string {
+  const errorMessages: Record<number, string> = {
+    401: "Risk hold - Message flagged as spam",
+    402: "Invalid sender ID",
+    403: "Invalid phone number",
+    404: "Unsupported number type",
+    405: "Insufficient balance",
+    406: "User in blacklist",
+    407: "Could not route message",
+    500: "Internal server error",
+  };
+
+  return (
+    errorMessages[statusCode] ||
+    status ||
+    `Unknown error (status code: ${statusCode})`
+  );
+}
+
+/**
+ * Generate a random 5-digit PIN or OTP
+ * Range: 00000-99999 (with leading zeros preserved)
  */
 export function generatePin(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  const pin = Math.floor(Math.random() * 100000);
+  return pin.toString().padStart(5, "0");
 }
 
 /**
@@ -193,4 +258,98 @@ export async function sendNotificationSMS(
     to: phoneNumber,
     message,
   });
+}
+
+/**
+ * Send SMS with retry logic
+ * Attempts: Immediate, 10s delay, 30s delay (configurable)
+ * Creates audit log entries for failed attempts
+ */
+export async function sendSMSWithRetry(
+  params: SendSMSParams,
+  auditContext?: {
+    eventType: string;
+    customerId?: string;
+    lgCustomerId?: string;
+  }
+): Promise<SendSMSResult> {
+  const maxAttempts = config.USSD.SMS_RETRY_ATTEMPTS;
+  const delays = config.USSD.SMS_RETRY_DELAYS_SECONDS;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // Wait before retry (except first attempt)
+    if (attempt > 0 && delays[attempt]) {
+      await new Promise(resolve => setTimeout(resolve, delays[attempt] * 1000));
+    }
+
+    const result = await sendSMS(params);
+
+    if (result.success) {
+      if (attempt > 0) {
+        logger.info(
+          { attempt: attempt + 1, to: params.to.slice(-4) },
+          "SMS sent successfully after retry"
+        );
+      }
+      return result;
+    }
+
+    // Log failed attempt
+    logger.warn(
+      {
+        attempt: attempt + 1,
+        maxAttempts,
+        to: params.to.slice(-4),
+        error: result.error,
+      },
+      "SMS send attempt failed"
+    );
+
+    // Create audit record for failed attempt
+    if (auditContext) {
+      await createAuditLog({
+        eventType: "SMS_FAILED",
+        customerId: auditContext.customerId,
+        lgCustomerId: auditContext.lgCustomerId,
+        details: {
+          originalEventType: auditContext.eventType,
+          attempt: attempt + 1,
+          maxAttempts,
+          error: result.error,
+          phoneNumber: params.to.slice(-4),
+          messageLength: params.message.length,
+        },
+      });
+    }
+  }
+
+  // All attempts failed
+  logger.error(
+    { to: params.to.slice(-4), attempts: maxAttempts },
+    "SMS send failed after all retry attempts"
+  );
+
+  return {
+    success: false,
+    error: `Failed after ${maxAttempts} attempts`,
+  };
+}
+
+/**
+ * Create audit log entry
+ * Helper function to log events to audit_log table
+ */
+async function createAuditLog(params: {
+  eventType: string;
+  customerId?: string;
+  lgCustomerId?: string;
+  details: any;
+}): Promise<void> {
+  try {
+    // Import dataService dynamically to avoid circular dependency
+    const { dataService } = await import("./database-storage.js");
+    await dataService.createAuditLog(params);
+  } catch (error) {
+    logger.error({ error, params }, "Failed to create audit log entry");
+  }
 }
