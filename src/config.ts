@@ -199,7 +199,8 @@ export const config = {
     ENABLED: process.env.SMS_ENABLED === "true",
     API_KEY: process.env.AFRICASTALKING_API_KEY,
     USERNAME: process.env.AFRICASTALKING_USERNAME || "sandbox",
-    SENDER_ID: process.env.AFRICASTALKING_SENDER_ID,
+    // Use provided SENDER_ID, fallback to "SupaMoto" if not set or empty
+    SENDER_ID: process.env.AFRICASTALKING_SENDER_ID?.trim() || "SupaMoto",
   },
   SERVER: {
     DISABLE_REQUEST_LOGGING:

@@ -54,6 +54,8 @@ function initializeSMSClient() {
       {
         username,
         clientInitialized: !!smsClient,
+        senderId: config.SMS.SENDER_ID,
+        senderIdConfigured: !!config.SMS.SENDER_ID?.trim(),
       },
       "✅ Africa's Talking SMS client initialized successfully"
     );
@@ -139,10 +141,27 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
 
   // Send actual SMS
   try {
+    // Validate sender ID before sending
+    if (!config.SMS.SENDER_ID || config.SMS.SENDER_ID.trim() === "") {
+      logger.error(
+        {
+          to: to.slice(-4),
+          senderId: config.SMS.SENDER_ID,
+          reason: "SENDER_ID is empty or not configured",
+        },
+        "❌ SENDER_ID validation failed - cannot send SMS"
+      );
+      return {
+        success: false,
+        error:
+          "AFRICASTALKING_SENDER_ID is not configured or is empty. Please set AFRICASTALKING_SENDER_ID environment variable.",
+      };
+    }
+
     logger.info(
       {
         to: to.slice(-4),
-        senderId: config.SMS.SENDER_ID || "NOT_SET",
+        senderId: config.SMS.SENDER_ID,
         messageLength: message.length,
         enqueue: true,
       },
