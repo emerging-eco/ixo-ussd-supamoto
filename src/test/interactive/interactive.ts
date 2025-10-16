@@ -15,9 +15,9 @@ import readline from "readline";
 
 // --- Setup ---
 
-// const SERVER_URL = "http://127.0.0.1:3005/api/ussd"; //localhost
-const SERVER_URL =
-  "https://ixo-ussd-supamoto-development.up.railway.app/api/ussd"; //development
+const SERVER_URL = "http://127.0.0.1:3005/api/ussd"; //localhost
+// const SERVER_URL =
+// "https://ixo-ussd-supamoto-development.up.railway.app/api/ussd"; //development
 const sessionId = `interactive-test-${Date.now()}`;
 const phoneNumber = "+260971230001"; // Zambian number
 const serviceCode = "*2233#"; //*384*46361#	// Zambia

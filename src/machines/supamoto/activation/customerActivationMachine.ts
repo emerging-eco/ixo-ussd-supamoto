@@ -124,19 +124,92 @@ const isValidPin = ({ event }: { event: CustomerActivationEvent }) => {
 const generateAndSendPinService = fromPromise(
   async ({ input }: { input: { customerId: string; phoneNumber: string } }) => {
     logger.info(
-      { customerId: input.customerId.slice(-4) },
-      "Generating and sending activation PIN"
+      {
+        customerId: input.customerId.slice(-4),
+        phoneNumber: input.phoneNumber.slice(-4),
+      },
+      "🔐 Generating and sending activation PIN"
     );
 
-    const tempPin = generatePin();
+    try {
+      const tempPin = generatePin();
+      logger.info(
+        {
+          customerId: input.customerId.slice(-4),
+          tempPin: "***",
+        },
+        "📝 Generated temporary PIN"
+      );
 
-    // Store temp PIN in database
-    await dataService.setTempPin(input.customerId, input.phoneNumber, tempPin);
+      // Store temp PIN in database
+      logger.info(
+        {
+          customerId: input.customerId.slice(-4),
+          phoneNumber: input.phoneNumber.slice(-4),
+        },
+        "💾 Storing temporary PIN in database"
+      );
+      await dataService.setTempPin(
+        input.customerId,
+        input.phoneNumber,
+        tempPin
+      );
+      logger.info(
+        { customerId: input.customerId.slice(-4) },
+        "✅ Temporary PIN stored successfully"
+      );
 
-    // Send SMS
-    await sendActivationSMS(input.phoneNumber, input.customerId, tempPin);
+      // Send SMS
+      logger.info(
+        {
+          customerId: input.customerId.slice(-4),
+          phoneNumber: input.phoneNumber.slice(-4),
+        },
+        "📱 Sending activation SMS"
+      );
+      const smsResult = await sendActivationSMS(
+        input.phoneNumber,
+        input.customerId,
+        tempPin
+      );
 
-    return { tempPin };
+      // Check if SMS was actually sent successfully
+      if (!smsResult.success) {
+        logger.error(
+          {
+            customerId: input.customerId.slice(-4),
+            phoneNumber: input.phoneNumber.slice(-4),
+            error: smsResult.error,
+          },
+          "❌ SMS delivery failed - throwing error to trigger onError handler"
+        );
+        throw new Error(
+          `SMS delivery failed: ${smsResult.error || "Unknown error"}`
+        );
+      }
+
+      logger.info(
+        {
+          customerId: input.customerId.slice(-4),
+          phoneNumber: input.phoneNumber.slice(-4),
+          messageId: smsResult.messageId,
+        },
+        "✅ Activation SMS sent successfully"
+      );
+
+      return { tempPin };
+    } catch (error) {
+      logger.error(
+        {
+          customerId: input.customerId.slice(-4),
+          phoneNumber: input.phoneNumber.slice(-4),
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+        "❌ Error in generateAndSendPinService"
+      );
+      throw error;
+    }
   }
 );
 
@@ -231,19 +304,53 @@ const sendConfirmationService = fromPromise(
   async ({ input }: { input: { phoneNumber: string } }) => {
     logger.info(
       { phoneNumber: input.phoneNumber.slice(-4) },
-      "Sending eligibility confirmation SMS"
+      "🎉 Sending eligibility confirmation SMS"
     );
 
-    await sendEligibilityConfirmationSMS(input.phoneNumber);
+    try {
+      const smsResult = await sendEligibilityConfirmationSMS(input.phoneNumber);
 
-    // TODO: Implement token transfer
-    // This requires integration with subscriptions-service-supamoto
-    logger.warn(
-      { phoneNumber: input.phoneNumber.slice(-4) },
-      "STUB: Would transfer BEAN token via subscriptions-service-supamoto"
-    );
+      // Check if SMS was actually sent successfully
+      if (!smsResult.success) {
+        logger.error(
+          {
+            phoneNumber: input.phoneNumber.slice(-4),
+            error: smsResult.error,
+          },
+          "❌ Eligibility confirmation SMS delivery failed - throwing error to trigger onError handler"
+        );
+        throw new Error(
+          `SMS delivery failed: ${smsResult.error || "Unknown error"}`
+        );
+      }
 
-    return { sent: true };
+      logger.info(
+        {
+          phoneNumber: input.phoneNumber.slice(-4),
+          messageId: smsResult.messageId,
+        },
+        "✅ Eligibility confirmation SMS sent successfully"
+      );
+
+      // TODO: Implement token transfer
+      // This requires integration with subscriptions-service-supamoto
+      logger.warn(
+        { phoneNumber: input.phoneNumber.slice(-4) },
+        "⏳ STUB: Would transfer BEAN token via subscriptions-service-supamoto"
+      );
+
+      return { sent: true };
+    } catch (error) {
+      logger.error(
+        {
+          phoneNumber: input.phoneNumber.slice(-4),
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+        "❌ Error in sendConfirmationService"
+      );
+      throw error;
+    }
   }
 );
 
