@@ -91,6 +91,7 @@ export async function createServer(): Promise<FastifyInstance> {
         : undefined,
     },
     disableRequestLogging: false,
+    requestTimeout: 30000, // 30 seconds - prevents hanging requests from destroying streams
   });
 
   // Initialize database in production/development environments
@@ -154,6 +155,47 @@ export async function createServer(): Promise<FastifyInstance> {
   // Register application routes
   await fastify.register(fp(ussdRoutes));
 
+  // Global error handler to catch and handle errors gracefully
+  fastify.setErrorHandler(async (error, request, reply) => {
+    logger.error(
+      {
+        error: error.message,
+        stack: error.stack,
+        url: request.url,
+        method: request.method,
+        statusCode: error.statusCode || 500,
+      },
+      "Request error"
+    );
+
+    // Check if response has already been sent
+    if (!reply.sent) {
+      // For USSD endpoints, return USSD-formatted error response
+      if (request.url.startsWith("/api/ussd")) {
+        return reply
+          .status(500)
+          .type("text/plain")
+          .send("END Service error. Please try again later.");
+      }
+
+      // For other endpoints, return JSON error response
+      return reply.status(error.statusCode || 500).send({
+        error: "Internal Server Error",
+        message: error.message,
+        statusCode: error.statusCode || 500,
+      });
+    }
+
+    // If response was already sent, just log it
+    logger.warn(
+      {
+        url: request.url,
+        method: request.method,
+      },
+      "Error occurred after response was already sent"
+    );
+  });
+
   // Root endpoint for PaaS health checks
   fastify.get("/", async () => {
     return {
@@ -184,6 +226,29 @@ export async function createServer(): Promise<FastifyInstance> {
     }
 
     return status;
+  });
+
+  // Request/Response lifecycle logging hooks for debugging stream issues
+  fastify.addHook("onRequest", async request => {
+    logger.debug(
+      {
+        url: request.url,
+        method: request.method,
+        ip: request.ip,
+      },
+      "Request started"
+    );
+  });
+
+  fastify.addHook("onResponse", async (request, reply) => {
+    logger.debug(
+      {
+        url: request.url,
+        method: request.method,
+        statusCode: reply.statusCode,
+      },
+      "Response sent"
+    );
   });
 
   // Graceful shutdown handling

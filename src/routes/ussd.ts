@@ -46,13 +46,20 @@ export async function ussdRoutes(fastify: FastifyInstance) {
       // console.log(`   Is End: ${response.isEnd}`);
       console.log(`   Formatted: ${response.formattedResponse}`);
 
-      // Return the formatted response (CON/END format)
-      return reply.type("text/plain").send(response.formattedResponse);
+      // Send the formatted response (CON/END format)
+      // Note: Do not return immediately to allow proper response handling
+      reply.type("text/plain").send(response.formattedResponse);
     } catch (error) {
       console.error("❌ USSD Error:", error);
-      return reply
-        .type("text/plain")
-        .send("END Service error. Please try again later.");
+
+      // Check if response has already been sent before attempting to send error response
+      if (!reply.sent) {
+        reply
+          .type("text/plain")
+          .send("END Service error. Please try again later.");
+      } else {
+        console.error("❌ Response already sent, cannot send error response");
+      }
     }
   });
 

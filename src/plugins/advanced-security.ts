@@ -447,17 +447,30 @@ async function advancedSecurityPlugin(fastify: FastifyInstance) {
 
   // Add security monitoring headers
   fastify.addHook("onSend", async (request, reply, payload) => {
-    // Add security monitoring headers
-    reply.header("X-Security-Level", "enhanced");
-    reply.header("X-Threat-Protection", "active");
+    try {
+      // Add security monitoring headers
+      reply.header("X-Security-Level", "enhanced");
+      reply.header("X-Threat-Protection", "active");
 
-    // Add request fingerprint for monitoring
-    const fingerprint = Buffer.from(
-      `${request.ip}-${request.headers["user-agent"]}`
-    ).toString("base64");
-    reply.header("X-Request-Fingerprint", fingerprint);
+      // Add request fingerprint for monitoring
+      const fingerprint = Buffer.from(
+        `${request.ip}-${request.headers["user-agent"]}`
+      ).toString("base64");
+      reply.header("X-Request-Fingerprint", fingerprint);
 
-    return payload;
+      return payload;
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          url: request.url,
+          method: request.method,
+        },
+        "Error in advanced security onSend hook"
+      );
+      // Return payload unchanged if error occurs to prevent stream destruction
+      return payload;
+    }
   });
 
   // Security monitoring endpoint

@@ -103,78 +103,91 @@ async function securityPlugin(fastify: FastifyInstance) {
 
   // Custom security headers for USSD API
   fastify.addHook("onSend", async (request, reply, payload) => {
-    // Add custom headers for USSD API
-    reply.header("X-API-Version", "1.0");
-    reply.header("X-Service-Type", "USSD");
+    try {
+      // Add custom headers for USSD API
+      reply.header("X-API-Version", "1.0");
+      reply.header("X-Service-Type", "USSD");
 
-    // Enhanced security headers
-    reply.header("X-Download-Options", "noopen");
-    reply.header("X-DNS-Prefetch-Control", "off");
-    reply.header("X-Frame-Options", "DENY");
-    reply.header("X-Permitted-Cross-Domain-Policies", "none");
-    reply.header("Cross-Origin-Embedder-Policy", "require-corp");
-    reply.header("Cross-Origin-Opener-Policy", "same-origin");
-    reply.header("Cross-Origin-Resource-Policy", "same-origin");
+      // Enhanced security headers
+      reply.header("X-Download-Options", "noopen");
+      reply.header("X-DNS-Prefetch-Control", "off");
+      reply.header("X-Frame-Options", "DENY");
+      reply.header("X-Permitted-Cross-Domain-Policies", "none");
+      reply.header("Cross-Origin-Embedder-Policy", "require-corp");
+      reply.header("Cross-Origin-Opener-Policy", "same-origin");
+      reply.header("Cross-Origin-Resource-Policy", "same-origin");
 
-    // Permissions Policy (formerly Feature-Policy)
-    reply.header(
-      "Permissions-Policy",
-      [
-        "camera=()",
-        "microphone=()",
-        "geolocation=()",
-        "payment=()",
-        "usb=()",
-        "magnetometer=()",
-        "gyroscope=()",
-        "accelerometer=()",
-        "ambient-light-sensor=()",
-      ].join(", ")
-    );
-
-    // Cache control for API responses
-    if (request.url.startsWith("/api/")) {
+      // Permissions Policy (formerly Feature-Policy)
       reply.header(
-        "Cache-Control",
-        "no-store, no-cache, must-revalidate, private"
-      );
-      reply.header("Pragma", "no-cache");
-      reply.header("Expires", "0");
-      reply.header("Clear-Site-Data", '"cache", "storage"');
-    }
-
-    // Security headers for health checks and status endpoints
-    if (request.url.includes("/health") || request.url.includes("/metrics")) {
-      reply.header("X-Robots-Tag", "noindex, nofollow, nosnippet, noarchive");
-      reply.header("Cache-Control", "no-store, no-cache");
-    }
-
-    // Add Content Security Policy Report-Only for monitoring
-    if (!securityConfig.isDevelopment) {
-      reply.header(
-        "Content-Security-Policy-Report-Only",
+        "Permissions-Policy",
         [
-          "default-src 'self'",
-          "script-src 'self'",
-          "style-src 'self' 'unsafe-inline'",
-          "img-src 'self' data:",
-          "connect-src 'self'",
-          "font-src 'self'",
-          "object-src 'none'",
-          "media-src 'none'",
-          "frame-src 'none'",
-          "worker-src 'none'",
-          "manifest-src 'self'",
-          "base-uri 'self'",
-          "form-action 'self'",
-          "upgrade-insecure-requests",
-          "block-all-mixed-content",
-          "report-uri /csp-report",
-        ].join("; ")
+          "camera=()",
+          "microphone=()",
+          "geolocation=()",
+          "payment=()",
+          "usb=()",
+          "magnetometer=()",
+          "gyroscope=()",
+          "accelerometer=()",
+          "ambient-light-sensor=()",
+        ].join(", ")
       );
-    }
 
-    return payload;
+      // Cache control for API responses
+      if (request.url.startsWith("/api/")) {
+        reply.header(
+          "Cache-Control",
+          "no-store, no-cache, must-revalidate, private"
+        );
+        reply.header("Pragma", "no-cache");
+        reply.header("Expires", "0");
+        reply.header("Clear-Site-Data", '"cache", "storage"');
+      }
+
+      // Security headers for health checks and status endpoints
+      if (request.url.includes("/health") || request.url.includes("/metrics")) {
+        reply.header("X-Robots-Tag", "noindex, nofollow, nosnippet, noarchive");
+        reply.header("Cache-Control", "no-store, no-cache");
+      }
+
+      // Add Content Security Policy Report-Only for monitoring
+      if (!securityConfig.isDevelopment) {
+        reply.header(
+          "Content-Security-Policy-Report-Only",
+          [
+            "default-src 'self'",
+            "script-src 'self'",
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data:",
+            "connect-src 'self'",
+            "font-src 'self'",
+            "object-src 'none'",
+            "media-src 'none'",
+            "frame-src 'none'",
+            "worker-src 'none'",
+            "manifest-src 'self'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "upgrade-insecure-requests",
+            "block-all-mixed-content",
+            "report-uri /csp-report",
+          ].join("; ")
+        );
+      }
+
+      return payload;
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          url: request.url,
+          method: request.method,
+        },
+        "Error in security onSend hook"
+      );
+      // Return payload unchanged if error occurs to prevent stream destruction
+      return payload;
+    }
   });
 
   // Security monitoring hooks
