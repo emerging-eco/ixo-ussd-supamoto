@@ -141,39 +141,44 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
 
   // Send actual SMS
   try {
-    // Validate sender ID before sending
-    if (!config.SMS.SENDER_ID || config.SMS.SENDER_ID.trim() === "") {
-      logger.error(
-        {
-          to: to.slice(-4),
-          senderId: config.SMS.SENDER_ID,
-          reason: "SENDER_ID is empty or not configured",
-        },
-        "❌ SENDER_ID validation failed - cannot send SMS"
-      );
-      return {
-        success: false,
-        error:
-          "AFRICASTALKING_SENDER_ID is not configured or is empty. Please set AFRICASTALKING_SENDER_ID environment variable.",
-      };
-    }
-
     logger.info(
       {
         to: to.slice(-4),
-        senderId: config.SMS.SENDER_ID,
+        senderId: config.SMS.SENDER_ID || "(using account default)",
         messageLength: message.length,
         enqueue: true,
       },
       "📤 Sending SMS via Africa's Talking API"
     );
 
-    const result = await client.send({
+    // Build SMS request parameters
+    const smsParams: any = {
       to: [to],
       message,
-      from: config.SMS.SENDER_ID,
       enqueue: true, // Queue for delivery (recommended for reliability)
-    });
+    };
+
+    // Only include 'from' parameter if sender ID is explicitly set
+    // If empty, Africa's Talking will use the account's default sender ID
+    if (config.SMS.SENDER_ID && config.SMS.SENDER_ID.trim() !== "") {
+      smsParams.from = config.SMS.SENDER_ID;
+      logger.info(
+        {
+          to: to.slice(-4),
+          senderId: config.SMS.SENDER_ID,
+        },
+        "📤 Using custom sender ID"
+      );
+    } else {
+      logger.info(
+        {
+          to: to.slice(-4),
+        },
+        "📤 Using account default sender ID (no custom sender ID configured)"
+      );
+    }
+
+    const result = await client.send(smsParams);
 
     logger.info(
       {

@@ -199,8 +199,10 @@ export const config = {
     ENABLED: process.env.SMS_ENABLED === "true",
     API_KEY: process.env.AFRICASTALKING_API_KEY,
     USERNAME: process.env.AFRICASTALKING_USERNAME || "sandbox",
-    // Use provided SENDER_ID, fallback to "SupaMoto" if not set or empty
-    SENDER_ID: process.env.AFRICASTALKING_SENDER_ID?.trim() || "SupaMoto",
+    // Use provided SENDER_ID, fallback to empty string if not set
+    // Empty string allows Africa's Talking to use the default sender ID for the account
+    // This is more reliable than hardcoding a sender ID that may not be registered
+    SENDER_ID: process.env.AFRICASTALKING_SENDER_ID?.trim() || "",
   },
   SERVER: {
     DISABLE_REQUEST_LOGGING:
