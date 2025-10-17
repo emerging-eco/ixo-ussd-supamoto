@@ -141,22 +141,22 @@ const generateAndSendPinService = fromPromise(
         "📝 Generated temporary PIN"
       );
 
-      // Store temp PIN in database
+      // Reset customer PIN with temporary PIN
       logger.info(
         {
           customerId: input.customerId.slice(-4),
           phoneNumber: input.phoneNumber.slice(-4),
         },
-        "💾 Storing temporary PIN in database"
+        "💾 Resetting customer PIN with temporary PIN"
       );
-      await dataService.setTempPin(
+      await dataService.resetCustomerPin(
         input.customerId,
-        input.phoneNumber,
-        tempPin
+        tempPin,
+        undefined // lgCustomerId not available in this context
       );
       logger.info(
         { customerId: input.customerId.slice(-4) },
-        "✅ Temporary PIN stored successfully"
+        "✅ Temporary PIN set successfully"
       );
 
       // Send SMS
@@ -221,20 +221,49 @@ const verifyPinService = fromPromise(
   }) => {
     logger.info(
       { customerId: input.customerId.slice(-4) },
-      "Verifying temporary PIN"
+      "🔐 Verifying temporary PIN"
     );
 
-    const isValid = await dataService.verifyTempPin(
-      input.customerId,
-      input.phoneNumber,
-      input.pin
-    );
+    try {
+      // Get customer record
+      const customer = await dataService.getCustomerByCustomerId(
+        input.customerId
+      );
 
-    if (!isValid) {
-      throw new Error("INVALID_PIN");
+      if (!customer) {
+        throw new Error("Customer not found");
+      }
+
+      // Verify PIN by encrypting input and comparing with stored encrypted PIN
+      // This reuses the same logic as the login machine
+      const { encryptPin } = await import("../../../utils/encryption.js");
+      const encryptedInputPin = encryptPin(input.pin);
+      const isValid = encryptedInputPin === customer.encryptedPin;
+
+      if (!isValid) {
+        logger.warn(
+          { customerId: input.customerId.slice(-4) },
+          "❌ Temporary PIN verification failed - invalid PIN"
+        );
+        throw new Error("INVALID_PIN");
+      }
+
+      logger.info(
+        { customerId: input.customerId.slice(-4) },
+        "✅ Temporary PIN verified successfully"
+      );
+
+      return { verified: true };
+    } catch (error) {
+      logger.error(
+        {
+          customerId: input.customerId.slice(-4),
+          error: error instanceof Error ? error.message : String(error),
+        },
+        "❌ PIN verification failed"
+      );
+      throw error;
     }
-
-    return { verified: true };
   }
 );
 

@@ -140,16 +140,7 @@ export interface Database {
     created_at: Date;
     updated_at: Date;
   };
-  temp_pins: {
-    id?: number;
-    customer_id: string;
-    phone_number: string;
-    temp_pin: string;
-    created_at: Date;
-    expires_at: Date;
-    used: boolean;
-    used_at: Date | null;
-  };
+  // temp_pins table removed - temporary PINs now stored encrypted in customers.encrypted_pin
   eligibility_verifications: {
     id?: number;
     customer_id: string;

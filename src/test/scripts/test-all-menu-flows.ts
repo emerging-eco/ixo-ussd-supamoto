@@ -1159,37 +1159,61 @@ async function testStep6b_CustomerActivation(
   session.results.push(result13);
   await wait(config.waitBetweenRequests);
 
-  // Verify database record for temp PIN
+  // Verify database record for customer PIN reset
   console.log(`\n${colorize("🔍 Verifying Database State:", "cyan")}`);
   try {
     const db = databaseManager.getKysely();
-    const tempPinRecord = await db
-      .selectFrom("temp_pins")
+
+    // Check customer record for encrypted PIN
+    const customerRecord = await db
+      .selectFrom("customers")
+      .select(["customer_id", "encrypted_pin", "updated_at"])
+      .where("customer_id", "=", activationCustomerId)
+      .executeTakeFirst();
+
+    if (customerRecord && customerRecord.encrypted_pin) {
+      console.log(
+        `   ${colorize("✅ Database:", "green")} Customer PIN reset recorded`
+      );
+      console.log(
+        `   ${colorize("   Encrypted PIN:", "cyan")} ${customerRecord.encrypted_pin.substring(0, 20)}...`
+      );
+      console.log(
+        `   ${colorize("   Updated:", "cyan")} ${customerRecord.updated_at}`
+      );
+    } else {
+      console.log(
+        `   ${colorize("⚠️  Database:", "yellow")} Customer PIN not found`
+      );
+    }
+
+    // Check audit log for PIN_RESET event
+    const auditRecord = await db
+      .selectFrom("audit_log")
       .selectAll()
       .where("customer_id", "=", activationCustomerId)
-      .where("phone_number", "=", activationPhone)
+      .where("event_type", "=", "PIN_RESET")
       .orderBy("created_at", "desc")
       .executeTakeFirst();
 
-    if (tempPinRecord) {
+    if (auditRecord) {
       console.log(
-        `   ${colorize("✅ Database:", "green")} Temp PIN record created`
+        `   ${colorize("✅ Audit Log:", "green")} PIN_RESET event recorded`
       );
       console.log(
-        `   ${colorize("   PIN:", "cyan")} ${tempPinRecord.temp_pin}`
+        `   ${colorize("   Event:", "cyan")} ${auditRecord.event_type}`
       );
       console.log(
-        `   ${colorize("   Expires:", "cyan")} ${tempPinRecord.expires_at}`
+        `   ${colorize("   Timestamp:", "cyan")} ${auditRecord.created_at}`
       );
-      console.log(`   ${colorize("   Used:", "cyan")} ${tempPinRecord.used}`);
     } else {
       console.log(
-        `   ${colorize("⚠️  Database:", "yellow")} Temp PIN record not found`
+        `   ${colorize("⚠️  Audit Log:", "yellow")} PIN_RESET event not found`
       );
     }
   } catch (error) {
     console.log(
-      `   ${colorize("⚠️  Database:", "yellow")} Error checking temp PIN: ${error}`
+      `   ${colorize("⚠️  Database:", "yellow")} Error checking database: ${error}`
     );
   }
 

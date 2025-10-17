@@ -693,118 +693,109 @@ class DataService {
    */
 
   /**
-   * Store temporary PIN for customer activation
-   * Uses upsert pattern to handle retries
+   * Reset customer PIN during activation
+   * Encrypts the temporary PIN and stores it in customers.encrypted_pin
+   * Creates audit log entry for compliance and security tracking
    */
-  async setTempPin(
+  async resetCustomerPin(
     customerId: string,
-    phoneNumber: string,
-    tempPin: string
+    tempPin: string,
+    lgCustomerId?: string
   ): Promise<void> {
     const db = databaseManager.getKysely();
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
 
     logger.info(
-      { customerId: customerId.slice(-4), phoneNumber: phoneNumber.slice(-4) },
-      "Setting temporary PIN for customer activation"
+      {
+        customerId: customerId.slice(-4),
+        lgCustomerId: lgCustomerId?.slice(-4),
+      },
+      "🔐 Resetting customer PIN during activation"
     );
 
     try {
-      await db
-        .insertInto("temp_pins")
-        .values({
-          customer_id: customerId,
-          phone_number: phoneNumber,
-          temp_pin: tempPin,
-          expires_at: expiresAt,
-          created_at: new Date(),
-          used: false,
-        })
-        .onConflict(oc =>
-          oc.columns(["customer_id", "phone_number"]).doUpdateSet({
-            temp_pin: tempPin,
-            expires_at: expiresAt,
-            used: false,
+      return await db.transaction().execute(async trx => {
+        // Import encryptPin here to avoid circular dependency
+        const { encryptPin } = await import("../utils/encryption.js");
+
+        // Encrypt the temporary PIN
+        const encryptedPin = encryptPin(tempPin);
+        logger.info(
+          { customerId: customerId.slice(-4) },
+          "📝 Encrypted temporary PIN"
+        );
+
+        // Update customer's encrypted_pin with the temporary PIN
+        // First verify customer exists
+        const customer = await trx
+          .selectFrom("customers")
+          .select("id")
+          .where("customer_id", "=", customerId)
+          .executeTakeFirst();
+
+        if (!customer) {
+          throw new Error(`Customer not found: ${customerId}`);
+        }
+
+        // Update the PIN
+        await trx
+          .updateTable("customers")
+          .set({
+            encrypted_pin: encryptedPin,
+            updated_at: new Date(),
+          })
+          .where("customer_id", "=", customerId)
+          .execute();
+
+        logger.info(
+          { customerId: customerId.slice(-4) },
+          "✅ Temporary PIN stored in customers.encrypted_pin"
+        );
+
+        // Create audit log entry for PIN reset
+        await trx
+          .insertInto("audit_log")
+          .values({
+            event_type: "PIN_RESET",
+            customer_id: customerId,
+            lg_customer_id: lgCustomerId || null,
+            details: JSON.stringify({
+              action: "CUSTOMER_ACTIVATED",
+              timestamp: new Date().toISOString(),
+              pinType: "temporary",
+              expiresIn: "30 minutes (until customer logs in and changes PIN)",
+            }),
             created_at: new Date(),
           })
-        )
-        .execute();
+          .execute();
 
-      logger.info(
-        { customerId: customerId.slice(-4), expiresAt },
-        "Temporary PIN set successfully"
-      );
+        logger.info(
+          {
+            customerId: customerId.slice(-4),
+            lgCustomerId: lgCustomerId?.slice(-4),
+          },
+          "📋 Audit log entry created for PIN_RESET"
+        );
+      });
     } catch (error) {
       logger.error(
         {
           error: error instanceof Error ? error.message : String(error),
           customerId: customerId.slice(-4),
+          lgCustomerId: lgCustomerId?.slice(-4),
         },
-        "Failed to set temporary PIN"
+        "❌ Failed to reset customer PIN"
       );
       throw error;
     }
   }
 
   /**
-   * Verify and consume temporary PIN
-   * Returns true if PIN is valid and not expired
+   * Temporary PIN verification is now handled by the login machine
+   * which uses the standard PIN verification logic:
+   * - Encrypts the input PIN using encryptPin()
+   * - Compares it to customers.encrypted_pin
+   * - No need for separate temp_pins table or verification logic
    */
-  async verifyTempPin(
-    customerId: string,
-    phoneNumber: string,
-    pin: string
-  ): Promise<boolean> {
-    const db = databaseManager.getKysely();
-
-    logger.debug(
-      { customerId: customerId.slice(-4), phoneNumber: phoneNumber.slice(-4) },
-      "Verifying temporary PIN"
-    );
-
-    try {
-      const record = await db
-        .selectFrom("temp_pins")
-        .selectAll()
-        .where("customer_id", "=", customerId)
-        .where("phone_number", "=", phoneNumber)
-        .where("temp_pin", "=", pin)
-        .where("used", "=", false)
-        .where("expires_at", ">", new Date())
-        .executeTakeFirst();
-
-      if (!record) {
-        logger.warn(
-          { customerId: customerId.slice(-4) },
-          "Temporary PIN verification failed - invalid or expired"
-        );
-        return false;
-      }
-
-      // Mark as used
-      await db
-        .updateTable("temp_pins")
-        .set({ used: true, used_at: new Date() })
-        .where("id", "=", record.id)
-        .execute();
-
-      logger.info(
-        { customerId: customerId.slice(-4) },
-        "Temporary PIN verified successfully"
-      );
-
-      return true;
-    } catch (error) {
-      logger.error(
-        {
-          error: error instanceof Error ? error.message : String(error),
-          customerId: customerId.slice(-4),
-        },
-        "Failed to verify temporary PIN"
-      );
-      throw error;
-    }
-  }
 
   /**
    * Record eligibility verification (for audit trail)
