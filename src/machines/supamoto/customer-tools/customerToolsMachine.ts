@@ -2,6 +2,7 @@ import { setup, assign, fromPromise } from "xstate";
 import { withNavigation } from "../utils/navigation-mixin.js";
 import { navigationGuards } from "../guards/navigation.guards.js";
 import { dataService } from "../../../services/database-storage.js";
+import { surveyResponseStorageService } from "../../../services/survey-response-storage.js";
 import { createModuleLogger } from "../../../services/logger.js";
 
 const logger = createModuleLogger("customerToolsMachine");
@@ -61,6 +62,38 @@ export const customerToolsMachine = setup({
       navigationGuards.isExitCommand(null as any, event as any),
   },
   actors: {
+    checkSurveyCompletionService: fromPromise(
+      async ({
+        input,
+      }: {
+        input: { customerId: string; lgCustomerId: string };
+      }) => {
+        logger.info(
+          {
+            customerId: input.customerId.slice(-4),
+          },
+          "Checking survey completion status"
+        );
+
+        const surveyState =
+          await surveyResponseStorageService.getSurveyResponseState(
+            input.customerId,
+            input.lgCustomerId
+          );
+
+        const isComplete = surveyState?.allFieldsCompleted ?? false;
+
+        logger.info(
+          {
+            customerId: input.customerId.slice(-4),
+            isComplete,
+          },
+          "Survey completion status checked"
+        );
+
+        return { isComplete };
+      }
+    ),
     submitHouseholdClaimService: fromPromise(
       async ({
         input,
@@ -194,6 +227,31 @@ export const customerToolsMachine = setup({
       entry: assign(() => ({
         message: HOUSEHOLD_QUESTION,
       })),
+      invoke: {
+        id: "checkSurveyCompletion",
+        src: "checkSurveyCompletionService",
+        input: ({ context }) => ({
+          customerId: context.customerId,
+          lgCustomerId: context.phoneNumber, // Use phone as LG identifier
+        }),
+        onDone: {
+          target: "householdClaimQuestion",
+          actions: assign({
+            message: ({ event }) => {
+              if (!event.output.isComplete) {
+                return "Please complete the household survey first.\n\n1. Back";
+              }
+              return HOUSEHOLD_QUESTION;
+            },
+          }),
+        },
+        onError: {
+          target: "householdClaimQuestion",
+          actions: assign({
+            message: HOUSEHOLD_QUESTION,
+          }),
+        },
+      },
       on: {
         INPUT: withNavigation(
           [

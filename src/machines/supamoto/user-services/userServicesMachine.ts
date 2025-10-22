@@ -293,6 +293,11 @@ export const userServicesMachine = setup({
             error: "Customer Tools error. Please try again.",
           }),
         },
+        onSnapshot: {
+          actions: assign(({ event }) => ({
+            message: event.snapshot.context.message,
+          })),
+        },
       },
     },
 

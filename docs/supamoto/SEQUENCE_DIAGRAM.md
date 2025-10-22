@@ -36,16 +36,34 @@ sequenceDiagram
     USSD->>USSD: setTempPIN(customerID, phoneNumber)
     USSD->>Customer: [SMS] Here's your temporary PIN. Use *2233*2*1# to log in and reset your PIN.
     Customer->>USSD: [USSD] log in(customerID, PIN)
+
+    Note over USSD,Customer: Household Survey Phase
+    USSD->>USSD: loadSurveyForm()
+    USSD->>USSD: recoverSessionIfInterrupted()
+    loop For each survey question
+        USSD->>Customer: [USSD] Survey Question (e.g., "Beneficiary Category?")
+        Customer->>USSD: [USSD] Answer (e.g., "1. Pregnant Woman")
+        USSD->>USSD: encryptAnswer()
+        USSD->>USSD: saveSurveyResponse(customerId, leadGeneratorId, answer)
+    end
+    USSD->>USSD: markSurveyComplete()
+
+    Note over USSD,Customer: 1,000 Day Household Claim Phase
     Customer->>USSD: [USSD] I have an eligible 1,000-day Household
-    USSD->>claims-bot: submit1000DayCustomerClaim(IXO DID)
-    claims-bot-->>matrix-bot: CronJob picks up new claim
-    matrix-bot-->>matrix-bot: Process Claim
-    Note over matrix-bot: Create 1,000-Day Household Credential
-    subs-svc->>matrix-bot: (1,000-Day Household Claim processed)
-    matrix-bot->>USSD: (done)
-    USSD-->>-SUPA: transfer(address, did, subscription-id)
-    SUPA->>subs-svc: Transfer BEAN token to Customer Subscription from ECS account
-    USSD->>Customer: [SMS] You can now collect your first free bag of beans! Visit your LG.
+    USSD->>USSD: checkSurveyCompletion()
+    alt Survey NOT Complete
+        USSD->>Customer: [USSD] Please complete household survey first
+    else Survey Complete
+        USSD->>claims-bot: submit1000DayCustomerClaim(IXO DID)
+        claims-bot-->>matrix-bot: CronJob picks up new claim
+        matrix-bot-->>matrix-bot: Process Claim
+        Note over matrix-bot: Create 1,000-Day Household Credential
+        subs-svc->>matrix-bot: (1,000-Day Household Claim processed)
+        matrix-bot->>USSD: (done)
+        USSD-->>-SUPA: transfer(address, did, subscription-id)
+        SUPA->>subs-svc: Transfer BEAN token to Customer Subscription from ECS account
+        USSD->>Customer: [SMS] You can now collect your first free bag of beans! Visit your LG.
+    end
 ```
 
 ### Key Steps
@@ -56,17 +74,26 @@ sequenceDiagram
 4. **Temp PIN Generation**: System generates 6-digit temporary PIN
 5. **SMS Sent**: Activation SMS sent to customer with temporary PIN
 6. **Customer Logs In**: Customer dials USSD and logs in with temp PIN
-7. **1,000 Day Household Claim**: Customer declares eligibility
-8. **Claim Processing**: Matrix bots process claim and create credential
-9. **Token Transfer**: SUPA transfers BEAN token to customer subscription
-10. **Confirmation**: Customer receives SMS confirming bean collection eligibility
+7. **Survey Form Loading**: System loads SurveyJS form definition from configured URL
+8. **Session Recovery**: System checks for interrupted survey and resumes from last question
+9. **Survey Questions**: Customer answers household eligibility questions one at a time
+10. **Answer Encryption**: Each answer is encrypted before storage
+11. **Survey Persistence**: Answers saved to database for session recovery support
+12. **Survey Completion**: All required questions answered, survey marked complete
+13. **1,000 Day Household Claim**: Customer declares eligibility (gated by survey completion)
+14. **Claim Processing**: Matrix bots process claim and create credential
+15. **Token Transfer**: SUPA transfers BEAN token to customer subscription
+16. **Confirmation**: Customer receives SMS confirming bean collection eligibility
 
 ### Database Operations
 
 - **Insert**: New row in `customers` table
 - **Update**: `customers.encrypted_pin` with bcrypt-encrypted PIN
+- **Insert**: `household_survey_responses` table with encrypted survey answers
+- **Update**: `household_survey_responses.all_fields_completed` when survey complete
 - **Insert**: `household_claims` table with claim data
 - **Log**: Event logged in `audit_log` table with type "CUSTOMER_ACTIVATED"
+- **Log**: Event logged in `audit_log` table with type "SURVEY_COMPLETED"
 
 ### External Systems Involved
 

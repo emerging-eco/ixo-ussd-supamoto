@@ -15,7 +15,7 @@
  * Exit: complete (returns to main menu)
  */
 
-import { assign, fromPromise, setup } from "xstate";
+import { assign, fromPromise, setup, sendTo } from "xstate";
 import { createModuleLogger } from "../../../services/logger.js";
 import { dataService } from "../../../services/database-storage.js";
 import {
@@ -23,6 +23,7 @@ import {
   sendActivationSMS,
   sendEligibilityConfirmationSMS,
 } from "../../../services/sms.js";
+import { householdSurveyMachine } from "./householdSurveyMachine.js";
 
 const logger = createModuleLogger("customerActivation");
 
@@ -44,6 +45,9 @@ export interface CustomerActivationContext {
   isEligible?: boolean;
   eligibilityRecordId?: number;
   claimId?: string;
+  // Survey flow
+  surveyComplete?: boolean;
+  surveyAnswers?: Record<string, any>;
   // Output
   nextParentState: CustomerActivationOutput;
 }
@@ -401,6 +405,7 @@ export const customerActivationMachine = setup({
     recordEligibilityService,
     submitClaimService,
     sendConfirmationService,
+    householdSurveyMachine,
   },
   actions: {
     clearErrors: assign({
@@ -641,7 +646,7 @@ export const customerActivationMachine = setup({
       on: {
         INPUT: [
           {
-            target: "eligibilityQuestion",
+            target: "collectingSurveyData",
             guard: "isInput1",
           },
           {
@@ -662,6 +667,49 @@ export const customerActivationMachine = setup({
                 ? `Error: ${event.error}\n0. Back`
                 : "An error occurred\n0. Back",
           }),
+        },
+      },
+    },
+
+    // Collect household survey data
+    collectingSurveyData: {
+      on: {
+        INPUT: {
+          actions: sendTo("householdSurveyChild", ({ event }) => event),
+        },
+      },
+      invoke: {
+        id: "householdSurveyChild",
+        src: "householdSurveyMachine",
+        input: ({ context }) => ({
+          sessionId: context.sessionId,
+          phoneNumber: context.phoneNumber,
+          serviceCode: context.serviceCode,
+          customerId: context.customerId || "",
+          leadGeneratorId: context.phoneNumber, // Use phone as LG identifier
+        }),
+        onDone: {
+          target: "eligibilityQuestion",
+          actions: assign({
+            surveyComplete: true,
+            surveyAnswers: ({ event }) => (event.output as any)?.answers || {},
+          }),
+        },
+        onError: {
+          target: "error",
+          actions: assign({
+            error: ({ event }) =>
+              event.error instanceof Error
+                ? event.error.message
+                : "Survey error",
+            message:
+              "Error collecting survey data. Please try again.\n\n0. Back",
+          }),
+        },
+        onSnapshot: {
+          actions: assign(({ event }) => ({
+            message: (event.snapshot as any).context.message,
+          })),
         },
       },
     },

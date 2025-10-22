@@ -165,6 +165,37 @@ export interface DistributionOTPRecord {
   verifiedBy?: string;
 }
 
+// Household Survey Response Types
+export interface HouseholdSurveyResponseRecord {
+  id: number;
+  customerId: string;
+  leadGeneratorId: string;
+  beneficiaryCategory: string | null;
+  childMaxAge: string | null;
+  beanIntakeFrequency: string | null;
+  priceSpecification: string | null;
+  awarenessIronBeans: string | null;
+  knowsNutritionalBenefits: string | null;
+  nutritionalBenefitDetails: string | null;
+  confirmActionAntenatalCardVerified: string | null;
+  allFieldsCompleted: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface HouseholdSurveyResponseData {
+  customerId: string;
+  leadGeneratorId: string;
+  beneficiaryCategory?: string;
+  childMaxAge?: string;
+  beanIntakeFrequency?: string;
+  priceSpecification?: string;
+  awarenessIronBeans?: string;
+  knowsNutritionalBenefits?: string;
+  nutritionalBenefitDetails?: string;
+  confirmActionAntenatalCardVerified?: string;
+}
+
 /**
  * Data Service
  *
@@ -1698,6 +1729,257 @@ class DataService {
       );
       throw error;
     }
+  }
+
+  /**
+   * Create or update household survey response
+   */
+  async createOrUpdateSurveyResponse(
+    data: HouseholdSurveyResponseData
+  ): Promise<HouseholdSurveyResponseRecord> {
+    const db = databaseManager.getKysely();
+    const { encrypt } = await import("../utils/encryption.js");
+    const { config } = await import("../config.js");
+    const encryptionKey = config.SYSTEM.ENCRYPTION_KEY;
+
+    logger.info(
+      {
+        customerId: data.customerId.slice(-4),
+        leadGeneratorId: data.leadGeneratorId.slice(-4),
+      },
+      "Creating or updating household survey response"
+    );
+
+    try {
+      // Encrypt all survey fields
+      const encryptedData = {
+        beneficiary_category: data.beneficiaryCategory
+          ? encrypt(data.beneficiaryCategory, encryptionKey)
+          : null,
+        child_max_age: data.childMaxAge
+          ? encrypt(data.childMaxAge, encryptionKey)
+          : null,
+        bean_intake_frequency: data.beanIntakeFrequency
+          ? encrypt(data.beanIntakeFrequency, encryptionKey)
+          : null,
+        price_specification: data.priceSpecification
+          ? encrypt(data.priceSpecification, encryptionKey)
+          : null,
+        awareness_iron_beans: data.awarenessIronBeans
+          ? encrypt(data.awarenessIronBeans, encryptionKey)
+          : null,
+        knows_nutritional_benefits: data.knowsNutritionalBenefits
+          ? encrypt(data.knowsNutritionalBenefits, encryptionKey)
+          : null,
+        nutritional_benefit_details: data.nutritionalBenefitDetails
+          ? encrypt(data.nutritionalBenefitDetails, encryptionKey)
+          : null,
+        confirm_action_antenatal_card_verified:
+          data.confirmActionAntenatalCardVerified
+            ? encrypt(data.confirmActionAntenatalCardVerified, encryptionKey)
+            : null,
+      };
+
+      // Try to find existing response for this customer/LG pair
+      const existing = await db
+        .selectFrom("household_survey_responses")
+        .selectAll()
+        .where("customer_id", "=", data.customerId)
+        .where("lead_generator_id", "=", data.leadGeneratorId)
+        .orderBy("created_at", "desc")
+        .executeTakeFirst();
+
+      if (existing) {
+        // Update existing record
+        const result = await db
+          .updateTable("household_survey_responses")
+          .set({
+            ...encryptedData,
+            updated_at: new Date(),
+          })
+          .where("id", "=", existing.id)
+          .returningAll()
+          .executeTakeFirstOrThrow();
+
+        return this.mapSurveyResponseRecord(result);
+      } else {
+        // Create new record
+        const result = await db
+          .insertInto("household_survey_responses")
+          .values({
+            customer_id: data.customerId,
+            lead_generator_id: data.leadGeneratorId,
+            ...encryptedData,
+            all_fields_completed: false,
+            created_at: new Date(),
+            updated_at: new Date(),
+          })
+          .returningAll()
+          .executeTakeFirstOrThrow();
+
+        return this.mapSurveyResponseRecord(result);
+      }
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: data.customerId.slice(-4),
+        },
+        "Failed to create or update survey response"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Mark survey as complete
+   */
+  async markSurveyComplete(
+    customerId: string,
+    leadGeneratorId: string
+  ): Promise<HouseholdSurveyResponseRecord> {
+    const db = databaseManager.getKysely();
+
+    logger.info(
+      {
+        customerId: customerId.slice(-4),
+        leadGeneratorId: leadGeneratorId.slice(-4),
+      },
+      "Marking survey as complete"
+    );
+
+    try {
+      const result = await db
+        .updateTable("household_survey_responses")
+        .set({
+          all_fields_completed: true,
+          updated_at: new Date(),
+        })
+        .where("customer_id", "=", customerId)
+        .where("lead_generator_id", "=", leadGeneratorId)
+        .orderBy("created_at", "desc")
+        .limit(1)
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      return this.mapSurveyResponseRecord(result);
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: customerId.slice(-4),
+        },
+        "Failed to mark survey as complete"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Get latest survey response for customer/LG pair
+   */
+  async getSurveyResponse(
+    customerId: string,
+    leadGeneratorId: string
+  ): Promise<HouseholdSurveyResponseRecord | null> {
+    const db = databaseManager.getKysely();
+    const { decrypt } = await import("../utils/encryption.js");
+    const { config } = await import("../config.js");
+    const encryptionKey = config.SYSTEM.ENCRYPTION_KEY;
+
+    logger.debug(
+      {
+        customerId: customerId.slice(-4),
+        leadGeneratorId: leadGeneratorId.slice(-4),
+      },
+      "Fetching survey response"
+    );
+
+    try {
+      const result = await db
+        .selectFrom("household_survey_responses")
+        .selectAll()
+        .where("customer_id", "=", customerId)
+        .where("lead_generator_id", "=", leadGeneratorId)
+        .orderBy("created_at", "desc")
+        .executeTakeFirst();
+
+      if (!result) {
+        return null;
+      }
+
+      // Decrypt all fields
+      return {
+        id: result.id!,
+        customerId: result.customer_id,
+        leadGeneratorId: result.lead_generator_id,
+        beneficiaryCategory: result.beneficiary_category
+          ? decrypt(result.beneficiary_category, encryptionKey)
+          : null,
+        childMaxAge: result.child_max_age
+          ? decrypt(result.child_max_age, encryptionKey)
+          : null,
+        beanIntakeFrequency: result.bean_intake_frequency
+          ? decrypt(result.bean_intake_frequency, encryptionKey)
+          : null,
+        priceSpecification: result.price_specification
+          ? decrypt(result.price_specification, encryptionKey)
+          : null,
+        awarenessIronBeans: result.awareness_iron_beans
+          ? decrypt(result.awareness_iron_beans, encryptionKey)
+          : null,
+        knowsNutritionalBenefits: result.knows_nutritional_benefits
+          ? decrypt(result.knows_nutritional_benefits, encryptionKey)
+          : null,
+        nutritionalBenefitDetails: result.nutritional_benefit_details
+          ? decrypt(result.nutritional_benefit_details, encryptionKey)
+          : null,
+        confirmActionAntenatalCardVerified:
+          result.confirm_action_antenatal_card_verified
+            ? decrypt(
+                result.confirm_action_antenatal_card_verified,
+                encryptionKey
+              )
+            : null,
+        allFieldsCompleted: result.all_fields_completed,
+        createdAt: result.created_at,
+        updatedAt: result.updated_at,
+      };
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: customerId.slice(-4),
+        },
+        "Failed to fetch survey response"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Helper to map database record to typed record
+   */
+  private mapSurveyResponseRecord(
+    dbRecord: any
+  ): HouseholdSurveyResponseRecord {
+    return {
+      id: dbRecord.id!,
+      customerId: dbRecord.customer_id,
+      leadGeneratorId: dbRecord.lead_generator_id,
+      beneficiaryCategory: dbRecord.beneficiary_category,
+      childMaxAge: dbRecord.child_max_age,
+      beanIntakeFrequency: dbRecord.bean_intake_frequency,
+      priceSpecification: dbRecord.price_specification,
+      awarenessIronBeans: dbRecord.awareness_iron_beans,
+      knowsNutritionalBenefits: dbRecord.knows_nutritional_benefits,
+      nutritionalBenefitDetails: dbRecord.nutritional_benefit_details,
+      confirmActionAntenatalCardVerified:
+        dbRecord.confirm_action_antenatal_card_verified,
+      allFieldsCompleted: dbRecord.all_fields_completed,
+      createdAt: dbRecord.created_at,
+      updatedAt: dbRecord.updated_at,
+    };
   }
 }
 

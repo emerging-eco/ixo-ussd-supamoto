@@ -218,4 +218,20 @@ export interface Database {
     details: any; // JSONB
     created_at: Date;
   };
+  household_survey_responses: {
+    id?: number;
+    customer_id: string;
+    lead_generator_id: string;
+    beneficiary_category: string | null;
+    child_max_age: string | null;
+    bean_intake_frequency: string | null;
+    price_specification: string | null;
+    awareness_iron_beans: string | null;
+    knows_nutritional_benefits: string | null;
+    nutritional_benefit_details: string | null;
+    confirm_action_antenatal_card_verified: string | null;
+    all_fields_completed: boolean;
+    created_at: Date;
+    updated_at: Date;
+  };
 }

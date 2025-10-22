@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createActor } from "xstate";
-import { userServicesMachine } from "../../../src/machines/supamoto/user-services/userServicesMachine.js";
+import { userServicesMachine } from "./userServicesMachine.js";
 
 describe("userServicesMachine", () => {
   const mockCustomerInput = {
