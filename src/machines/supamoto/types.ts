@@ -420,12 +420,11 @@ export type ContextAction = (
  * Note: Uses 'any' for maximum XState compatibility
  */
 export interface FlowStateConfig {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   states: Record<string, any>;
   context?: Partial<AppTypesContext>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   guards?: Record<string, any>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   actions?: Record<string, any>;
 }
 

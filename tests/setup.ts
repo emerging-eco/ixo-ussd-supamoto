@@ -32,10 +32,10 @@ console.log(environmentSetup.getEnvironmentSummary());
 
 // Set default test values for required environment variables if not set
 const defaultTestValues = {
-  CHAIN_NETWORK: "testnet",
-  MATRIX_HOME_SERVER: "https://test.matrix.org",
-  MATRIX_BOT_URL: "https://test.bot.matrix.org",
-  FEEGRANT_URL: "https://test.feegrant.com",
+  CHAIN_NETWORK: "devnet",
+  MATRIX_HOME_SERVER: "https://dev.matrix.org",
+  MATRIX_BOT_URL: "https://dev.bot.matrix.org",
+  FEEGRANT_URL: "https://dev.feegrant.com",
   FEEGRANT_AUTH: "test_auth_token",
   SERVICE_CODES: "*1234#",
 };

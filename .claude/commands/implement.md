@@ -5,6 +5,7 @@ Follow the `Instructions` to implement the `Plan` then `Report` the completed wo
 ## Instructions
 
 - Read the plan, think hard about the plan and implement the plan.
+- Implement the plan in a new git branch.
 
 ## Plan
 

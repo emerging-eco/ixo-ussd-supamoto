@@ -196,7 +196,9 @@ export class USSDResponseService {
             if (childSnapshot?.value) {
               return childSnapshot.value as string;
             }
-          } catch {}
+          } catch {
+            // Silently fail if child snapshot is not available
+          }
         }
       }
     }

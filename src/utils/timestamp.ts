@@ -13,7 +13,7 @@ export function convertTimestampObjectToTimestamp(
     const date = utils.proto.fromTimestamp(timestamp);
 
     return date.getTime();
-  } catch (error) {
+  } catch {
     return undefined;
   }
 }

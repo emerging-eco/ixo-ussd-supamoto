@@ -6,8 +6,8 @@
 
 ## Run
 
-Install dependencies
-cp .env.example .env
+Install dependencies specified in @package.json.
+Run `cp .env.example .env` to create the '.env' file.
 
 ## Report
 

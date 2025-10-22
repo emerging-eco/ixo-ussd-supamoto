@@ -206,7 +206,7 @@ export const canSwitchFlows: CombinedGuard = (context, event) => {
 /**
  * Checks if operation requires elevated security
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 export const requiresElevatedSecurity: CombinedGuard = (context, event) => {
   // Check for high-risk operations
   const highRiskEventTypes = [

@@ -1,10 +1,7 @@
 import { setup, assign, fromPromise, sendTo } from "xstate";
 import { withNavigation } from "../utils/navigation-mixin.js";
 import { navigationGuards } from "../guards/navigation.guards.js";
-import {
-  dataService,
-  type CustomerRecord,
-} from "../../../services/database-storage.js";
+import { dataService } from "../../../services/database-storage.js";
 import { config } from "../../../config.js";
 import {
   loginWithVault,
@@ -23,7 +20,7 @@ import { customerToolsMachine } from "../customer-tools/customerToolsMachine.js"
 /**
  * User Services Machine - Post-login user menu and simple stubs
  *
- * Entry: menu
+ * Entry: customerTools (for customers) or agent (for agents) - determined by customerRole
  * Exit: routeToMain (signals parent to return to main menu)
  * Events: INPUT, ERROR
  */
@@ -42,23 +39,6 @@ export interface UserServicesContext {
 export type UserServicesEvent =
   | { type: "INPUT"; input: string }
   | { type: "ERROR"; error: string };
-
-/**
- * Build menu message based on user role
- * Shows ONLY Customer Tools for customers OR ONLY Agent Tools for agents (never both)
- */
-const buildMenuMessage = (role?: string): string => {
-  const isAgent =
-    role === "lead_generator" || role === "call_center" || role === "admin";
-
-  if (isAgent) {
-    // Agent users see only Agent Tools
-    return "Services\n" + "1. Agent Tools\n" + "0. Back";
-  } else {
-    // Customer users see only Customer Tools
-    return "Services\n" + "1. Customer Tools\n" + "0. Back";
-  }
-};
 
 export const userServicesMachine = setup({
   types: {
@@ -102,7 +82,9 @@ export const userServicesMachine = setup({
                 return { source: "matrix" as const, profile };
               }
             }
-          } catch {}
+          } catch {
+            // Silently fail if Matrix read is not available
+          }
         }
         const record = await dataService.getCustomerByPhone(input.phoneNumber);
         return { source: "db" as const, profile: record };
@@ -127,7 +109,9 @@ export const userServicesMachine = setup({
                 roomId: room.roomId,
               });
             }
-          } catch {}
+          } catch {
+            // Silently fail if Matrix read is not available
+          }
         }
         return null;
       }
@@ -151,7 +135,9 @@ export const userServicesMachine = setup({
                 roomId: room.roomId,
               });
             }
-          } catch {}
+          } catch {
+            // Silently fail if Matrix read is not available
+          }
         }
         return [] as any[];
       }
@@ -175,7 +161,9 @@ export const userServicesMachine = setup({
                 roomId: room.roomId,
               });
             }
-          } catch {}
+          } catch {
+            // Silently fail if Matrix read is not available
+          }
         }
         return [] as any[];
       }
@@ -222,9 +210,6 @@ export const userServicesMachine = setup({
     }),
 */
   actions: {
-    setMenuMessage: assign(({ context }) => ({
-      message: buildMenuMessage(context.customerRole),
-    })),
     setError: assign({
       error: ({ event }) =>
         event.type === "ERROR" ? event.error : "An error occurred",
@@ -257,7 +242,7 @@ export const userServicesMachine = setup({
   },
 }).createMachine({
   id: "userServices",
-  initial: "menu",
+  initial: "determineInitialState",
   context: ({ input }): UserServicesContext => ({
     sessionId: input?.sessionId || "",
     phoneNumber: input?.phoneNumber || "",
@@ -265,52 +250,22 @@ export const userServicesMachine = setup({
     pin: input?.pin,
     customerId: input?.customerId,
     customerRole: input?.customerRole || "customer", // Default to customer role
-    message: buildMenuMessage(input?.customerRole), // Dynamic menu based on role
+    message: "", // Will be set by entry actions of initial state
     error: undefined,
   }),
   states: {
-    // Top-level services menu - routes to Customer Tools or Agent Tools based on role
-    menu: {
-      entry: ["setMenuMessage", "clearErrors"],
-      on: {
-        INPUT: withNavigation(
-          [
-            {
-              target: "customerTools",
-              guard: ({
-                event,
-                context,
-              }: {
-                event: UserServicesEvent;
-                context: UserServicesContext;
-              }) =>
-                navigationGuards.isInput("1")(null as any, event as any) &&
-                context.customerRole === "customer",
-            },
-            {
-              target: "agent",
-              guard: ({
-                event,
-                context,
-              }: {
-                event: UserServicesEvent;
-                context: UserServicesContext;
-              }) =>
-                navigationGuards.isInput("1")(null as any, event as any) &&
-                (context.customerRole === "lead_generator" ||
-                  context.customerRole === "call_center" ||
-                  context.customerRole === "admin"),
-            },
-          ],
-          {
-            backTarget: "routeToMain",
-            exitTarget: "routeToMain",
-            enableBack: true,
-            enableExit: true,
-          }
-        ),
-        ERROR: { target: "error", actions: "setError" },
-      },
+    // Determine initial state based on customerRole
+    determineInitialState: {
+      always: [
+        {
+          target: "agent",
+          guard: "isAgent",
+        },
+        {
+          target: "customerTools",
+          guard: "isCustomer",
+        },
+      ],
     },
 
     // Customer Tools - delegates to customerToolsMachine
@@ -330,7 +285,7 @@ export const userServicesMachine = setup({
           customerId: context.customerId || "",
         }),
         onDone: {
-          target: "menu",
+          target: "routeToMain",
         },
         onError: {
           target: "error",
@@ -361,7 +316,7 @@ export const userServicesMachine = setup({
             { target: "agentConfirmDelivery", guard: "isInput4" },
           ],
           {
-            backTarget: "menu",
+            backTarget: "routeToMain",
             exitTarget: "routeToMain",
             enableBack: true,
             enableExit: true,
@@ -464,7 +419,7 @@ export const userServicesMachine = setup({
       entry: "setError",
       on: {
         INPUT: withNavigation([], {
-          backTarget: "menu",
+          backTarget: "routeToMain",
           exitTarget: "routeToMain",
           enableBack: true,
           enableExit: true,

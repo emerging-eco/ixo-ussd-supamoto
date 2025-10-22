@@ -60,7 +60,6 @@ export enum LoginOutput {
 }
 
 // Messages
-import { APP_NAME } from "../../../constants/branding.js";
 export const CUSTOMER_ID_PROMPT = `Enter your Customer ID to log in:`;
 export const PIN_PROMPT = "Enter your PIN:";
 export const INVALID_CUSTOMER_ID =

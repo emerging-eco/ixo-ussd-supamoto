@@ -12,7 +12,7 @@
  */
 
 import { createActor } from "xstate";
-import { appMachine } from "./parentMachine.js";
+import { supamotoMachine } from "../../../src/machines/supamoto/parentMachine.js";
 
 console.log("🚀 Parent (App) Machine Demo\n");
 
@@ -39,7 +39,7 @@ console.log("=".repeat(50));
 console.log("DEMO 1: Start session and show preMenu");
 console.log("=".repeat(50));
 
-const actor1 = createActor(appMachine, { input: baseInput });
+const actor1 = createActor(supamotoMachine, { input: baseInput });
 actor1.subscribe(logSnapshot("DEMO1"));
 actor1.start();
 actor1.send({
@@ -53,7 +53,7 @@ console.log("\n" + "=".repeat(50));
 console.log("DEMO 2: Navigate to Know More and return to main menu");
 console.log("=".repeat(50));
 
-const actor2 = createActor(appMachine, { input: baseInput });
+const actor2 = createActor(supamotoMachine, { input: baseInput });
 actor2.subscribe(logSnapshot("DEMO2"));
 actor2.start();
 actor2.send({
@@ -69,7 +69,7 @@ console.log("\n" + "=".repeat(50));
 console.log("DEMO 3: Account Menu → Login path");
 console.log("=".repeat(50));
 
-const actor3 = createActor(appMachine, { input: baseInput });
+const actor3 = createActor(supamotoMachine, { input: baseInput });
 actor3.subscribe(logSnapshot("DEMO3"));
 actor3.start();
 actor3.send({
@@ -85,7 +85,7 @@ console.log("\n" + "=".repeat(50));
 console.log("DEMO 4: Exit from preMenu");
 console.log("=".repeat(50));
 
-const actor4 = createActor(appMachine, { input: baseInput });
+const actor4 = createActor(supamotoMachine, { input: baseInput });
 actor4.subscribe(logSnapshot("DEMO4"));
 actor4.start();
 actor4.send({

@@ -220,7 +220,7 @@ export async function createServer(): Promise<FastifyInstance> {
       try {
         // Simple database health check
         status.database = "connected";
-      } catch (error) {
+      } catch {
         status.database = "error";
       }
     }

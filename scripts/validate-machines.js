@@ -100,10 +100,27 @@ console.log(`Found ${testFiles.length} test files`);
 for (const machineFile of machineFiles) {
   const baseName = path.basename(machineFile, ".ts");
   const machineDir = path.dirname(machineFile);
-  const expectedTestFile = path.join(machineDir, `${baseName}.test.ts`);
-  const expectedDemoFile = path.join(machineDir, `${baseName}-demo.ts`);
 
-  if (!existsSync(expectedTestFile)) {
+  // Test files can be in src/machines/supamoto or tests/machines/supamoto
+  const expectedTestFileInSrc = path.join(machineDir, `${baseName}.test.ts`);
+  const relativeMachineDir = path.relative(MACHINES_DIR, machineDir);
+  const expectedTestFileInTests = path.join(
+    "tests/machines/supamoto",
+    relativeMachineDir,
+    `${baseName}.test.ts`
+  );
+
+  // Demo files are now in tests directory
+  const expectedDemoFile = path.join(
+    "tests/machines/supamoto",
+    relativeMachineDir,
+    `${baseName}-demo.ts`
+  );
+
+  const hasTestInSrc = existsSync(expectedTestFileInSrc);
+  const hasTestInTests = existsSync(expectedTestFileInTests);
+
+  if (!hasTestInSrc && !hasTestInTests) {
     console.log(`❌ Missing test file for ${baseName}`);
     hasErrors = true;
   } else {

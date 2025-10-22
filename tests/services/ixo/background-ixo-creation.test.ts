@@ -81,7 +81,9 @@ describe("background IXO creation flow (smoke)", () => {
     expect(res.success).toBe(true);
 
     // Verify deterministic claimId derivation and that submitClaim received it
-    const { submitClaim } = await import("./ixo-claims.js");
+    const { submitClaim } = await import(
+      "../../../src/services/ixo/ixo-claims.js"
+    );
     const submitMock: any = submitClaim as any;
     const call = submitMock.mock.calls[0];
     const args = call[0];

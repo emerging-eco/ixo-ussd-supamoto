@@ -236,7 +236,9 @@ const verifyPinService = fromPromise(
 
       // Verify PIN by encrypting input and comparing with stored encrypted PIN
       // This reuses the same logic as the login machine
-      const { encryptPin } = await import("../../../utils/encryption.js");
+      const { encryptPin } = await import(
+        "../../../../src/utils/encryption.js"
+      );
       const encryptedInputPin = encryptPin(input.pin);
       const isValid = encryptedInputPin === customer.encryptedPin;
 

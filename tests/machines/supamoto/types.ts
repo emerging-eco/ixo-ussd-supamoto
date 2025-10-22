@@ -6,7 +6,7 @@
  */
 
 // Import types from existing services
-import type { AuthResponse } from "../../services/ixo/matrix.js";
+import type { AuthResponse } from "../../../src/services/ixo/matrix.js";
 
 /**
  * IXO Address Record - represents a blockchain address associated with a user

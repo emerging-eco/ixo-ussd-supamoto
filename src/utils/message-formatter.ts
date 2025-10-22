@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /**
  * Message formatting utilities for USSD responses
  */

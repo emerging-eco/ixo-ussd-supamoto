@@ -13,10 +13,6 @@ import { knowMoreMachine } from "./information/index.js";
 import { withNavigation } from "./utils/navigation-mixin.js";
 import { NavigationPatterns } from "./utils/navigation-patterns.js";
 import { userServicesMachine } from "./user-services/userServicesMachine.js";
-import {
-  pinChangeMachine,
-  PinChangeOutput,
-} from "./pin-change/pinChangeMachine.js";
 
 /**
  * Supamoto State Machine - Simplified Architecture

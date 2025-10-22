@@ -172,7 +172,7 @@ export async function findUserRoom(params: {
     });
     const res = await api.room.v1beta1.queryId(alias);
     return { roomId: res.room_id, roomAlias: alias };
-  } catch (e) {
+  } catch {
     logger.warn({ alias }, "Could not resolve user room alias");
     return { roomAlias: alias };
   }

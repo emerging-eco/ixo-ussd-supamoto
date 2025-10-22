@@ -65,7 +65,7 @@ const mxLogin = async (
     const client = createTemporaryClient(mxHomeServerUrl);
     // Using the object-style login which is the current recommended approach
     // The Matrix SDK shows this as deprecated but this is actually the modern approach
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment, @typescript-eslint/no-deprecated
+
     // @ts-ignore - Matrix SDK deprecation warning, but this is the correct modern approach
     const response = await client.login("m.login.password", {
       identifier: {
@@ -554,7 +554,7 @@ export async function checkIsUsernameAvailable({
   try {
     const isUsernameAvailable = await client.isUsernameAvailable(username);
     return !!isUsernameAvailable;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -889,7 +889,7 @@ export async function getBaseUrl(servername: string): Promise<string> {
       throw new Error();
     }
     return baseUrl;
-  } catch (e) {
+  } catch {
     return `${protocol}${servername}`;
   }
 }

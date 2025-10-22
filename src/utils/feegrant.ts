@@ -85,6 +85,7 @@ export async function queryAddressAllowances(address: string) {
       });
     return allowancesResponse?.allowances ?? [];
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error("queryAddressAllowances::", (error as Error).message);
     return undefined;
   }

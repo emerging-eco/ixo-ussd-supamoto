@@ -52,7 +52,7 @@ class DatabaseManager {
         await this.pool.query("SELECT 1");
         logger.info("Database connection valid, reusing existing connection");
         return;
-      } catch (error) {
+      } catch {
         logger.warn("Existing connection invalid, reinitializing");
         await this.close(); // Clean up invalid pool
       }
@@ -280,7 +280,7 @@ class DatabaseManager {
     if (this.pool) {
       try {
         await this.pool.end();
-      } catch (error) {
+      } catch {
         // Ignore errors during force reset
         logger.debug("Ignoring error during force reset");
       }

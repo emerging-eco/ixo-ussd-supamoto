@@ -112,7 +112,7 @@ export const customerToolsMachine = setup({
         );
 
         // Get or create delivery confirmation
-        let confirmation = await dataService.getDeliveryConfirmation(
+        const confirmation = await dataService.getDeliveryConfirmation(
           input.customerId,
           input.lgCustomerId
         );
@@ -240,7 +240,7 @@ export const customerToolsMachine = setup({
     },
 
     claimSubmitted: {
-      entry: assign(({ context }) => ({
+      entry: assign(() => ({
         message:
           "Your self-proclamation has been recorded. You should receive an SMS shortly with instructions on how to collect your first free bag of beans!\n\n1. Continue",
       })),

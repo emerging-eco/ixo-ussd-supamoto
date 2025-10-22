@@ -85,7 +85,7 @@ export async function handleMatrixOnboarding(params: {
         mxMnemonic = existingData.mnemonic;
         mxRoomId = existingData.roomId;
         mxMnemonicSource = "decrypted";
-      } catch (error) {
+      } catch {
         logger.warn(
           "Failed to fetch existing credentials, generating new ones"
         );
@@ -133,21 +133,20 @@ export async function handleMatrixOnboarding(params: {
   } catch (err) {
     errorMessage = err instanceof Error ? err.message : String(err);
     status = "Matrix onboarding failed";
-  } finally {
-    // Always return as much info as possible
-    return {
-      status,
-      mxUsername: mxUsername ?? "",
-      mxUserId: account?.userId ?? "",
-      mxMnemonicSource: mxMnemonicSource ?? "",
-      mxMnemonic: mxMnemonic ?? "",
-      mxRoomId: mxRoomId ?? "",
-      mxRoomAlias: mxRoomAlias ?? "",
-      mxPassword: mxPassword ?? "",
-      error: errorMessage ?? "",
-    };
   }
-  // let mxMnemonicSource: "decrypted" | "generated" = "generated";
+
+  // Always return as much info as possible
+  return {
+    status,
+    mxUsername: mxUsername ?? "",
+    mxUserId: account?.userId ?? "",
+    mxMnemonicSource: mxMnemonicSource ?? "",
+    mxMnemonic: mxMnemonic ?? "",
+    mxRoomId: mxRoomId ?? "",
+    mxRoomAlias: mxRoomAlias ?? "",
+    mxPassword: mxPassword ?? "",
+    error: errorMessage ?? "",
+  };
 }
 
 /**

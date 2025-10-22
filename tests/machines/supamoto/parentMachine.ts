@@ -58,7 +58,7 @@ export type SupamotoMachineEvent =
   | { type: "CANCEL" }
   | { type: "ERROR"; error: string };
 
-import { messages } from "../../constants/branding.js";
+import { messages } from "../../../src/constants/branding.js";
 const buildPreMenuMessage = (isAuthenticated: boolean) =>
   `${messages.welcome()}\n1. Know More\n2. Account Menu${isAuthenticated ? "\n3. Services" : ""}\n*. Exit`;
 export const supamotoMachine = setup({
