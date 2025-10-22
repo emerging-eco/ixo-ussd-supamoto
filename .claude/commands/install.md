@@ -7,8 +7,11 @@
 ## Run
 
 Install dependencies
-Run `./scripts/copy_dot_env.sh` to copy the .env file from the tac-2 directory.
+cp .env.example .env
 
 ## Report
 
 Output the work you've just done in a concise bullet point list.
+Prompt the user to update their .env file with their own settings in order to be able to start the dev server
+Prompt the user to also start their PostgreSQL database
+Mention the /start slash command

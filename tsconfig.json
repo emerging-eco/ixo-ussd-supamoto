@@ -18,7 +18,7 @@
     "isolatedModules": true,
     "types": ["vitest/globals", "node", "@ixo/impactxclient-sdk"]
   },
-  "include": ["src/**/*", "test/**/*", "src/types/**/*.d.ts"],
+  "include": ["src/**/*", "tests/**/*", "scripts/**/*", "src/types/**/*.d.ts"],
   "exclude": [
     "node_modules",
     "dist",

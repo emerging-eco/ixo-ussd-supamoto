@@ -9,5 +9,5 @@ git ls-files
 ## Read
 
 README.md
-docs/_._
-docs/supamoto/_._
+docs/
+docs/supamoto/

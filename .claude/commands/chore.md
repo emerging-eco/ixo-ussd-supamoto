@@ -17,9 +17,9 @@ Create a new plan in specs/\*.md to resolve the `Chore` using the exact specifie
 
 Focus on the following files:
 
-- `README.md` - Contains the project overview and instructions.
-- `app/**` - Contains the codebase client/server.
-- `scripts/**` - Contains the scripts to start and stop the server + client.
+- `README.md`, `docs/`, `docs/supamoto/` - Contains the project overview and instructions.
+- `src/**` - Contains the codebase client/server.
+- `src/test/scripts/**` - Contains the scripts to start and stop the server + client.
 
 Ignore all other files in the codebase.
 
@@ -50,7 +50,7 @@ Execute every command to validate the chore is complete with zero regressions.
 
 <list commands you'll use to validate with 100% confidence the chore is complete with zero regressions. every command must execute without errors so be specific about what you want to run to validate the chore is complete with zero regressions. Don't validate with curl commands.>
 
-- `cd app/server && uv run pytest` - Run server tests to validate the chore is complete with zero regressions
+<!-- - `cd app/server && uv run pytest` - Run server tests to validate the chore is complete with zero regressions -->
 
 ## Notes
 

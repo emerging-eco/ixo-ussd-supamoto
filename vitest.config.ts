@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     globals: true, // Jest-style globals
     environment: "node", // Fast execution for Node.js backend
-    setupFiles: ["./test/setup.ts"],
+    setupFiles: ["./tests/setup.ts"],
     testTimeout: 30_000, // 30s - covers USSD session TTL flows
     coverage: {
       provider: "v8",
@@ -24,7 +24,7 @@ export default defineConfig({
         "**/*.d.ts",
         "**/*.test.{ts,tsx}",
         "**/*.spec.{ts,tsx}",
-        "src/test/**/*",
+        "tests/**/*",
         "src/**/__tests__/**/*",
         "src/**/__mocks__/**/*",
         "src/index.ts",
@@ -33,13 +33,16 @@ export default defineConfig({
       ],
     },
     // Test file patterns
-    include: ["**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+    include: [
+      "tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}",
+      "src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}",
+    ],
     // Exclude Docker-dependent integration tests
     exclude: [
       "dist/**",
       "**/node_modules/**",
-      "**/src/test/integration/**", // Exclude integration tests that require Docker containers
-      "**/src/test/e2e/recorded-flows.test.ts", // Exclude recorded flows - run manually with test:replay
+      "**/tests/integration/**", // Exclude integration tests that require Docker containers
+      "**/tests/e2e/recorded-flows.test.ts", // Exclude recorded flows - run manually with test:replay
     ],
   },
   // Support for path aliases from tsconfig.json
