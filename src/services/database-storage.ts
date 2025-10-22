@@ -135,7 +135,8 @@ export interface BeanDeliveryConfirmationRecord {
 
 export interface HouseholdClaimRecord {
   id: number;
-  customerId: string;
+  lgCustomerId: string; // Lead Generator who submitted the claim
+  customerId: string; // Customer the claim is for
   is1000DayHousehold: boolean;
   claimSubmittedAt: Date;
   claimProcessedAt: Date | null;
@@ -168,8 +169,8 @@ export interface DistributionOTPRecord {
 // Household Survey Response Types
 export interface HouseholdSurveyResponseRecord {
   id: number;
-  customerId: string;
-  leadGeneratorId: string;
+  lgCustomerId: string; // Lead Generator's customer ID
+  customerId: string; // Customer being surveyed
   beneficiaryCategory: string | null;
   childMaxAge: string | null;
   beanIntakeFrequency: string | null;
@@ -184,8 +185,8 @@ export interface HouseholdSurveyResponseRecord {
 }
 
 export interface HouseholdSurveyResponseData {
-  customerId: string;
-  leadGeneratorId: string;
+  lgCustomerId: string; // Lead Generator's customer ID
+  customerId: string; // Customer being surveyed
   beneficiaryCategory?: string;
   childMaxAge?: string;
   beanIntakeFrequency?: string;
@@ -1529,9 +1530,10 @@ class DataService {
   }
 
   /**
-   * Create household claim
+   * Create household claim (submitted by Lead Generator)
    */
   async createHouseholdClaim(
+    lgCustomerId: string,
     customerId: string,
     is1000DayHousehold: boolean
   ): Promise<HouseholdClaimRecord> {
@@ -1539,16 +1541,18 @@ class DataService {
 
     logger.info(
       {
+        lgCustomerId: lgCustomerId.slice(-4),
         customerId: customerId.slice(-4),
         is1000DayHousehold,
       },
-      "Creating household claim"
+      "Creating household claim (submitted by LG)"
     );
 
     try {
       const result = await db
         .insertInto("household_claims")
         .values({
+          lg_customer_id: lgCustomerId,
           customer_id: customerId,
           is_1000_day_household: is1000DayHousehold,
           claim_submitted_at: new Date(),
@@ -1563,6 +1567,7 @@ class DataService {
 
       return {
         id: result.id!,
+        lgCustomerId: result.lg_customer_id,
         customerId: result.customer_id,
         is1000DayHousehold: result.is_1000_day_household,
         claimSubmittedAt: result.claim_submitted_at,
@@ -1744,8 +1749,8 @@ class DataService {
 
     logger.info(
       {
+        lgCustomerId: data.lgCustomerId.slice(-4),
         customerId: data.customerId.slice(-4),
-        leadGeneratorId: data.leadGeneratorId.slice(-4),
       },
       "Creating or updating household survey response"
     );
@@ -1780,12 +1785,12 @@ class DataService {
             : null,
       };
 
-      // Try to find existing response for this customer/LG pair
+      // Try to find existing response for this LG-Customer pair
       const existing = await db
         .selectFrom("household_survey_responses")
         .selectAll()
+        .where("lg_customer_id", "=", data.lgCustomerId)
         .where("customer_id", "=", data.customerId)
-        .where("lead_generator_id", "=", data.leadGeneratorId)
         .orderBy("created_at", "desc")
         .executeTakeFirst();
 
@@ -1807,8 +1812,8 @@ class DataService {
         const result = await db
           .insertInto("household_survey_responses")
           .values({
+            lg_customer_id: data.lgCustomerId,
             customer_id: data.customerId,
-            lead_generator_id: data.leadGeneratorId,
             ...encryptedData,
             all_fields_completed: false,
             created_at: new Date(),
@@ -1835,15 +1840,15 @@ class DataService {
    * Mark survey as complete
    */
   async markSurveyComplete(
-    customerId: string,
-    leadGeneratorId: string
+    lgCustomerId: string,
+    customerId: string
   ): Promise<HouseholdSurveyResponseRecord> {
     const db = databaseManager.getKysely();
 
     logger.info(
       {
+        lgCustomerId: lgCustomerId.slice(-4),
         customerId: customerId.slice(-4),
-        leadGeneratorId: leadGeneratorId.slice(-4),
       },
       "Marking survey as complete"
     );
@@ -1855,8 +1860,8 @@ class DataService {
           all_fields_completed: true,
           updated_at: new Date(),
         })
+        .where("lg_customer_id", "=", lgCustomerId)
         .where("customer_id", "=", customerId)
-        .where("lead_generator_id", "=", leadGeneratorId)
         .orderBy("created_at", "desc")
         .limit(1)
         .returningAll()
@@ -1876,11 +1881,11 @@ class DataService {
   }
 
   /**
-   * Get latest survey response for customer/LG pair
+   * Get latest survey response for LG-Customer pair
    */
   async getSurveyResponse(
-    customerId: string,
-    leadGeneratorId: string
+    lgCustomerId: string,
+    customerId: string
   ): Promise<HouseholdSurveyResponseRecord | null> {
     const db = databaseManager.getKysely();
     const { decrypt } = await import("../utils/encryption.js");
@@ -1889,8 +1894,8 @@ class DataService {
 
     logger.debug(
       {
+        lgCustomerId: lgCustomerId.slice(-4),
         customerId: customerId.slice(-4),
-        leadGeneratorId: leadGeneratorId.slice(-4),
       },
       "Fetching survey response"
     );
@@ -1899,8 +1904,8 @@ class DataService {
       const result = await db
         .selectFrom("household_survey_responses")
         .selectAll()
+        .where("lg_customer_id", "=", lgCustomerId)
         .where("customer_id", "=", customerId)
-        .where("lead_generator_id", "=", leadGeneratorId)
         .orderBy("created_at", "desc")
         .executeTakeFirst();
 
@@ -1911,8 +1916,8 @@ class DataService {
       // Decrypt all fields
       return {
         id: result.id!,
+        lgCustomerId: result.lg_customer_id,
         customerId: result.customer_id,
-        leadGeneratorId: result.lead_generator_id,
         beneficiaryCategory: result.beneficiary_category
           ? decrypt(result.beneficiary_category, encryptionKey)
           : null,
@@ -1965,8 +1970,8 @@ class DataService {
   ): HouseholdSurveyResponseRecord {
     return {
       id: dbRecord.id!,
+      lgCustomerId: dbRecord.lg_customer_id,
       customerId: dbRecord.customer_id,
-      leadGeneratorId: dbRecord.lead_generator_id,
       beneficiaryCategory: dbRecord.beneficiary_category,
       childMaxAge: dbRecord.child_max_age,
       beanIntakeFrequency: dbRecord.bean_intake_frequency,

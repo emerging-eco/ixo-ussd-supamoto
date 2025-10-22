@@ -201,7 +201,8 @@ export interface Database {
   };
   household_claims: {
     id?: number;
-    customer_id: string;
+    lg_customer_id: string; // Lead Generator who submitted the claim
+    customer_id: string; // Customer the claim is for
     is_1000_day_household: boolean;
     claim_submitted_at: Date;
     claim_processed_at: Date | null;
@@ -220,8 +221,8 @@ export interface Database {
   };
   household_survey_responses: {
     id?: number;
-    customer_id: string;
-    lead_generator_id: string;
+    lg_customer_id: string; // Lead Generator's customer ID
+    customer_id: string; // Customer being surveyed
     beneficiary_category: string | null;
     child_max_age: string | null;
     bean_intake_frequency: string | null;

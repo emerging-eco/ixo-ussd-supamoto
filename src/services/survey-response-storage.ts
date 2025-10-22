@@ -18,8 +18,8 @@ export interface SurveyAnswer {
 }
 
 export interface SurveyResponseState {
-  customerId: string;
-  leadGeneratorId: string;
+  lgCustomerId: string; // Lead Generator's customer ID
+  customerId: string; // Customer being surveyed
   answers: Record<string, any>;
   allFieldsCompleted: boolean;
 }
@@ -33,15 +33,15 @@ class SurveyResponseStorageService {
    * Save a single survey answer
    */
   async saveSurveyAnswer(
+    lgCustomerId: string,
     customerId: string,
-    leadGeneratorId: string,
     questionName: string,
     answer: string | boolean | number
   ): Promise<HouseholdSurveyResponseRecord> {
     logger.info(
       {
+        lgCustomerId: lgCustomerId.slice(-4),
         customerId: customerId.slice(-4),
-        leadGeneratorId: leadGeneratorId.slice(-4),
         questionName,
       },
       "Saving survey answer"
@@ -50,13 +50,13 @@ class SurveyResponseStorageService {
     try {
       // Get existing response or create new one
       const existing = await dataService.getSurveyResponse(
-        customerId,
-        leadGeneratorId
+        lgCustomerId,
+        customerId
       );
 
       const data: HouseholdSurveyResponseData = {
+        lgCustomerId,
         customerId,
-        leadGeneratorId,
       };
 
       // Map question name to field name
@@ -69,7 +69,7 @@ class SurveyResponseStorageService {
           if (
             key !== "id" &&
             key !== "customerId" &&
-            key !== "leadGeneratorId" &&
+            key !== "lgCustomerId" &&
             key !== "createdAt" &&
             key !== "updatedAt" &&
             key !== "allFieldsCompleted" &&
@@ -98,14 +98,14 @@ class SurveyResponseStorageService {
    * Save multiple survey answers at once
    */
   async saveSurveyAnswers(
+    lgCustomerId: string,
     customerId: string,
-    leadGeneratorId: string,
     answers: Record<string, any>
   ): Promise<HouseholdSurveyResponseRecord> {
     logger.info(
       {
+        lgCustomerId: lgCustomerId.slice(-4),
         customerId: customerId.slice(-4),
-        leadGeneratorId: leadGeneratorId.slice(-4),
         answerCount: Object.keys(answers).length,
       },
       "Saving multiple survey answers"
@@ -113,8 +113,8 @@ class SurveyResponseStorageService {
 
     try {
       const data: HouseholdSurveyResponseData = {
+        lgCustomerId,
         customerId,
-        leadGeneratorId,
       };
 
       // Map all answers to field names
@@ -140,19 +140,19 @@ class SurveyResponseStorageService {
    * Mark survey as complete
    */
   async markSurveyComplete(
-    customerId: string,
-    leadGeneratorId: string
+    lgCustomerId: string,
+    customerId: string
   ): Promise<HouseholdSurveyResponseRecord> {
     logger.info(
       {
+        lgCustomerId: lgCustomerId.slice(-4),
         customerId: customerId.slice(-4),
-        leadGeneratorId: leadGeneratorId.slice(-4),
       },
       "Marking survey as complete"
     );
 
     try {
-      return await dataService.markSurveyComplete(customerId, leadGeneratorId);
+      return await dataService.markSurveyComplete(lgCustomerId, customerId);
     } catch (error) {
       logger.error(
         {
@@ -169,21 +169,21 @@ class SurveyResponseStorageService {
    * Get survey response state for session recovery
    */
   async getSurveyResponseState(
-    customerId: string,
-    leadGeneratorId: string
+    lgCustomerId: string,
+    customerId: string
   ): Promise<SurveyResponseState | null> {
     logger.debug(
       {
+        lgCustomerId: lgCustomerId.slice(-4),
         customerId: customerId.slice(-4),
-        leadGeneratorId: leadGeneratorId.slice(-4),
       },
       "Fetching survey response state"
     );
 
     try {
       const response = await dataService.getSurveyResponse(
-        customerId,
-        leadGeneratorId
+        lgCustomerId,
+        customerId
       );
 
       if (!response) {
@@ -220,8 +220,8 @@ class SurveyResponseStorageService {
       }
 
       return {
+        lgCustomerId: response.lgCustomerId,
         customerId: response.customerId,
-        leadGeneratorId: response.leadGeneratorId,
         answers,
         allFieldsCompleted: response.allFieldsCompleted,
       };

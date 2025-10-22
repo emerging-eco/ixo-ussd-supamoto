@@ -2,7 +2,6 @@ import { setup, assign, fromPromise } from "xstate";
 import { withNavigation } from "../utils/navigation-mixin.js";
 import { navigationGuards } from "../guards/navigation.guards.js";
 import { dataService } from "../../../services/database-storage.js";
-import { surveyResponseStorageService } from "../../../services/survey-response-storage.js";
 import { createModuleLogger } from "../../../services/logger.js";
 
 const logger = createModuleLogger("customerToolsMachine");
@@ -10,8 +9,10 @@ const logger = createModuleLogger("customerToolsMachine");
 /**
  * Customer Tools Machine
  * Handles customer-specific operations:
- * 1. 1,000 Day Household claim
- * 2. Confirm Receival of Beans
+ * 1. Confirm Receival of Beans
+ *
+ * NOTE: 1,000 Day Household claim submission has been moved to Agent Tools
+ * and is now submitted by Lead Generators, not customers.
  */
 
 export interface CustomerToolsContext {
@@ -27,11 +28,7 @@ export type CustomerToolsEvent =
   | { type: "INPUT"; input: string }
   | { type: "ERROR"; error: string };
 
-const MENU_MESSAGE =
-  "Customer Tools\n1. 1,000 Day Household\n2. Confirm Receival of Beans\n0. Back";
-
-const HOUSEHOLD_QUESTION =
-  "A 1,000 Day Household is a family with a pregnant or breastfeeding mother, or a child younger than two years old.\n\nDo you have an eligible 1,000 Day Household?\n1. Yes\n2. No\n0. Back";
+const MENU_MESSAGE = "Customer Tools\n1. Confirm Receival of Beans\n0. Back";
 
 const RECEIPT_QUESTION =
   "Did you receive a bag of beans from your Lead Generator?\n1. Yes\n2. No\n0. Back";
@@ -62,70 +59,6 @@ export const customerToolsMachine = setup({
       navigationGuards.isExitCommand(null as any, event as any),
   },
   actors: {
-    checkSurveyCompletionService: fromPromise(
-      async ({
-        input,
-      }: {
-        input: { customerId: string; lgCustomerId: string };
-      }) => {
-        logger.info(
-          {
-            customerId: input.customerId.slice(-4),
-          },
-          "Checking survey completion status"
-        );
-
-        const surveyState =
-          await surveyResponseStorageService.getSurveyResponseState(
-            input.customerId,
-            input.lgCustomerId
-          );
-
-        const isComplete = surveyState?.allFieldsCompleted ?? false;
-
-        logger.info(
-          {
-            customerId: input.customerId.slice(-4),
-            isComplete,
-          },
-          "Survey completion status checked"
-        );
-
-        return { isComplete };
-      }
-    ),
-    submitHouseholdClaimService: fromPromise(
-      async ({
-        input,
-      }: {
-        input: { customerId: string; is1000DayHousehold: boolean };
-      }) => {
-        logger.info(
-          {
-            customerId: input.customerId.slice(-4),
-            is1000DayHousehold: input.is1000DayHousehold,
-          },
-          "Submitting household claim"
-        );
-
-        // Create household claim record
-        const claim = await dataService.createHouseholdClaim(
-          input.customerId,
-          input.is1000DayHousehold
-        );
-
-        // TODO: Send to claims bot (async, non-blocking)
-        // This would be implemented when the claims bot integration is ready
-        // For now, we just create the record with status='PENDING'
-
-        logger.info(
-          { customerId: input.customerId.slice(-4), claimId: claim.id },
-          "Household claim submitted successfully"
-        );
-
-        return { success: true, is1000DayHousehold: input.is1000DayHousehold };
-      }
-    ),
     submitReceiptConfirmationService: fromPromise(
       async ({
         input,
@@ -203,10 +136,7 @@ export const customerToolsMachine = setup({
       })),
       on: {
         INPUT: withNavigation(
-          [
-            { target: "householdClaimQuestion", guard: "isInput1" },
-            { target: "confirmReceiptQuestion", guard: "isInput2" },
-          ],
+          [{ target: "confirmReceiptQuestion", guard: "isInput1" }],
           {
             backTarget: "routeToMain",
             exitTarget: "routeToMain",
@@ -220,95 +150,6 @@ export const customerToolsMachine = setup({
             error: ({ event }) => event.error || "An error occurred",
           }),
         },
-      },
-    },
-
-    householdClaimQuestion: {
-      entry: assign(() => ({
-        message: HOUSEHOLD_QUESTION,
-      })),
-      invoke: {
-        id: "checkSurveyCompletion",
-        src: "checkSurveyCompletionService",
-        input: ({ context }) => ({
-          customerId: context.customerId,
-          lgCustomerId: context.phoneNumber, // Use phone as LG identifier
-        }),
-        onDone: {
-          target: "householdClaimQuestion",
-          actions: assign({
-            message: ({ event }) => {
-              if (!event.output.isComplete) {
-                return "Please complete the household survey first.\n\n1. Back";
-              }
-              return HOUSEHOLD_QUESTION;
-            },
-          }),
-        },
-        onError: {
-          target: "householdClaimQuestion",
-          actions: assign({
-            message: HOUSEHOLD_QUESTION,
-          }),
-        },
-      },
-      on: {
-        INPUT: withNavigation(
-          [
-            {
-              target: "submittingClaim",
-              guard: "isYes",
-            },
-            {
-              target: "submittingClaim",
-              guard: "isNo",
-            },
-          ],
-          {
-            backTarget: "menu",
-            exitTarget: "routeToMain",
-            enableBack: true,
-            enableExit: true,
-          }
-        ),
-      },
-    },
-
-    submittingClaim: {
-      entry: assign(() => ({
-        message: "Submitting your response...",
-      })),
-      invoke: {
-        src: "submitHouseholdClaimService",
-        input: ({ context, event }) => ({
-          customerId: context.customerId,
-          is1000DayHousehold:
-            event.type === "INPUT" && event.input.trim() === "1",
-        }),
-        onDone: {
-          target: "claimSubmitted",
-        },
-        onError: {
-          target: "error",
-          actions: assign({
-            error: "Failed to submit claim. Please try again.",
-          }),
-        },
-      },
-    },
-
-    claimSubmitted: {
-      entry: assign(() => ({
-        message:
-          "Your self-proclamation has been recorded. You should receive an SMS shortly with instructions on how to collect your first free bag of beans!\n\n1. Continue",
-      })),
-      on: {
-        INPUT: withNavigation([{ target: "menu", guard: "isInput1" }], {
-          backTarget: "menu",
-          exitTarget: "routeToMain",
-          enableBack: false,
-          enableExit: true,
-        }),
       },
     },
 

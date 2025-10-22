@@ -2,12 +2,13 @@
  * Household Survey Machine
  *
  * Handles the USSD survey flow for collecting household eligibility data
+ * Collected by Lead Generators (LG) for customers
  * Supports session interruption recovery and conditional question visibility
  *
  * Flow:
  * 1. Load survey form from SurveyJS
  * 2. Present questions one at a time
- * 3. Save each answer to database
+ * 3. Save each answer to database (encrypted)
  * 4. Check for conditional visibility
  * 5. Mark survey complete when all required questions answered
  * 6. Return to parent machine
@@ -24,10 +25,10 @@ const logger = createModuleLogger("householdSurvey");
 // Types and Interfaces
 export interface HouseholdSurveyContext {
   sessionId: string;
-  phoneNumber: string;
+  phoneNumber: string; // LG's phone number
   serviceCode: string;
-  customerId: string;
-  leadGeneratorId: string;
+  lgCustomerId: string; // Lead Generator's customer ID
+  customerId: string; // Customer being surveyed
   message: string;
   error?: string;
   // Survey state
@@ -41,10 +42,10 @@ export interface HouseholdSurveyContext {
 
 export interface HouseholdSurveyInput {
   sessionId: string;
-  phoneNumber: string;
+  phoneNumber: string; // LG's phone number
   serviceCode: string;
-  customerId: string;
-  leadGeneratorId: string;
+  lgCustomerId: string; // Lead Generator's customer ID
+  customerId: string; // Customer being surveyed
 }
 
 export type HouseholdSurveyEvent =
@@ -67,22 +68,23 @@ const saveAnswerService = fromPromise(
     input,
   }: {
     input: {
+      lgCustomerId: string;
       customerId: string;
-      leadGeneratorId: string;
       questionName: string;
       answer: string;
     };
   }) => {
     logger.info(
       {
+        lgCustomerId: input.lgCustomerId.slice(-4),
         customerId: input.customerId.slice(-4),
         questionName: input.questionName,
       },
       "Saving survey answer"
     );
     return await surveyResponseStorageService.saveSurveyAnswer(
+      input.lgCustomerId,
       input.customerId,
-      input.leadGeneratorId,
       input.questionName,
       input.answer
     );
@@ -94,19 +96,20 @@ const markCompleteService = fromPromise(
     input,
   }: {
     input: {
+      lgCustomerId: string;
       customerId: string;
-      leadGeneratorId: string;
     };
   }) => {
     logger.info(
       {
+        lgCustomerId: input.lgCustomerId.slice(-4),
         customerId: input.customerId.slice(-4),
       },
       "Marking survey as complete"
     );
     return await surveyResponseStorageService.markSurveyComplete(
-      input.customerId,
-      input.leadGeneratorId
+      input.lgCustomerId,
+      input.customerId
     );
   }
 );
@@ -116,19 +119,20 @@ const recoverSessionService = fromPromise(
     input,
   }: {
     input: {
+      lgCustomerId: string;
       customerId: string;
-      leadGeneratorId: string;
     };
   }) => {
     logger.info(
       {
+        lgCustomerId: input.lgCustomerId.slice(-4),
         customerId: input.customerId.slice(-4),
       },
       "Recovering survey session"
     );
     return await surveyResponseStorageService.getSurveyResponseState(
-      input.customerId,
-      input.leadGeneratorId
+      input.lgCustomerId,
+      input.customerId
     );
   }
 );
@@ -173,8 +177,8 @@ export const householdSurveyMachine = setup({
     sessionId: input?.sessionId || "",
     phoneNumber: input?.phoneNumber || "",
     serviceCode: input?.serviceCode || "",
+    lgCustomerId: input?.lgCustomerId || "",
     customerId: input?.customerId || "",
-    leadGeneratorId: input?.leadGeneratorId || "",
     message: "Loading survey...",
     currentQuestionIndex: 0,
     allQuestions: [],
@@ -216,8 +220,8 @@ export const householdSurveyMachine = setup({
         id: "recoverSession",
         src: "recoverSessionService",
         input: ({ context }) => ({
+          lgCustomerId: context.lgCustomerId,
           customerId: context.customerId,
-          leadGeneratorId: context.leadGeneratorId,
         }),
         onDone: {
           target: "presentingQuestion",
@@ -298,8 +302,8 @@ export const householdSurveyMachine = setup({
         id: "saveAnswer",
         src: "saveAnswerService",
         input: ({ context, event }) => ({
+          lgCustomerId: context.lgCustomerId,
           customerId: context.customerId,
-          leadGeneratorId: context.leadGeneratorId,
           questionName: context.currentQuestion?.name || "",
           answer: event.type === "INPUT" ? event.input : "",
         }),
@@ -346,8 +350,8 @@ export const householdSurveyMachine = setup({
         id: "markComplete",
         src: "markCompleteService",
         input: ({ context }) => ({
+          lgCustomerId: context.lgCustomerId,
           customerId: context.customerId,
-          leadGeneratorId: context.leadGeneratorId,
         }),
         onDone: {
           target: "complete",
