@@ -103,7 +103,7 @@ Fix the PIN login attempt limiting and account lockout feature to ensure:
 
 Execute every command to validate the chore is complete with zero regressions.
 
-- `pnpm format && pnpm lint && pnpm tsc --noEmit && pnpm install && pnpm build && pnpm validate:machines && pnpm test` - Run tests to validate the chore is complete with zero regressions.
+- `pnpm install && pnpm format && pnpm lint && pnpm tsc --noEmit && pnpm build && pnpm validate:machines && pnpm test` - Run tests to validate the chore is complete with zero regressions.
 
 ## Notes
 
@@ -112,4 +112,4 @@ Execute every command to validate the chore is complete with zero regressions.
 - The audit log entry is already created when account is locked
 - Focus on fixing the message display and routing logic
 - The specification requires the message format to be: "X of 3 attempts - Y left - account will be locked upon 3 incorrect attempts"
-- After 3 failed attempts, the user should see the lockout message on the Pre-Menu screen, not the Account Menu
+- After 3 failed attempts, the user should see the lockout message on the Pre-Menu screen, not the Account Menu and not the KnowMore Menu

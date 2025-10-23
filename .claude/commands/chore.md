@@ -53,7 +53,7 @@ Execute every command to validate the chore is complete with zero regressions.
 
 <list commands you'll use to validate with 100% confidence the chore is complete with zero regressions. every command must execute without errors so be specific about what you want to run to validate the chore is complete with zero regressions. Don't validate with curl commands.>
 
-- `pnpm format && pnpm lint && pnpm tsc --noEmit && pnpm install && pnpm build && pnpm validate:machines && pnpm test` - Run tests to validate the chore is complete with zero regressions.
+- `pnpm install && pnpm format && pnpm lint && pnpm tsc --noEmit && pnpm build && pnpm validate:machines && pnpm test` - Run tests to validate the chore is complete with zero regressions.
 
 ## Notes
 

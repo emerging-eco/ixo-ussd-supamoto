@@ -22,22 +22,26 @@ import { dataService } from "../../../../src/services/database-storage.js";
 import { encryptPin } from "../../../../src/utils/encryption.js";
 
 // Mock dependencies
-vi.mock("../../../services/database-storage.js", () => ({
+vi.mock("../../../../src/services/database-storage.js", () => ({
   dataService: {
     getCustomerByCustomerId: vi.fn(),
     clearCustomerPin: vi.fn(),
+    createAuditLog: vi.fn(),
   },
 }));
-vi.mock("../../../utils/encryption.js", () => ({
+vi.mock("../../../../src/utils/encryption.js", () => ({
   encryptPin: vi.fn(),
 }));
-vi.mock("../../../services/logger.js", () => ({
+vi.mock("../../../../src/services/logger.js", () => ({
   createModuleLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
     debug: vi.fn(),
   }),
+}));
+vi.mock("../../../../src/services/sms.js", () => ({
+  sendSMSWithRetry: vi.fn(),
 }));
 
 const mockDataService = vi.mocked(dataService);
@@ -246,21 +250,60 @@ describe("loginMachine", () => {
       await new Promise(resolve => setTimeout(resolve, 10));
       expect(actor.getSnapshot().value).toBe("pinEntry");
 
-      // First two attempts
+      // First attempt - INCORRECT_PIN transitions immediately to pinEntry
       actor.send({ type: "INPUT", input: "1234" });
       await new Promise(resolve => setTimeout(resolve, 10));
+      expect(actor.getSnapshot().value).toBe("pinEntry");
+      console.log(
+        "After 1st attempt - State:",
+        actor.getSnapshot().value,
+        "Message:",
+        actor.getSnapshot().context.message
+      );
 
+      // Second attempt - INCORRECT_PIN transitions immediately to pinEntry
       actor.send({ type: "INPUT", input: "1234" });
       await new Promise(resolve => setTimeout(resolve, 10));
+      expect(actor.getSnapshot().value).toBe("pinEntry");
+      console.log(
+        "After 2nd attempt - State:",
+        actor.getSnapshot().value,
+        "Message:",
+        actor.getSnapshot().context.message
+      );
 
-      // Third attempt should trigger max attempts exceeded
+      // Third attempt - MAX_ATTEMPTS_EXCEEDED waits for user input
       actor.send({ type: "INPUT", input: "1234" });
       await new Promise(resolve => setTimeout(resolve, 10));
+      expect(actor.getSnapshot().value).toBe("verifyingPin");
+      console.log(
+        "After 3rd attempt (before pressing 1) - State:",
+        actor.getSnapshot().value,
+        "Message:",
+        actor.getSnapshot().context.message
+      );
+
+      actor.send({ type: "INPUT", input: "1" });
+      await new Promise(resolve => setTimeout(resolve, 10));
+      console.log(
+        "After 3rd attempt (after pressing 1) - State:",
+        actor.getSnapshot().value,
+        "Message:",
+        actor.getSnapshot().context.message
+      );
 
       expect(actor.getSnapshot().value).toBe("routeToMain");
-      expect((actor.getSnapshot().output as any)?.result).toBe(
-        LoginOutput.MAX_ATTEMPTS_EXCEEDED
-      );
+      const context = actor.getSnapshot().context;
+      const output = actor.getSnapshot().output as any;
+
+      console.log("Context message:", context.message);
+      console.log("Output keys:", Object.keys(output || {}));
+      console.log("Output.message:", output?.message);
+      console.log("Full output:", output);
+
+      expect(output?.result).toBe(LoginOutput.MAX_ATTEMPTS_EXCEEDED);
+      expect(context.message).toBeDefined();
+      expect(context.message).toContain("account was locked");
       expect(mockDataService.clearCustomerPin).toHaveBeenCalledWith(
         "C12345678"
       );

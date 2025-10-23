@@ -70,15 +70,11 @@ export const CUSTOMER_NOT_FOUND_MSG =
 export const PIN_FIELD_EMPTY_MSG =
   "Your account needs PIN setup. Please contact support.";
 export const INCORRECT_PIN_MSG = (attempt: number) => {
-  if (attempt === 1) {
-    return "Incorrect PIN. Please try again. (Attempt 1 of 3)";
-  } else if (attempt === 2) {
-    return "Incorrect PIN. Please try again. (Attempt 2 of 3)\nWARNING: Your account will be locked after one more failed attempt.";
-  }
-  return "Incorrect PIN. Please try again.";
+  const attemptsLeft = 3 - attempt;
+  return `${attempt} of 3 attempts - ${attemptsLeft} left - account will be locked upon 3 incorrect attempts`;
 };
 export const MAX_ATTEMPTS_MSG =
-  "Your USSD account has been locked due to 3 failed PIN attempts. Contact your LG or the SupaMoto call centre to reset your PIN.";
+  "Your account was locked after 3 incorrect PIN attempts. Please contact your LG to activate your account.";
 export const VERIFYING_MSG = "Verifying Customer ID...\n1. Continue";
 export const VERIFYING_PIN_MSG = "Verifying PIN...\n1. Continue";
 export const LOGIN_SUCCESS_MSG = (
@@ -482,7 +478,6 @@ export const loginMachine = setup({
         },
         onError: [
           {
-            target: "routeToMain",
             guard: ({ event }) =>
               (event.error as Error)?.message === "MAX_ATTEMPTS_EXCEEDED",
             actions: [
@@ -525,7 +520,7 @@ export const loginMachine = setup({
               guard: "isLoginSuccess",
             },
             {
-              target: "pinEntry",
+              target: "routeToMain",
             },
           ],
           NavigationPatterns.loginChild

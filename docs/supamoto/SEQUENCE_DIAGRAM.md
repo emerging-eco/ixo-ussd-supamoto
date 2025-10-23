@@ -37,12 +37,13 @@ sequenceDiagram
     USSD->>Customer: [SMS] Here's your temporary PIN. Use *2233*2*1# to log in and reset your PIN.
     Customer->>USSD: [USSD] log in(customerID, PIN)
 
-    Note over USSD,Customer: Household Survey Phase
+    Note over USSD,LG: Household Survey Phase
     USSD->>USSD: loadSurveyForm()
     USSD->>USSD: recoverSessionIfInterrupted()
     loop For each survey question
-        USSD->>Customer: [USSD] Survey Question (e.g., "Beneficiary Category?")
-        Customer->>USSD: [USSD] Answer (e.g., "1. Pregnant Woman")
+        LG->>USSD: [USSD] Start Survey Questionnaire
+        USSD->>LG: [USSD] Survey Question (e.g., "Beneficiary Category?")
+        LG->>USSD: [USSD] Answer (e.g., "1. Pregnant Woman")
         USSD->>USSD: encryptAnswer()
         USSD->>USSD: saveSurveyResponse(customerId, leadGeneratorId, answer)
     end
@@ -52,7 +53,7 @@ sequenceDiagram
     Customer->>USSD: [USSD] I have an eligible 1,000-day Household
     USSD->>USSD: checkSurveyCompletion()
     alt Survey NOT Complete
-        USSD->>Customer: [USSD] Please complete household survey first
+        USSD->>Customer: [USSD] Please ask LG to complete household survey first
     else Survey Complete
         USSD->>claims-bot: submit1000DayCustomerClaim(IXO DID)
         claims-bot-->>matrix-bot: CronJob picks up new claim

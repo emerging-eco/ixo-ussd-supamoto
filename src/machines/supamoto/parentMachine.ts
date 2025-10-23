@@ -94,9 +94,17 @@ export const supamotoMachine = setup({
       message: buildPreMenuMessage(!!context.isAuthenticated),
     })),
 
-    setPreMenuMessage: assign(({ context }) => ({
-      message: buildPreMenuMessage(!!context.isAuthenticated),
-    })),
+    setPreMenuMessage: assign(({ context }) => {
+      // If there's a lockout message, preserve it and append the menu options
+      if (context.message && context.message.includes("account was locked")) {
+        return {
+          message: `${context.message}\n\n${buildPreMenuMessage(!!context.isAuthenticated)}`,
+        };
+      }
+      return {
+        message: buildPreMenuMessage(!!context.isAuthenticated),
+      };
+    }),
 
     setAgentIdEntryMessage: assign(() => ({
       message: "Enter your Agent ID:",
@@ -313,11 +321,6 @@ export const supamotoMachine = setup({
           target: "error",
           actions: "setError",
         },
-        onSnapshot: {
-          actions: assign(({ event }) => ({
-            message: event.snapshot.context.message,
-          })),
-        },
       },
     },
 
@@ -352,6 +355,7 @@ export const supamotoMachine = setup({
                   isAuthenticated: true,
                   // Thread session PIN for Matrix vault decryption in services
                   sessionPin: output?.sessionPin,
+                  message: output?.message,
                 };
               }),
             ],
@@ -360,35 +364,50 @@ export const supamotoMachine = setup({
             target: "accountMenu",
             guard: ({ event }) =>
               (event.output as any)?.result === LoginOutput.CUSTOMER_NOT_FOUND,
-            actions: ["clearErrors"],
+            actions: [
+              "clearErrors",
+              assign(({ event }) => ({
+                message: (event.output as any)?.message,
+              })),
+            ],
           },
           {
             target: "accountMenu",
             guard: ({ event }) =>
               (event.output as any)?.result ===
               LoginOutput.ENCRYPTED_PIN_FIELD_EMPTY,
-            actions: ["clearErrors"],
-          },
-          {
-            target: "accountMenu",
-            guard: ({ event }) =>
-              (event.output as any)?.result ===
-              LoginOutput.MAX_ATTEMPTS_EXCEEDED,
-            actions: ["clearErrors"],
+            actions: [
+              "clearErrors",
+              assign(({ event }) => ({
+                message: (event.output as any)?.message,
+              })),
+            ],
           },
           {
             target: "preMenu",
-            actions: ["clearErrors"],
+            guard: ({ event }) =>
+              (event.output as any)?.result ===
+              LoginOutput.MAX_ATTEMPTS_EXCEEDED,
+            actions: [
+              "clearErrors",
+              assign(({ event }) => ({
+                message: (event.output as any)?.message,
+              })),
+            ],
+          },
+          {
+            target: "preMenu",
+            actions: [
+              "clearErrors",
+              assign(({ event }) => ({
+                message: (event.output as any)?.message,
+              })),
+            ],
           },
         ],
         onError: {
           target: "error",
           actions: "setError",
-        },
-        onSnapshot: {
-          actions: assign(({ event }) => ({
-            message: event.snapshot.context.message,
-          })),
         },
       },
     },
@@ -438,11 +457,6 @@ export const supamotoMachine = setup({
         onError: {
           target: "error",
           actions: "setError",
-        },
-        onSnapshot: {
-          actions: assign(({ event }) => ({
-            message: event.snapshot.context.message,
-          })),
         },
       },
     },
@@ -498,11 +512,6 @@ export const supamotoMachine = setup({
         onError: {
           target: "error",
           actions: "setError",
-        },
-        onSnapshot: {
-          actions: assign(({ event }) => ({
-            message: event.snapshot.context.message,
-          })),
         },
       },
     },
