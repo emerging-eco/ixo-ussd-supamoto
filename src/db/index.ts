@@ -141,29 +141,7 @@ export interface Database {
     updated_at: Date;
   };
   // temp_pins table removed - temporary PINs now stored encrypted in customers.encrypted_pin
-  eligibility_verifications: {
-    id?: number;
-    customer_id: string;
-    phone_number: string;
-    is_eligible: boolean;
-    verification_date: Date;
-    claim_id: string | null;
-    claim_status: string | null;
-    claim_submitted_at: Date | null;
-    notes: string | null;
-    created_at: Date;
-    updated_at: Date;
-  };
-  distribution_otps: {
-    id?: number;
-    customer_id: string;
-    otp_code: string;
-    created_at: Date;
-    expires_at: Date;
-    used: boolean;
-    used_at: Date | null;
-    verified_by: string | null;
-  };
+  // eligibility_verifications table removed - replaced by household_claims + household_survey_responses
   lg_delivery_intents: {
     id?: number;
     customer_id: string;

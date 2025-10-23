@@ -42,7 +42,6 @@ export interface CustomerActivationContext {
   // Customer activation flow
   isActivated: boolean;
   isEligible?: boolean;
-  eligibilityRecordId?: number;
   claimId?: string;
   // Output
   nextParentState: CustomerActivationOutput;
@@ -263,27 +262,6 @@ const verifyPinService = fromPromise(
   }
 );
 
-const recordEligibilityService = fromPromise(
-  async ({
-    input,
-  }: {
-    input: { customerId: string; phoneNumber: string; isEligible: boolean };
-  }) => {
-    logger.info(
-      { customerId: input.customerId.slice(-4), isEligible: input.isEligible },
-      "Recording eligibility verification"
-    );
-
-    const record = await dataService.recordEligibility(
-      input.customerId,
-      input.phoneNumber,
-      input.isEligible
-    );
-
-    return record;
-  }
-);
-
 const submitClaimService = fromPromise(
   async ({
     input,
@@ -291,7 +269,6 @@ const submitClaimService = fromPromise(
     input: {
       customerId: string;
       phoneNumber: string;
-      eligibilityRecordId: number;
     };
   }) => {
     logger.info(
@@ -313,13 +290,6 @@ const submitClaimService = fromPromise(
 
     // Simulate claim submission
     const stubClaimId = `claim-${Date.now()}`;
-
-    // Update eligibility record with claim info
-    await dataService.updateEligibilityWithClaim(
-      input.eligibilityRecordId,
-      stubClaimId,
-      "pending"
-    );
 
     return { claimId: stubClaimId };
   }
@@ -398,7 +368,6 @@ export const customerActivationMachine = setup({
   actors: {
     generateAndSendPinService,
     verifyPinService,
-    recordEligibilityService,
     submitClaimService,
     sendConfirmationService,
   },
@@ -711,55 +680,33 @@ export const customerActivationMachine = setup({
       },
     },
 
-    // Record not eligible (audit trail)
+    // Not eligible - complete activation without claim
     recordingNotEligible: {
-      invoke: {
-        id: "recordNotEligible",
-        src: "recordEligibilityService",
-        input: ({ context }) => ({
-          customerId: context.customerId!,
-          phoneNumber: context.customerPhone!,
-          isEligible: false,
-        }),
-        onDone: {
-          target: "complete",
-          actions: assign({
-            nextParentState: CustomerActivationOutput.COMPLETE,
-          }),
-        },
-        onError: {
-          target: "error",
-          actions: assign({
-            error: "Failed to record eligibility",
-            message: "Failed to record eligibility. Please try again.\n0. Back",
-          }),
-        },
+      entry: assign({
+        message: "Thank you for your response.\n\n1. Continue",
+        nextParentState: CustomerActivationOutput.COMPLETE,
+      }),
+      on: {
+        INPUT: [
+          {
+            target: "complete",
+            guard: "isInput1",
+          },
+          {
+            target: "complete",
+            guard: "isExit",
+          },
+        ],
       },
     },
 
-    // Record eligible and submit claim
+    // Eligible - proceed to submit claim
     recordingEligible: {
-      invoke: {
-        id: "recordEligible",
-        src: "recordEligibilityService",
-        input: ({ context }) => ({
-          customerId: context.customerId!,
-          phoneNumber: context.customerPhone!,
-          isEligible: true,
-        }),
-        onDone: {
-          target: "submittingClaim",
-          actions: assign(({ event }) => ({
-            eligibilityRecordId: event.output.id,
-          })),
-        },
-        onError: {
-          target: "error",
-          actions: assign({
-            error: "Failed to record eligibility",
-            message: "Failed to record eligibility. Please try again.\n0. Back",
-          }),
-        },
+      entry: assign({
+        message: SUBMITTING_CLAIM_MSG,
+      }),
+      always: {
+        target: "submittingClaim",
       },
     },
 
@@ -771,7 +718,6 @@ export const customerActivationMachine = setup({
         input: ({ context }) => ({
           customerId: context.customerId!,
           phoneNumber: context.customerPhone!,
-          eligibilityRecordId: context.eligibilityRecordId!,
         }),
         onDone: {
           target: "sendingConfirmation",

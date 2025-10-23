@@ -2,8 +2,8 @@
 -- CONSOLIDATED DATABASE INITIALIZATION SCRIPT
 -- ============================================================================
 -- This script initializes the complete database schema for the IXO USSD Server
--- in a single pass. It consolidates all migrations (001-007) into one
--- comprehensive initialization script for fresh database deployments.
+-- for fresh database deployments. All tables, indexes, and constraints are
+-- created in a single idempotent script.
 --
 -- Schema Organization:
 -- 1. Core Tables (Phones, Households, Customers, Wallets)
@@ -101,33 +101,10 @@ CREATE TABLE IF NOT EXISTS matrix_vaults (
 -- ============================================================================
 -- SECTION 2: CUSTOMER ACTIVATION & ELIGIBILITY
 -- ============================================================================
-
--- 2.1 Eligibility verifications (audit trail)
-CREATE TABLE IF NOT EXISTS eligibility_verifications (
-  id SERIAL PRIMARY KEY,
-  customer_id VARCHAR(10) NOT NULL,
-  phone_number VARCHAR(32) NOT NULL,
-  is_eligible BOOLEAN NOT NULL,
-  verification_date TIMESTAMP NOT NULL DEFAULT NOW(),
-  claim_id TEXT,
-  claim_status VARCHAR(50),
-  claim_submitted_at TIMESTAMP,
-  notes TEXT,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
--- 2.2 Distribution OTPs for bean collection confirmation
-CREATE TABLE IF NOT EXISTS distribution_otps (
-  id SERIAL PRIMARY KEY,
-  customer_id VARCHAR(10) NOT NULL,
-  otp_code VARCHAR(6) NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  expires_at TIMESTAMP NOT NULL,
-  used BOOLEAN DEFAULT FALSE,
-  used_at TIMESTAMP,
-  verified_by VARCHAR(10)
-);
+-- Note: eligibility_verifications table not included - replaced by
+--       household_claims + household_survey_responses system
+-- Note: distribution_otps table not included - superseded by bean_distribution_otps
+--       which provides comprehensive tracking with foreign keys and LG tracking
 
 -- ============================================================================
 -- SECTION 3: BEAN DISTRIBUTION & DELIVERY
@@ -242,10 +219,8 @@ CREATE INDEX IF NOT EXISTS idx_ixo_accounts_address ON ixo_accounts(address);
 CREATE INDEX IF NOT EXISTS idx_matrix_vaults_profile_id ON matrix_vaults(ixo_profile_id);
 
 -- Activation & eligibility indexes
-CREATE INDEX IF NOT EXISTS idx_eligibility_customer ON eligibility_verifications(customer_id);
-CREATE INDEX IF NOT EXISTS idx_eligibility_date ON eligibility_verifications(verification_date);
-CREATE INDEX IF NOT EXISTS idx_distribution_otps_customer ON distribution_otps(customer_id);
-CREATE INDEX IF NOT EXISTS idx_distribution_otps_expires ON distribution_otps(expires_at) WHERE used = FALSE;
+-- Note: eligibility_verifications indexes not included - table not in schema
+-- Note: distribution_otps indexes not included - table superseded by bean_distribution_otps
 
 -- Bean distribution indexes
 CREATE INDEX IF NOT EXISTS idx_lg_intents_customer ON lg_delivery_intents(customer_id);
@@ -287,7 +262,7 @@ COMMENT ON TABLE lg_delivery_intents IS 'Stores LG intent to deliver beans befor
 COMMENT ON COLUMN lg_delivery_intents.voucher_status IS 'Status: HAS_VOUCHER, NO_VOUCHER, ERROR';
 COMMENT ON COLUMN lg_delivery_intents.voucher_check_response IS 'Full JSON response from subscriptions-service-supamoto';
 
-COMMENT ON TABLE bean_distribution_otps IS 'Tracks OTPs generated for bean distribution (valid 10 minutes by default, configurable)';
+COMMENT ON TABLE bean_distribution_otps IS 'Primary OTP tracking table for bean distribution. Replaced the simpler distribution_otps table which lacked foreign key relationships and LG tracking. Valid 10 minutes by default (configurable via OTP_VALIDITY_MINUTES). Tracks the complete OTP lifecycle from generation through validation and usage.';
 COMMENT ON TABLE bean_delivery_confirmations IS 'Tracks dual confirmations (LG + Customer) for bean delivery within 7-day window';
 COMMENT ON COLUMN bean_delivery_confirmations.customer_confirmed_receipt IS 'TRUE = received beans, FALSE = did not receive, NULL = not yet confirmed';
 

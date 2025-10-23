@@ -70,6 +70,7 @@ SupaMoto is a specialized implementation of the IXO USSD platform designed to su
 ### Removed Tables
 
 - `temp_pins`: Consolidated into `customers.encrypted_pin` (Migration 005)
+- `eligibility_verifications`: Replaced by `household_claims` + `household_survey_responses` (Migration 007)
 
 ## State Machine Architecture
 

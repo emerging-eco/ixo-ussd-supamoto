@@ -47,7 +47,7 @@ The machine uses three database tables:
 
 1. **temp_pins**: Stores temporary PINs for activation (expires in 30 minutes)
 2. **eligibility_verifications**: Audit trail of all eligibility responses
-3. **distribution_otps**: OTPs for bean distribution confirmation (expires in 10 minutes)
+3. **bean_distribution_otps**: OTPs for bean distribution confirmation (expires in 10 minutes)
 
 ## SMS Integration
 
@@ -133,8 +133,8 @@ AFRICASTALKING_SENDER_ID=SUPAMOTO
 1. **Implement Claim Submission**
    - Retrieve customer's IXO DID and mnemonic from database
    - Decrypt mnemonic using customer's PIN
-   - Submit actual claim to IXO blockchain
-   - Update eligibility record with real claim ID
+   - Submit actual claim to IXO blockchain via ixo-matrix-supamoto-claims-bot
+   - Create household_claims record with claim response
 
 2. **Implement Token Transfer**
    - Integrate with `subscriptions-service-supamoto` API
