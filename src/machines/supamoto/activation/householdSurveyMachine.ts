@@ -230,9 +230,11 @@ export const householdSurveyMachine = setup({
             currentQuestionIndex: ({ context, event }) => {
               // Find first unanswered question
               const answers = event.output?.answers || {};
-              return context.allQuestions.findIndex(
+              const index = context.allQuestions.findIndex(
                 q => answers[q.name] === undefined
               );
+              // Ensure index is never negative (defaults to 0 if all questions are unanswered)
+              return Math.max(0, index);
             },
           }),
         },

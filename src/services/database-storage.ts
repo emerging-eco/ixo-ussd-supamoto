@@ -1854,16 +1854,24 @@ class DataService {
     );
 
     try {
+      // First, find the most recent record ID
+      const recordToUpdate = await db
+        .selectFrom("household_survey_responses")
+        .select("id")
+        .where("lg_customer_id", "=", lgCustomerId)
+        .where("customer_id", "=", customerId)
+        .orderBy("created_at", "desc")
+        .limit(1)
+        .executeTakeFirstOrThrow();
+
+      // Then update that specific record
       const result = await db
         .updateTable("household_survey_responses")
         .set({
           all_fields_completed: true,
           updated_at: new Date(),
         })
-        .where("lg_customer_id", "=", lgCustomerId)
-        .where("customer_id", "=", customerId)
-        .orderBy("created_at", "desc")
-        .limit(1)
+        .where("id", "=", recordToUpdate.id)
         .returningAll()
         .executeTakeFirstOrThrow();
 
