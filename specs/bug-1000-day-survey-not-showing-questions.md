@@ -24,9 +24,11 @@ Additionally, there is a SQL syntax error in the `markSurveyComplete` function t
 
 ## Solution Statement
 
-1. **Fix the session recovery logic**: When `customerId` is empty or when `findIndex` returns `-1`, ensure `currentQuestionIndex` defaults to `0` to start from the first question.
+1. **Add SURVEY_FORM_URL to environment configuration**: Add the missing `SURVEY_FORM_URL` environment variable to `.env.example` with documentation and ensure it's configured in the actual `.env` file.
 
-2. **Fix the SQL syntax error**: Rewrite the `markSurveyComplete` query to first SELECT the record ID using a subquery, then UPDATE that specific record without using `ORDER BY` and `LIMIT` in the UPDATE statement.
+2. **Fix the session recovery logic**: When `customerId` is empty or when `findIndex` returns `-1`, ensure `currentQuestionIndex` defaults to `0` to start from the first question.
+
+3. **Fix the SQL syntax error**: Rewrite the `markSurveyComplete` query to first SELECT the record ID using a subquery, then UPDATE that specific record without using `ORDER BY` and `LIMIT` in the UPDATE statement.
 
 ## Steps to Reproduce
 
@@ -46,7 +48,22 @@ Additionally, there is a SQL syntax error in the `markSurveyComplete` function t
 
 ## Root Cause Analysis
 
-### Primary Issue: Invalid currentQuestionIndex
+### Primary Issue: Missing SURVEY_FORM_URL Environment Variable
+
+The `SURVEY_FORM_URL` environment variable is not set in `.env` or documented in `.env.example`. When the survey machine tries to load the survey form, the `survey-engine.ts` service throws an error at line 38-41:
+
+```typescript
+const surveyFormUrl = config.SURVEY_FORM_URL;
+if (!surveyFormUrl) {
+  throw new Error("SURVEY_FORM_URL environment variable is not set");
+}
+```
+
+This error is caught by the `onError` handler in `householdSurveyMachine.ts` (lines 205-214), which displays "Error loading survey. Please try again."
+
+**Fix:** Add `SURVEY_FORM_URL` to `.env.example` with a placeholder URL and ensure it's set in the actual `.env` file with a valid SurveyJS form JSON URL.
+
+### Secondary Issue: Invalid currentQuestionIndex
 
 In `src/machines/supamoto/activation/householdSurveyMachine.ts`, the `recoveringSession` state's `onDone` action sets `currentQuestionIndex` using:
 
@@ -60,7 +77,7 @@ currentQuestionIndex: ({ context, event }) => {
 },
 ```
 
-When `customerId` is empty (which it is initially in the agent survey flow), the recovery service returns `null` or an empty answers object. The `findIndex` method returns `-1` when no matching element is found (which happens when all questions are "unanswered" because answers is empty). This `-1` value is then used as the `currentQuestionIndex`.
+**Note:** This issue only manifests if the SURVEY_FORM_URL is properly configured and the form loads successfully. When `customerId` is empty (which it is initially in the agent survey flow), the recovery service returns `null` or an empty answers object. The `findIndex` method returns `-1` when no matching element is found (which happens when all questions are "unanswered" because answers is empty). This `-1` value is then used as the `currentQuestionIndex`.
 
 In the `presentingQuestion` state, when accessing `context.allQuestions[context.currentQuestionIndex]` with index `-1`, it returns `undefined`, which triggers the "Survey complete!" message:
 
@@ -71,7 +88,7 @@ if (!question) {
 }
 ```
 
-### Secondary Issue: SQL Syntax Error
+### Tertiary Issue: SQL Syntax Error
 
 In `src/services/database-storage.ts`, the `markSurveyComplete` function uses:
 
@@ -102,20 +119,26 @@ Use these files to fix the bug:
 
 ## Step by Step Tasks
 
-### 1. Fix currentQuestionIndex in householdSurveyMachine
+### 1. Add SURVEY_FORM_URL to .env.example
+
+- Add `SURVEY_FORM_URL` environment variable to `.env.example` under the Survey Configuration section
+- Provide a placeholder URL with clear documentation
+- Document that this URL should point to a valid SurveyJS form JSON definition
+
+### 2. Fix currentQuestionIndex in householdSurveyMachine
 
 - Update the `recoveringSession` state's `onDone` action in `src/machines/supamoto/activation/householdSurveyMachine.ts`
 - Ensure that when `findIndex` returns `-1`, the `currentQuestionIndex` is set to `0` instead
 - Use `Math.max(0, findIndex(...))` to ensure the index is never negative
 
-### 2. Fix SQL syntax error in markSurveyComplete
+### 3. Fix SQL syntax error in markSurveyComplete
 
 - Update the `markSurveyComplete` function in `src/services/database-storage.ts`
 - Rewrite the query to use a subquery approach: first SELECT the ID of the record to update, then UPDATE that specific record
 - Remove the `orderBy` and `limit` clauses from the UPDATE statement
 - Ensure the query still updates only the most recent record for the given LG-Customer pair
 
-### 3. Run validation commands
+### 4. Run validation commands
 
 - Execute all validation commands to ensure the bug is fixed with zero regressions
 - Test the interactive flow manually to verify the survey questions now appear correctly
@@ -129,11 +152,14 @@ Execute every command to validate the bug is fixed with zero regressions.
 
 ## Notes
 
-- The bug has two separate root causes that both need to be fixed:
-  1. The state machine logic issue (currentQuestionIndex = -1)
-  2. The SQL syntax error (ORDER BY in UPDATE statement)
-- The first issue prevents the survey from showing questions
-- The second issue prevents the survey from being marked as complete even if questions were answered
-- Both issues must be fixed for the survey to work end-to-end
+- The bug has three separate root causes that all need to be fixed:
+  1. **Missing SURVEY_FORM_URL** - Prevents the survey form from loading at all (shows "Error loading survey")
+  2. **State machine logic issue** (currentQuestionIndex = -1) - Would prevent survey from showing questions even if form loads
+  3. **SQL syntax error** (ORDER BY in UPDATE statement) - Prevents survey from being marked as complete
+- The first issue is the primary blocker - without SURVEY_FORM_URL configured, the survey cannot load
+- The second issue would manifest after the first is fixed, preventing questions from displaying
+- The third issue would prevent completion even if questions were answered
+- All three issues must be fixed for the survey to work end-to-end
 - The fix should be minimal and surgical - only change what's necessary to fix these specific issues
 - The `customerId` being empty initially is intentional design (it will be entered during the survey flow), so the fix should handle this case gracefully
+- **Important:** After adding SURVEY_FORM_URL to .env.example, users must set it in their actual .env file with a valid SurveyJS form JSON URL
