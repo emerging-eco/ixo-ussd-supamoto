@@ -1,0 +1,227 @@
+================================================================================
+USSD INTERACTIVE TEST SESSION LOG
+================================================================================
+{
+  "sessionId": "interactive-test-1761543921905",
+  "phoneNumber": "+260971230001",
+  "serviceCode": "*2233#",
+  "nodeVersion": "v24.10.0",
+  "platform": "darwin",
+  "environment": "development"
+}
+================================================================================
+
+[2025-10-27T05:45:21.908Z] 🚀 Simple Interactive USSD Test
+[2025-10-27T05:45:21.908Z] ================================
+[2025-10-27T05:45:21.908Z] 📱 Phone: +260971230001
+[2025-10-27T05:45:21.908Z] 🔢 Service Code: *2233#
+[2025-10-27T05:45:21.908Z] 🆔 Session ID: interactive-test-1761543921905
+[2025-10-27T05:45:21.908Z] 📝 Session log: /Users/alwynvanwyk/Workspaces/ecs/ixo-ussd-supamoto/logs/sessions/session-2025-10-27-05-45-21.log
+[2025-10-27T05:45:21.908Z] 
+[2025-10-27T05:45:21.908Z] Commands:
+[2025-10-27T05:45:21.908Z]   - Type numbers to navigate menus
+[2025-10-27T05:45:21.908Z]   - Type 'debug' to see session state
+[2025-10-27T05:45:21.908Z]   - Type 'exit' or 'quit' to stop
+[2025-10-27T05:45:21.908Z] 
+[2025-10-27T05:45:21.908Z] 📞 Dialing *2233#...
+
+[2025-10-27T05:45:21.950Z] CON Welcome to USSD Supamoto App
+1. Know More
+2. Account Menu
+*. Exit
+[2025-10-27T05:45:23.957Z] USER INPUT: 2
+
+[2025-10-27T05:45:23.963Z] 
+CON Account Menu
+Do you have an existing account?
+1. Yes, log me in
+2. No, create my account
+0. Back
+[2025-10-27T05:45:26.592Z] USER INPUT: 1
+
+[2025-10-27T05:45:26.598Z] 
+CON Enter your Customer ID to log in:
+0. Back
+[2025-10-27T05:45:28.491Z] USER INPUT: CD883AAC5
+
+[2025-10-27T05:45:28.494Z] 
+CON Verifying Customer ID...
+1. Continue
+[2025-10-27T05:45:31.062Z] USER INPUT: 1
+
+[2025-10-27T05:45:31.066Z] 
+CON Enter your PIN:
+0. Back
+[2025-10-27T05:45:33.816Z] USER INPUT: 10101
+
+[2025-10-27T05:45:33.836Z] 
+CON Verifying PIN...
+1. Continue
+[2025-10-27T05:45:34.938Z] USER INPUT: 1
+
+[2025-10-27T05:45:34.942Z] 
+CON Welcome, Lead Generator!
+Login successful for Customer ID: CD883AAC5.
+1. Continue
+[2025-10-27T05:45:36.395Z] USER INPUT: 1
+
+[2025-10-27T05:45:36.400Z] 
+CON Agent Tools
+1. Activate a Customer
+2. 1,000 Day Survey
+3. Submit 1,000 Day Household Claim
+4. Register Intent to Deliver Beans
+5. Submit Customer OTP
+6. Confirm Bean Delivery
+0. Back
+LOGIC: Remove '3. Submit 1,000 Day Household Claim'. Adjust numbering accordingly.
+
+[2025-10-27T05:45:39.723Z] USER INPUT: 2
+[2025-10-27T05:45:39.732Z] 
+CON Loading survey...
+1. Continue
+[2025-10-27T05:45:44.524Z] USER INPUT: 1
+LOGIC: Use the SurveyJS form template from the URL indicated by the env var named 'SURVEY_FORM_URL' to hardcode the questions at development time.
+
+[2025-10-27T05:45:44.527Z] 
+CON A Lead Generator completes this survey on behalf of a Customer.
+What is the Customer ID for the Customer on whose behalf you are completing the survey?
+1. Back to Agent Tools
+[2025-10-27T05:45:56.782Z] USER INPUT: CDDA2FB60
+LOGIC: This question maps to the 'ecs:childMaxAge' survey form element.
+LOGIC: Validate that it is in the correct format for customer IDs as used in the codebase currently.
+LOGIC: Back option returns to Agent Tools menu.
+
+[2025-10-27T05:45:44.527Z] 
+CON Select all TRUE options for your household
+A: Pregnant Woman
+B: Breastfeeding Mother
+C: Child under 2 years
+1. A
+2. B
+3. C
+4. A + B
+5. A + C
+6. B + C
+7. All
+8. None
+0. Back
+[2025-10-27T05:45:56.782Z] USER INPUT: 4
+LOGIC: This question maps to the 'ecs:beneficiaryCategory' survey form element.
+
+[2025-10-27T05:45:44.527Z] 
+CON What is the child's age in months?
+0. Back
+[2025-10-27T05:45:56.782Z] USER INPUT: 18
+LOGIC: This question maps to the 'ecs:childMaxAge' survey form element.
+LOGIC: Use the 'visibleIf' field in the 'ecs:childMaxAge' survey form element to decide whether to show the "CON What is the child's age in months?" question.
+LOGIC: Validate that it is a number.
+
+[2025-10-27T05:45:44.527Z] 
+CON How many times a week does the child eat beans?
+1. None at all
+2. 1–2 times a week
+3. 3–4 times a week
+4. 5–6 times a week
+5. Daily
+0. Back
+[2025-10-27T05:45:56.782Z] USER INPUT: 3
+LOGIC: This question maps to the 'ecs:beanIntakeFrequency' survey form element.
+
+[2025-10-27T05:45:44.527Z] 
+CON How much are you willing to pay for a 1 kg bag of beans? (ZMW)
+0. Back
+[2025-10-27T05:45:56.782Z] USER INPUT: 10 ZMW
+LOGIC: This question maps to the 'schema:priceSpecification' survey form element.
+LOGIC: Validate that it is a number after stripping the ZMW.
+
+[2025-10-27T05:45:44.527Z] 
+CON Have you ever heard about iron-fortified beans (mbereshi beans)?
+1. Yes
+2. No
+0. Back
+[2025-10-27T05:45:56.782Z] USER INPUT: 2
+LOGIC: This question maps to the 'ecs:awarenessIronBeans' survey form element.
+
+[2025-10-27T05:45:44.527Z] 
+CON Do you know any nutritional benefits of iron-fortified beans (mbereshi beans)?
+1. Yes
+2. No
+0. Back
+[2025-10-27T05:45:56.782Z] USER INPUT: 2
+LOGIC: This question maps to the 'ecs:knowsNutritionalBenefits' survey form element.
+
+[2025-10-27T05:45:44.527Z] 
+CON Do you think this is a nutritional benefit?
+(1 of 5)
+A: Improve iron status and help reduce iron deficiency/anemia.
+1. Yes
+2. No
+0. Back
+[2025-10-27T05:45:56.782Z] USER INPUT: 1
+LOGIC: This question maps to the 'ecs:nutritionalBenefitDetails' survey form element.
+LOGIC: Only after the user has answered all 5 of 5 'Do you think this is a nutritional benefit?' questions should the user's response be added to the survey form's answers and the survey form answers saved to the HOUSEHOLD_CLAIMS.survey_form field in the database.
+
+[2025-10-27T05:45:44.527Z] 
+CON Do you think this is a nutritional benefit?
+(2 of 5)
+B: Support cognitive performance in iron-deficient individuals.
+1. Yes
+2. No
+0. Back
+[2025-10-27T05:45:56.782Z] USER INPUT: 2
+LOGIC: This question maps to the 'ecs:nutritionalBenefitDetails' survey form element.
+LOGIC: Only after the user has answered all 5 of 5 'Do you think this is a nutritional benefit?' questions should the user's response be added to the survey form's answers and the survey form answers saved to the HOUSEHOLD_CLAIMS.survey_form field in the database.
+
+[2025-10-27T05:45:44.527Z] 
+CON Do you think this is a nutritional benefit?
+(3 of 5)
+C: Enhance physical work capacity and reduce fatigue.
+1. Yes
+2. No
+0. Back
+[2025-10-27T05:45:56.782Z] USER INPUT: 2
+LOGIC: This question maps to the 'ecs:nutritionalBenefitDetails' survey form element.
+LOGIC: Only after the user has answered all 5 of 5 'Do you think this is a nutritional benefit?' questions should the user's response be added to the survey form's answers and the survey form answers saved to the HOUSEHOLD_CLAIMS.survey_form field in the database.
+
+[2025-10-27T05:45:44.527Z] 
+CON Do you think this is a nutritional benefit?
+(4 of 5)
+D: Provide higher iron (and often zinc) than standard bean varieties.
+1. Yes
+2. No
+0. Back
+[2025-10-27T05:45:56.782Z] USER INPUT: 1
+LOGIC: This question maps to the 'ecs:nutritionalBenefitDetails' survey form element.
+LOGIC: Only after the user has answered all 5 of 5 'Do you think this is a nutritional benefit?' questions should the user's response be added to the survey form's answers and the survey form answers saved to the HOUSEHOLD_CLAIMS.survey_form field in the database.
+
+[2025-10-27T05:45:44.527Z] 
+CON Do you think this is a nutritional benefit?
+(5 of 5)
+E: Supply plant protein and fiber for satiety and gut health.
+1. Yes
+2. No
+0. Back
+[2025-10-27T05:45:56.782Z] USER INPUT: 1
+LOGIC: This question maps to the 'ecs:nutritionalBenefitDetails' survey form element.
+LOGIC: The answers to the 'Do you think this is a nutritional benefit?' questions can now be collated to check the correct boxes in the survey form's answers for 'ecs:nutritionalBenefitDetails'. Then save the survey form answers to the HOUSEHOLD_CLAIMS.survey_form field in the database.
+
+[2025-10-27T05:45:44.527Z] 
+CON Lead Generator: I confirm I have seen a recent antenatal card for a household member.
+1. Yes
+2. No
+0. Back
+[2025-10-27T05:45:56.782Z] USER INPUT: 1
+LOGIC: This question maps to the 'ecs:confirmAction_antenatal_card_verified' survey form element.
+LOGIC: Add the user's response to the survey form's answers and save the survey form answers to the HOUSEHOLD_CLAIMS.survey_form field in the database.
+
+[2025-10-27T05:45:44.527Z] 
+CON Thank you. Your answers have been saved and submitted.
+1. Back to Agent Tools
+[2025-10-27T05:45:56.782Z] USER INPUT: 1
+LOGIC: Back option returns to Agent Tools menu.
+LOGIC: Add the user's response to the survey form's answers and save the survey form answers to the HOUSEHOLD_CLAIMS.survey_form field in the database.
+
+[2025-10-27T05:45:56.782Z] USER INPUT: exit
+[2025-10-27T05:45:56.782Z] 👋 Exiting simple interactive test.
+[2025-10-27T05:45:56.782Z] 📁 Session log saved to: /Users/alwynvanwyk/Workspaces/ecs/ixo-ussd-supamoto/logs/sessions/session-2025-10-27-05-45-21.log

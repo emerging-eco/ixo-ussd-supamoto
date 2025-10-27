@@ -37,34 +37,27 @@ sequenceDiagram
     USSD->>Customer: [SMS] Here's your temporary PIN. Use *2233*2*1# to log in and reset your PIN.
     Customer->>USSD: [USSD] log in(customerID, PIN)
 
-    Note over USSD,LG: Household Survey Phase
-    USSD->>USSD: loadSurveyForm()
-    USSD->>USSD: recoverSessionIfInterrupted()
+    Note over USSD,LG: Household Survey Claim Submission Phase
     loop For each survey question
         LG->>USSD: [USSD] Start Survey Questionnaire
+        USSD->>USSD: loadSurveyForm()
         USSD->>LG: [USSD] Survey Question (e.g., "Beneficiary Category?")
         LG->>USSD: [USSD] Answer (e.g., "1. Pregnant Woman")
         USSD->>USSD: encryptAnswer()
         USSD->>USSD: saveSurveyResponse(customerId, leadGeneratorId, answer)
+        USSD->>USSD: recoverSessionIfInterrupted()
     end
     USSD->>USSD: markSurveyComplete()
-
-    Note over USSD,Customer: 1,000 Day Household Claim Phase
-    Customer->>USSD: [USSD] I have an eligible 1,000-day Household
-    USSD->>USSD: checkSurveyCompletion()
-    alt Survey NOT Complete
-        USSD->>Customer: [USSD] Please ask LG to complete household survey first
-    else Survey Complete
-        USSD->>claims-bot: submit1000DayCustomerClaim(IXO DID)
-        claims-bot-->>matrix-bot: CronJob picks up new claim
-        matrix-bot-->>matrix-bot: Process Claim
-        Note over matrix-bot: Create 1,000-Day Household Credential
-        subs-svc->>matrix-bot: (1,000-Day Household Claim processed)
-        matrix-bot->>USSD: (done)
-        USSD-->>-SUPA: transfer(address, did, subscription-id)
-        SUPA->>subs-svc: Transfer BEAN token to Customer Subscription from ECS account
-        USSD->>Customer: [SMS] You can now collect your first free bag of beans! Visit your LG.
-    end
+    USSD->>claims-bot: submit1000DayCustomerClaim(IXO DID)
+    claims-bot-->>matrix-bot: CronJob picks up new claim
+    matrix-bot-->>matrix-bot: Process Claim
+    matrix-bot-->>matrix-bot: Create 1,000-Day Household Credential
+    matrix-bot->>SUPA: transfer(bean-token, customer)
+    SUPA->>subs-svc: Transfer BEAN token to Customer Subscription from ECS account
+    subs-svc-->>SUPA: done
+    SUPA-->>matrix-bot: done?
+    matrix-bot-->>USSD: sendSMS(customerID)
+    USSD->>Customer: [SMS] You can now collect your first free bag of beans! Visit your LG.
 ```
 
 ### Key Steps

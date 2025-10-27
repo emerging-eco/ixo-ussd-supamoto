@@ -240,7 +240,6 @@ export const config = {
     SMS_RETRY_ATTEMPTS: parseInt(process.env.SMS_RETRY_ATTEMPTS || "3", 10),
     SMS_RETRY_DELAYS_SECONDS: [0, 10, 30], // Immediate, 10s, 30s for 3 attempts
   },
-  SURVEY_FORM_URL: process.env.SURVEY_FORM_URL,
 } as const;
 
 // Type for the config object
