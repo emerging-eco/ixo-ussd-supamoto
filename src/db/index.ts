@@ -187,6 +187,8 @@ export interface Database {
     claim_status: string | null;
     bean_voucher_allocated: boolean;
     claims_bot_response: any; // JSONB
+    survey_form: string | null; // Encrypted JSON string containing survey form and responses
+    survey_form_updated_at: Date | null; // Timestamp of last survey update
     created_at: Date;
   };
   audit_log: {
@@ -196,21 +198,5 @@ export interface Database {
     lg_customer_id: string | null;
     details: any; // JSONB
     created_at: Date;
-  };
-  household_survey_responses: {
-    id?: number;
-    lg_customer_id: string; // Lead Generator's customer ID
-    customer_id: string; // Customer being surveyed
-    beneficiary_category: string | null;
-    child_max_age: string | null;
-    bean_intake_frequency: string | null;
-    price_specification: string | null;
-    awareness_iron_beans: string | null;
-    knows_nutritional_benefits: string | null;
-    nutritional_benefit_details: string | null;
-    confirm_action_antenatal_card_verified: string | null;
-    all_fields_completed: boolean;
-    created_at: Date;
-    updated_at: Date;
   };
 }

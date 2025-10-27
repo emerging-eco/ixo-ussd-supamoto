@@ -129,6 +129,8 @@ export interface HouseholdClaimRecord {
   claimStatus: string | null;
   beanVoucherAllocated: boolean;
   claimsBotResponse: any; // JSONB
+  surveyForm: string | null; // Encrypted JSON string containing survey form and responses
+  surveyFormUpdatedAt: Date | null; // Timestamp of last survey update
   createdAt: Date;
 }
 
@@ -139,37 +141,6 @@ export interface AuditLogRecord {
   lgCustomerId: string | null;
   details: any; // JSONB
   createdAt: Date;
-}
-
-// Household Survey Response Types
-export interface HouseholdSurveyResponseRecord {
-  id: number;
-  lgCustomerId: string; // Lead Generator's customer ID
-  customerId: string; // Customer being surveyed
-  beneficiaryCategory: string | null;
-  childMaxAge: string | null;
-  beanIntakeFrequency: string | null;
-  priceSpecification: string | null;
-  awarenessIronBeans: string | null;
-  knowsNutritionalBenefits: string | null;
-  nutritionalBenefitDetails: string | null;
-  confirmActionAntenatalCardVerified: string | null;
-  allFieldsCompleted: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface HouseholdSurveyResponseData {
-  lgCustomerId: string; // Lead Generator's customer ID
-  customerId: string; // Customer being surveyed
-  beneficiaryCategory?: string;
-  childMaxAge?: string;
-  beanIntakeFrequency?: string;
-  priceSpecification?: string;
-  awarenessIronBeans?: string;
-  knowsNutritionalBenefits?: string;
-  nutritionalBenefitDetails?: string;
-  confirmActionAntenatalCardVerified?: string;
 }
 
 /**
@@ -1338,6 +1309,8 @@ class DataService {
         claimStatus: result.claim_status,
         beanVoucherAllocated: result.bean_voucher_allocated,
         claimsBotResponse: result.claims_bot_response,
+        surveyForm: result.survey_form,
+        surveyFormUpdatedAt: result.survey_form_updated_at,
         createdAt: result.created_at,
       };
     } catch (error) {
@@ -1500,11 +1473,13 @@ class DataService {
   }
 
   /**
-   * Create or update household survey response
+   * Update claim survey form with JSON data
    */
-  async createOrUpdateSurveyResponse(
-    data: HouseholdSurveyResponseData
-  ): Promise<HouseholdSurveyResponseRecord> {
+  async updateClaimSurveyForm(
+    lgCustomerId: string,
+    customerId: string,
+    surveyFormJson: any
+  ): Promise<void> {
     const db = databaseManager.getKysely();
     const { encrypt } = await import("../utils/encryption.js");
     const { config } = await import("../config.js");
@@ -1512,152 +1487,65 @@ class DataService {
 
     logger.info(
       {
-        lgCustomerId: data.lgCustomerId.slice(-4),
-        customerId: data.customerId.slice(-4),
-      },
-      "Creating or updating household survey response"
-    );
-
-    try {
-      // Encrypt all survey fields
-      const encryptedData = {
-        beneficiary_category: data.beneficiaryCategory
-          ? encrypt(data.beneficiaryCategory, encryptionKey)
-          : null,
-        child_max_age: data.childMaxAge
-          ? encrypt(data.childMaxAge, encryptionKey)
-          : null,
-        bean_intake_frequency: data.beanIntakeFrequency
-          ? encrypt(data.beanIntakeFrequency, encryptionKey)
-          : null,
-        price_specification: data.priceSpecification
-          ? encrypt(data.priceSpecification, encryptionKey)
-          : null,
-        awareness_iron_beans: data.awarenessIronBeans
-          ? encrypt(data.awarenessIronBeans, encryptionKey)
-          : null,
-        knows_nutritional_benefits: data.knowsNutritionalBenefits
-          ? encrypt(data.knowsNutritionalBenefits, encryptionKey)
-          : null,
-        nutritional_benefit_details: data.nutritionalBenefitDetails
-          ? encrypt(data.nutritionalBenefitDetails, encryptionKey)
-          : null,
-        confirm_action_antenatal_card_verified:
-          data.confirmActionAntenatalCardVerified
-            ? encrypt(data.confirmActionAntenatalCardVerified, encryptionKey)
-            : null,
-      };
-
-      // Try to find existing response for this LG-Customer pair
-      const existing = await db
-        .selectFrom("household_survey_responses")
-        .selectAll()
-        .where("lg_customer_id", "=", data.lgCustomerId)
-        .where("customer_id", "=", data.customerId)
-        .orderBy("created_at", "desc")
-        .executeTakeFirst();
-
-      if (existing) {
-        // Update existing record
-        const result = await db
-          .updateTable("household_survey_responses")
-          .set({
-            ...encryptedData,
-            updated_at: new Date(),
-          })
-          .where("id", "=", existing.id)
-          .returningAll()
-          .executeTakeFirstOrThrow();
-
-        return this.mapSurveyResponseRecord(result);
-      } else {
-        // Create new record
-        const result = await db
-          .insertInto("household_survey_responses")
-          .values({
-            lg_customer_id: data.lgCustomerId,
-            customer_id: data.customerId,
-            ...encryptedData,
-            all_fields_completed: false,
-            created_at: new Date(),
-            updated_at: new Date(),
-          })
-          .returningAll()
-          .executeTakeFirstOrThrow();
-
-        return this.mapSurveyResponseRecord(result);
-      }
-    } catch (error) {
-      logger.error(
-        {
-          error: error instanceof Error ? error.message : String(error),
-          customerId: data.customerId.slice(-4),
-        },
-        "Failed to create or update survey response"
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * Mark survey as complete
-   */
-  async markSurveyComplete(
-    lgCustomerId: string,
-    customerId: string
-  ): Promise<HouseholdSurveyResponseRecord> {
-    const db = databaseManager.getKysely();
-
-    logger.info(
-      {
         lgCustomerId: lgCustomerId.slice(-4),
         customerId: customerId.slice(-4),
       },
-      "Marking survey as complete"
+      "Updating claim survey form"
     );
 
     try {
-      // First, find the most recent record ID
-      const recordToUpdate = await db
-        .selectFrom("household_survey_responses")
-        .select("id")
+      // Encrypt the entire JSON object
+      const encryptedJson = encrypt(
+        JSON.stringify(surveyFormJson),
+        encryptionKey
+      );
+
+      // Try to update existing claim
+      const result = await db
+        .updateTable("household_claims")
+        .set({
+          survey_form: encryptedJson,
+          survey_form_updated_at: new Date(),
+        })
         .where("lg_customer_id", "=", lgCustomerId)
         .where("customer_id", "=", customerId)
-        .orderBy("created_at", "desc")
-        .limit(1)
-        .executeTakeFirstOrThrow();
+        .executeTakeFirst();
 
-      // Then update that specific record
-      const result = await db
-        .updateTable("household_survey_responses")
-        .set({
-          all_fields_completed: true,
-          updated_at: new Date(),
-        })
-        .where("id", "=", recordToUpdate.id)
-        .returningAll()
-        .executeTakeFirstOrThrow();
-
-      return this.mapSurveyResponseRecord(result);
+      // If no claim exists, create one
+      if (result.numUpdatedRows === BigInt(0)) {
+        await db
+          .insertInto("household_claims")
+          .values({
+            lg_customer_id: lgCustomerId,
+            customer_id: customerId,
+            is_1000_day_household: false, // Will be updated when claim is submitted
+            claim_submitted_at: new Date(),
+            survey_form: encryptedJson,
+            survey_form_updated_at: new Date(),
+            bean_voucher_allocated: false,
+            created_at: new Date(),
+          })
+          .execute();
+      }
     } catch (error) {
       logger.error(
         {
           error: error instanceof Error ? error.message : String(error),
           customerId: customerId.slice(-4),
         },
-        "Failed to mark survey as complete"
+        "Failed to update claim survey form"
       );
       throw error;
     }
   }
 
   /**
-   * Get latest survey response for LG-Customer pair
+   * Get claim by LG and customer ID
    */
-  async getSurveyResponse(
+  async getClaimByLgAndCustomer(
     lgCustomerId: string,
     customerId: string
-  ): Promise<HouseholdSurveyResponseRecord | null> {
+  ): Promise<HouseholdClaimRecord | null> {
     const db = databaseManager.getKysely();
     const { decrypt } = await import("../utils/encryption.js");
     const { config } = await import("../config.js");
@@ -1668,12 +1556,12 @@ class DataService {
         lgCustomerId: lgCustomerId.slice(-4),
         customerId: customerId.slice(-4),
       },
-      "Fetching survey response"
+      "Fetching claim by LG and customer"
     );
 
     try {
       const result = await db
-        .selectFrom("household_survey_responses")
+        .selectFrom("household_claims")
         .selectAll()
         .where("lg_customer_id", "=", lgCustomerId)
         .where("customer_id", "=", customerId)
@@ -1684,42 +1572,35 @@ class DataService {
         return null;
       }
 
-      // Decrypt all fields
+      // Decrypt survey form if it exists
+      let surveyForm = null;
+      if (result.survey_form) {
+        try {
+          surveyForm = decrypt(result.survey_form, encryptionKey);
+        } catch (error) {
+          logger.warn(
+            {
+              error: error instanceof Error ? error.message : String(error),
+              customerId: customerId.slice(-4),
+            },
+            "Failed to decrypt survey form, returning null"
+          );
+        }
+      }
+
       return {
         id: result.id!,
         lgCustomerId: result.lg_customer_id,
         customerId: result.customer_id,
-        beneficiaryCategory: result.beneficiary_category
-          ? decrypt(result.beneficiary_category, encryptionKey)
-          : null,
-        childMaxAge: result.child_max_age
-          ? decrypt(result.child_max_age, encryptionKey)
-          : null,
-        beanIntakeFrequency: result.bean_intake_frequency
-          ? decrypt(result.bean_intake_frequency, encryptionKey)
-          : null,
-        priceSpecification: result.price_specification
-          ? decrypt(result.price_specification, encryptionKey)
-          : null,
-        awarenessIronBeans: result.awareness_iron_beans
-          ? decrypt(result.awareness_iron_beans, encryptionKey)
-          : null,
-        knowsNutritionalBenefits: result.knows_nutritional_benefits
-          ? decrypt(result.knows_nutritional_benefits, encryptionKey)
-          : null,
-        nutritionalBenefitDetails: result.nutritional_benefit_details
-          ? decrypt(result.nutritional_benefit_details, encryptionKey)
-          : null,
-        confirmActionAntenatalCardVerified:
-          result.confirm_action_antenatal_card_verified
-            ? decrypt(
-                result.confirm_action_antenatal_card_verified,
-                encryptionKey
-              )
-            : null,
-        allFieldsCompleted: result.all_fields_completed,
+        is1000DayHousehold: result.is_1000_day_household,
+        claimSubmittedAt: result.claim_submitted_at,
+        claimProcessedAt: result.claim_processed_at,
+        claimStatus: result.claim_status,
+        beanVoucherAllocated: result.bean_voucher_allocated,
+        claimsBotResponse: result.claims_bot_response,
+        surveyForm,
+        surveyFormUpdatedAt: result.survey_form_updated_at,
         createdAt: result.created_at,
-        updatedAt: result.updated_at,
       };
     } catch (error) {
       logger.error(
@@ -1727,35 +1608,10 @@ class DataService {
           error: error instanceof Error ? error.message : String(error),
           customerId: customerId.slice(-4),
         },
-        "Failed to fetch survey response"
+        "Failed to fetch claim"
       );
       throw error;
     }
-  }
-
-  /**
-   * Helper to map database record to typed record
-   */
-  private mapSurveyResponseRecord(
-    dbRecord: any
-  ): HouseholdSurveyResponseRecord {
-    return {
-      id: dbRecord.id!,
-      lgCustomerId: dbRecord.lg_customer_id,
-      customerId: dbRecord.customer_id,
-      beneficiaryCategory: dbRecord.beneficiary_category,
-      childMaxAge: dbRecord.child_max_age,
-      beanIntakeFrequency: dbRecord.bean_intake_frequency,
-      priceSpecification: dbRecord.price_specification,
-      awarenessIronBeans: dbRecord.awareness_iron_beans,
-      knowsNutritionalBenefits: dbRecord.knows_nutritional_benefits,
-      nutritionalBenefitDetails: dbRecord.nutritional_benefit_details,
-      confirmActionAntenatalCardVerified:
-        dbRecord.confirm_action_antenatal_card_verified,
-      allFieldsCompleted: dbRecord.all_fields_completed,
-      createdAt: dbRecord.created_at,
-      updatedAt: dbRecord.updated_at,
-    };
   }
 }
 

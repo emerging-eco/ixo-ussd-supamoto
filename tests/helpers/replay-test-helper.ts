@@ -238,6 +238,126 @@ export class ReplayTestHelper {
   }
 
   /**
+   * Replay a session via HTTP requests to a running USSD server
+   *
+   * @param fixture - The session fixture to replay
+   * @param serverUrl - URL of the USSD server endpoint (default: http://127.0.0.1:3005/api/ussd)
+   * @param timeout - Request timeout in milliseconds (default: 5000)
+   * @returns ReplaySession with results of the replay
+   */
+  async replaySessionViaHTTP(
+    fixture: SessionFixture,
+    serverUrl: string = "http://127.0.0.1:3005/api/ussd",
+    timeout: number = 5000
+  ): Promise<ReplaySession> {
+    console.log(`\n🎬 Starting HTTP replay of: ${fixture.flowName}`);
+    console.log(`📅 Original session: ${fixture.timestamp}`);
+    console.log(`🌐 Server URL: ${serverUrl}`);
+
+    const results: ReplayResult[] = [];
+    let passedTurns = 0;
+    let failedTurns = 0;
+
+    try {
+      for (let i = 0; i < fixture.turns.length; i++) {
+        const turn = fixture.turns[i];
+        console.log(`\n🔄 Turn ${i + 1}/${fixture.turns.length}`);
+        console.log(`📤 Input: "${turn.textSent}"`);
+        console.log(`🎯 Expected: "${turn.serverReply}"`);
+
+        try {
+          // Make HTTP request to USSD endpoint
+          const response = await fetch(serverUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "User-Agent": "ReplayTestHelper/1.0 (Vitest)",
+            },
+            body: JSON.stringify({
+              sessionId: fixture.sessionId,
+              serviceCode: fixture.serviceCode,
+              phoneNumber: fixture.phoneNumber,
+              text: turn.textSent,
+            }),
+            signal: AbortSignal.timeout(timeout),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(
+              `Server returned error: ${response.status} ${errorText}`
+            );
+          }
+
+          const actualResponse = await response.text();
+          console.log(`📥 Actual: "${actualResponse}"`);
+
+          // Assert exact string equality
+          const success = this.assertResponse(turn.serverReply, actualResponse);
+
+          const result: ReplayResult = {
+            success,
+            turnIndex: i,
+            expected: turn.serverReply,
+            actual: actualResponse,
+          };
+
+          if (success) {
+            console.log(`✅ Turn ${i + 1} passed`);
+            passedTurns++;
+          } else {
+            console.log(`❌ Turn ${i + 1} failed`);
+            failedTurns++;
+          }
+
+          results.push(result);
+        } catch (error) {
+          console.log(
+            `💥 Turn ${i + 1} threw error:`,
+            error instanceof Error ? error.message : String(error)
+          );
+
+          const result: ReplayResult = {
+            success: false,
+            turnIndex: i,
+            expected: turn.serverReply,
+            actual: "",
+            error: error instanceof Error ? error.message : String(error),
+          };
+
+          results.push(result);
+          failedTurns++;
+        }
+      }
+
+      const success = failedTurns === 0;
+
+      console.log(`\n📊 Replay Summary for ${fixture.flowName}:`);
+      console.log(`✅ Passed: ${passedTurns}/${fixture.turns.length}`);
+      console.log(`❌ Failed: ${failedTurns}/${fixture.turns.length}`);
+      console.log(
+        `🎯 Success Rate: ${((passedTurns / fixture.turns.length) * 100).toFixed(1)}%`
+      );
+      console.log(`🏆 Overall: ${success ? "PASSED" : "FAILED"}`);
+
+      return {
+        fixture,
+        results,
+        success,
+        totalTurns: fixture.turns.length,
+        passedTurns,
+        failedTurns,
+      };
+    } catch (error) {
+      console.error(
+        `💥 Fatal error during HTTP replay:`,
+        error instanceof Error ? error.message : String(error)
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Validate fixture structure
    */
   private validateFixture(fixture: SessionFixture): void {

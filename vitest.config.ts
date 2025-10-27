@@ -37,12 +37,13 @@ export default defineConfig({
       "tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}",
       "src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}",
     ],
-    // Exclude Docker-dependent integration tests
+    // Exclude Docker-dependent integration tests and flow tests
     exclude: [
       "dist/**",
       "**/node_modules/**",
-      "**/tests/integration/**", // Exclude integration tests that require Docker containers
+      "**/tests/integration/survey-refactor.test.ts", // Exclude Docker-dependent integration tests
       "**/tests/e2e/recorded-flows.test.ts", // Exclude recorded flows - run manually with test:replay
+      "**/tests/flows/**/*.test.ts", // Exclude flow tests - run with pnpm test:flows (requires running server)
     ],
   },
   // Support for path aliases from tsconfig.json

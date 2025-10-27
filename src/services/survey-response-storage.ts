@@ -1,14 +1,13 @@
 /**
  * Survey Response Storage Service
  * Handles persistence of encrypted survey responses with session recovery support
+ * Refactored to use JSON storage in household_claims table
  */
 
 import { createModuleLogger } from "./logger.js";
-import {
-  dataService,
-  HouseholdSurveyResponseRecord,
-  HouseholdSurveyResponseData,
-} from "./database-storage.js";
+import { dataService } from "./database-storage.js";
+import { encrypt, decrypt } from "../utils/encryption.js";
+import { config } from "../config.js";
 
 const logger = createModuleLogger("survey-response-storage");
 
@@ -24,11 +23,113 @@ export interface SurveyResponseState {
   allFieldsCompleted: boolean;
 }
 
+export interface SurveyQuestion {
+  name: string;
+  title: string;
+  type: string;
+  required?: boolean;
+  visibleIf?: string;
+  choices?: any[];
+}
+
+export interface ParsedSurveyForm {
+  title?: string;
+  questions: SurveyQuestion[];
+}
+
+export interface SurveyFormJson {
+  formDefinition: ParsedSurveyForm | null;
+  answers: Record<string, any>;
+  metadata: {
+    startedAt: string;
+    lastUpdatedAt: string;
+    completedAt: string | null;
+    allFieldsCompleted: boolean;
+    version: string;
+  };
+}
+
 /**
  * Survey Response Storage Service
- * Manages saving and retrieving survey responses with encryption
+ * Manages saving and retrieving survey responses with JSON encryption
  */
 class SurveyResponseStorageService {
+  /**
+   * Encrypt survey JSON
+   */
+  encryptSurveyJson(surveyData: any): string {
+    const encryptionKey = config.SYSTEM.ENCRYPTION_KEY;
+    return encrypt(JSON.stringify(surveyData), encryptionKey);
+  }
+
+  /**
+   * Decrypt survey JSON
+   */
+  decryptSurveyJson(encryptedJson: string): any {
+    const encryptionKey = config.SYSTEM.ENCRYPTION_KEY;
+    try {
+      const decrypted = decrypt(encryptedJson, encryptionKey);
+      return JSON.parse(decrypted);
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+        },
+        "Failed to decrypt survey JSON"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Build survey form JSON structure
+   */
+  buildSurveyFormJson(
+    formDefinition: ParsedSurveyForm | null,
+    answers: Record<string, any>,
+    existingMetadata?: any
+  ): SurveyFormJson {
+    const now = new Date().toISOString();
+
+    return {
+      formDefinition,
+      answers,
+      metadata: {
+        startedAt: existingMetadata?.startedAt || now,
+        lastUpdatedAt: now,
+        completedAt: existingMetadata?.completedAt || null,
+        allFieldsCompleted: existingMetadata?.allFieldsCompleted || false,
+        version: "1.0",
+      },
+    };
+  }
+
+  /**
+   * Extract answers from survey JSON
+   */
+  extractAnswersFromJson(surveyJson: SurveyFormJson): Record<string, any> {
+    return surveyJson.answers || {};
+  }
+
+  /**
+   * Check if all required fields are completed
+   */
+  isAllFieldsCompleted(
+    surveyJson: SurveyFormJson,
+    requiredQuestions: SurveyQuestion[]
+  ): boolean {
+    const answers = surveyJson.answers || {};
+
+    // Check if all required questions have answers
+    for (const question of requiredQuestions) {
+      if (question.required && !answers[question.name]) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   /**
    * Save a single survey answer
    */
@@ -36,8 +137,9 @@ class SurveyResponseStorageService {
     lgCustomerId: string,
     customerId: string,
     questionName: string,
-    answer: string | boolean | number
-  ): Promise<HouseholdSurveyResponseRecord> {
+    answer: string | boolean | number,
+    formDefinition?: ParsedSurveyForm
+  ): Promise<void> {
     logger.info(
       {
         lgCustomerId: lgCustomerId.slice(-4),
@@ -48,39 +150,38 @@ class SurveyResponseStorageService {
     );
 
     try {
-      // Get existing response or create new one
-      const existing = await dataService.getSurveyResponse(
+      // Get existing claim with survey data
+      const existingClaim = await dataService.getClaimByLgAndCustomer(
         lgCustomerId,
         customerId
       );
 
-      const data: HouseholdSurveyResponseData = {
-        lgCustomerId,
-        customerId,
-      };
+      let surveyJson: SurveyFormJson;
 
-      // Map question name to field name
-      const fieldName = this.mapQuestionNameToFieldName(questionName);
-      (data as any)[fieldName] = String(answer);
-
-      // Preserve existing answers
-      if (existing) {
-        Object.keys(existing).forEach(key => {
-          if (
-            key !== "id" &&
-            key !== "customerId" &&
-            key !== "lgCustomerId" &&
-            key !== "createdAt" &&
-            key !== "updatedAt" &&
-            key !== "allFieldsCompleted" &&
-            (data as any)[key] === undefined
-          ) {
-            (data as any)[key] = (existing as any)[key];
-          }
+      if (existingClaim?.surveyForm) {
+        // Parse existing survey JSON
+        surveyJson = JSON.parse(existingClaim.surveyForm);
+        // Update the answer
+        surveyJson.answers[questionName] = answer;
+        // Update metadata
+        surveyJson.metadata.lastUpdatedAt = new Date().toISOString();
+        // Update form definition if provided
+        if (formDefinition) {
+          surveyJson.formDefinition = formDefinition;
+        }
+      } else {
+        // Create new survey JSON
+        surveyJson = this.buildSurveyFormJson(formDefinition || null, {
+          [questionName]: answer,
         });
       }
 
-      return await dataService.createOrUpdateSurveyResponse(data);
+      // Save to database
+      await dataService.updateClaimSurveyForm(
+        lgCustomerId,
+        customerId,
+        surveyJson
+      );
     } catch (error) {
       logger.error(
         {
@@ -100,8 +201,9 @@ class SurveyResponseStorageService {
   async saveSurveyAnswers(
     lgCustomerId: string,
     customerId: string,
-    answers: Record<string, any>
-  ): Promise<HouseholdSurveyResponseRecord> {
+    answers: Record<string, any>,
+    formDefinition?: ParsedSurveyForm
+  ): Promise<void> {
     logger.info(
       {
         lgCustomerId: lgCustomerId.slice(-4),
@@ -112,18 +214,36 @@ class SurveyResponseStorageService {
     );
 
     try {
-      const data: HouseholdSurveyResponseData = {
+      // Get existing claim with survey data
+      const existingClaim = await dataService.getClaimByLgAndCustomer(
+        lgCustomerId,
+        customerId
+      );
+
+      let surveyJson: SurveyFormJson;
+
+      if (existingClaim?.surveyForm) {
+        // Parse existing survey JSON
+        surveyJson = JSON.parse(existingClaim.surveyForm);
+        // Merge new answers
+        surveyJson.answers = { ...surveyJson.answers, ...answers };
+        // Update metadata
+        surveyJson.metadata.lastUpdatedAt = new Date().toISOString();
+        // Update form definition if provided
+        if (formDefinition) {
+          surveyJson.formDefinition = formDefinition;
+        }
+      } else {
+        // Create new survey JSON
+        surveyJson = this.buildSurveyFormJson(formDefinition || null, answers);
+      }
+
+      // Save to database
+      await dataService.updateClaimSurveyForm(
         lgCustomerId,
         customerId,
-      };
-
-      // Map all answers to field names
-      Object.entries(answers).forEach(([questionName, answer]) => {
-        const fieldName = this.mapQuestionNameToFieldName(questionName);
-        (data as any)[fieldName] = String(answer);
-      });
-
-      return await dataService.createOrUpdateSurveyResponse(data);
+        surveyJson
+      );
     } catch (error) {
       logger.error(
         {
@@ -142,7 +262,7 @@ class SurveyResponseStorageService {
   async markSurveyComplete(
     lgCustomerId: string,
     customerId: string
-  ): Promise<HouseholdSurveyResponseRecord> {
+  ): Promise<void> {
     logger.info(
       {
         lgCustomerId: lgCustomerId.slice(-4),
@@ -152,7 +272,30 @@ class SurveyResponseStorageService {
     );
 
     try {
-      return await dataService.markSurveyComplete(lgCustomerId, customerId);
+      // Get existing claim with survey data
+      const existingClaim = await dataService.getClaimByLgAndCustomer(
+        lgCustomerId,
+        customerId
+      );
+
+      if (!existingClaim?.surveyForm) {
+        throw new Error("No survey data found to mark as complete");
+      }
+
+      // Parse existing survey JSON
+      const surveyJson: SurveyFormJson = JSON.parse(existingClaim.surveyForm);
+
+      // Update metadata
+      surveyJson.metadata.allFieldsCompleted = true;
+      surveyJson.metadata.completedAt = new Date().toISOString();
+      surveyJson.metadata.lastUpdatedAt = new Date().toISOString();
+
+      // Save to database
+      await dataService.updateClaimSurveyForm(
+        lgCustomerId,
+        customerId,
+        surveyJson
+      );
     } catch (error) {
       logger.error(
         {
@@ -181,49 +324,23 @@ class SurveyResponseStorageService {
     );
 
     try {
-      const response = await dataService.getSurveyResponse(
+      const claim = await dataService.getClaimByLgAndCustomer(
         lgCustomerId,
         customerId
       );
 
-      if (!response) {
+      if (!claim?.surveyForm) {
         return null;
       }
 
-      // Convert decrypted fields back to answers object
-      const answers: Record<string, any> = {};
-
-      if (response.beneficiaryCategory) {
-        answers.beneficiaryCategory = response.beneficiaryCategory;
-      }
-      if (response.childMaxAge) {
-        answers.childMaxAge = response.childMaxAge;
-      }
-      if (response.beanIntakeFrequency) {
-        answers.beanIntakeFrequency = response.beanIntakeFrequency;
-      }
-      if (response.priceSpecification) {
-        answers.priceSpecification = response.priceSpecification;
-      }
-      if (response.awarenessIronBeans) {
-        answers.awarenessIronBeans = response.awarenessIronBeans;
-      }
-      if (response.knowsNutritionalBenefits) {
-        answers.knowsNutritionalBenefits = response.knowsNutritionalBenefits;
-      }
-      if (response.nutritionalBenefitDetails) {
-        answers.nutritionalBenefitDetails = response.nutritionalBenefitDetails;
-      }
-      if (response.confirmActionAntenatalCardVerified) {
-        answers.confirmActionAntenatalCardVerified =
-          response.confirmActionAntenatalCardVerified;
-      }
+      // Parse survey JSON
+      const surveyJson: SurveyFormJson = JSON.parse(claim.surveyForm);
 
       return {
-        lgCustomerId: response.lgCustomerId,
-        customerId: response.customerId,
-        answers,
-        allFieldsCompleted: response.allFieldsCompleted,
+        lgCustomerId,
+        customerId,
+        answers: surveyJson.answers || {},
+        allFieldsCompleted: surveyJson.metadata?.allFieldsCompleted || false,
       };
     } catch (error) {
       logger.error(
@@ -235,24 +352,6 @@ class SurveyResponseStorageService {
       );
       throw error;
     }
-  }
-
-  /**
-   * Map question name to database field name
-   */
-  private mapQuestionNameToFieldName(questionName: string): string {
-    const mapping: Record<string, string> = {
-      beneficiaryCategory: "beneficiaryCategory",
-      childMaxAge: "childMaxAge",
-      beanIntakeFrequency: "beanIntakeFrequency",
-      priceSpecification: "priceSpecification",
-      awarenessIronBeans: "awarenessIronBeans",
-      knowsNutritionalBenefits: "knowsNutritionalBenefits",
-      nutritionalBenefitDetails: "nutritionalBenefitDetails",
-      confirmActionAntenatalCardVerified: "confirmActionAntenatalCardVerified",
-    };
-
-    return mapping[questionName] || questionName;
   }
 }
 

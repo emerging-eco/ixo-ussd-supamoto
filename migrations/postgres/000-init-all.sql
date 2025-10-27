@@ -9,9 +9,71 @@
 -- 1. Core Tables (Phones, Households, Customers, Wallets)
 -- 2. Customer Activation & Eligibility
 -- 3. Bean Distribution & Delivery
--- 4. Household Survey & Claims
+-- 4. Household Survey & Claims (with JSON storage)
 -- 5. Audit & Logging
+--
+-- Note: This script includes the survey JSON storage refactor, consolidating
+-- survey responses directly into the household_claims table as JSONB.
 -- ============================================================================
+
+-- ============================================================================
+-- SECTION 0: DROP EXISTING TABLES (Idempotent)
+-- ============================================================================
+-- Drop tables in reverse dependency order to avoid foreign key constraint errors
+
+-- Drop indexes first (if they exist)
+DROP INDEX IF EXISTS idx_household_claims_survey_form;
+DROP INDEX IF EXISTS idx_household_claims_survey_updated;
+DROP INDEX IF EXISTS idx_household_claims_lg_customer_composite;
+DROP INDEX IF EXISTS idx_household_survey_lg_customer_unique;
+DROP INDEX IF EXISTS idx_household_survey_customer;
+DROP INDEX IF EXISTS idx_household_survey_lg;
+DROP INDEX IF EXISTS idx_household_survey_completion;
+DROP INDEX IF EXISTS idx_household_survey_created;
+DROP INDEX IF EXISTS idx_audit_log_pin_reset;
+DROP INDEX IF EXISTS idx_audit_log_created;
+DROP INDEX IF EXISTS idx_audit_log_customer;
+DROP INDEX IF EXISTS idx_audit_log_event_type;
+DROP INDEX IF EXISTS idx_household_claims_status;
+DROP INDEX IF EXISTS idx_household_claims_lg_customer;
+DROP INDEX IF EXISTS idx_household_claims_lg;
+DROP INDEX IF EXISTS idx_household_claims_customer;
+DROP INDEX IF EXISTS idx_bean_confirmations_deadline;
+DROP INDEX IF EXISTS idx_bean_confirmations_lg;
+DROP INDEX IF EXISTS idx_bean_confirmations_customer;
+DROP INDEX IF EXISTS idx_bean_otps_valid;
+DROP INDEX IF EXISTS idx_bean_otps_intent;
+DROP INDEX IF EXISTS idx_bean_otps_lg;
+DROP INDEX IF EXISTS idx_bean_otps_customer;
+DROP INDEX IF EXISTS idx_lg_intents_status;
+DROP INDEX IF EXISTS idx_lg_intents_lg;
+DROP INDEX IF EXISTS idx_lg_intents_customer;
+DROP INDEX IF EXISTS idx_matrix_vaults_profile_id;
+DROP INDEX IF EXISTS idx_ixo_accounts_address;
+DROP INDEX IF EXISTS idx_ixo_accounts_profile_id;
+DROP INDEX IF EXISTS idx_ixo_profiles_did;
+DROP INDEX IF EXISTS idx_ixo_profiles_household_id;
+DROP INDEX IF EXISTS idx_ixo_profiles_customer_id;
+DROP INDEX IF EXISTS idx_customer_phones_phone_id;
+DROP INDEX IF EXISTS idx_customer_phones_customer_id;
+DROP INDEX IF EXISTS idx_customers_role;
+DROP INDEX IF EXISTS idx_customers_customer_id;
+DROP INDEX IF EXISTS idx_phones_phone_number;
+
+-- Drop tables in reverse dependency order
+DROP TABLE IF EXISTS audit_log;
+DROP TABLE IF EXISTS household_claims;
+DROP TABLE IF EXISTS household_survey_responses;  -- Legacy table from before JSON refactor
+DROP TABLE IF EXISTS bean_delivery_confirmations;
+DROP TABLE IF EXISTS bean_distribution_otps;
+DROP TABLE IF EXISTS lg_delivery_intents;
+DROP TABLE IF EXISTS matrix_vaults;
+DROP TABLE IF EXISTS ixo_accounts;
+DROP TABLE IF EXISTS ixo_profiles;
+DROP TABLE IF EXISTS customer_phones;
+DROP TABLE IF EXISTS customers;
+DROP TABLE IF EXISTS households;
+DROP TABLE IF EXISTS phones;
 
 -- ============================================================================
 -- SECTION 1: CORE TABLES
@@ -19,7 +81,7 @@
 -- Data Storage: Phone → Customer → Wallet (IXO Profile + Account) → Matrix Vault
 
 -- 1.1 Phone details (independent - can exist without any other data)
-CREATE TABLE IF NOT EXISTS phones (
+CREATE TABLE phones (
   id SERIAL PRIMARY KEY,
   phone_number VARCHAR(32) NOT NULL UNIQUE,
   first_seen TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -30,14 +92,14 @@ CREATE TABLE IF NOT EXISTS phones (
 );
 
 -- 1.2 Households (created only when needed for IXO Profile/Wallet)
-CREATE TABLE IF NOT EXISTS households (
+CREATE TABLE households (
   id SERIAL PRIMARY KEY,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 -- 1.3 Customer details (needs phone, may have household)
-CREATE TABLE IF NOT EXISTS customers (
+CREATE TABLE customers (
   id SERIAL PRIMARY KEY,
   customer_id VARCHAR(10) NOT NULL UNIQUE,
   full_name VARCHAR(255),
@@ -53,7 +115,7 @@ CREATE TABLE IF NOT EXISTS customers (
 );
 
 -- 1.4 Junction table for phone-customer relationships (many-to-many)
-CREATE TABLE IF NOT EXISTS customer_phones (
+CREATE TABLE customer_phones (
   id SERIAL PRIMARY KEY,
   customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
   phone_id INTEGER NOT NULL REFERENCES phones(id) ON DELETE CASCADE,
@@ -63,7 +125,7 @@ CREATE TABLE IF NOT EXISTS customer_phones (
 );
 
 -- 1.5 IXO Profiles (Wallet part 1 - can be individual or household-based)
-CREATE TABLE IF NOT EXISTS ixo_profiles (
+CREATE TABLE ixo_profiles (
   id SERIAL PRIMARY KEY,
   customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
   household_id INTEGER REFERENCES households(id) ON DELETE CASCADE,
@@ -77,7 +139,7 @@ CREATE TABLE IF NOT EXISTS ixo_profiles (
 );
 
 -- 1.6 IXO Accounts (Wallet part 2 - many per IXO profile)
-CREATE TABLE IF NOT EXISTS ixo_accounts (
+CREATE TABLE ixo_accounts (
   id SERIAL PRIMARY KEY,
   ixo_profile_id INTEGER NOT NULL REFERENCES ixo_profiles(id) ON DELETE CASCADE,
   address TEXT NOT NULL UNIQUE,
@@ -88,7 +150,7 @@ CREATE TABLE IF NOT EXISTS ixo_accounts (
 );
 
 -- 1.7 Matrix Vaults (secure storage - one per IXO profile)
-CREATE TABLE IF NOT EXISTS matrix_vaults (
+CREATE TABLE matrix_vaults (
   id SERIAL PRIMARY KEY,
   ixo_profile_id INTEGER NOT NULL REFERENCES ixo_profiles(id) ON DELETE CASCADE,
   username TEXT NOT NULL,
@@ -102,16 +164,18 @@ CREATE TABLE IF NOT EXISTS matrix_vaults (
 -- SECTION 2: CUSTOMER ACTIVATION & ELIGIBILITY
 -- ============================================================================
 -- Note: eligibility_verifications table not included - replaced by
---       household_claims + household_survey_responses system
+--       household_claims + survey_form JSONB system
 -- Note: distribution_otps table not included - superseded by bean_distribution_otps
 --       which provides comprehensive tracking with foreign keys and LG tracking
+-- Note: household_survey_responses table not included - replaced by survey_form
+--       JSONB column in household_claims table for flexible schema
 
 -- ============================================================================
 -- SECTION 3: BEAN DISTRIBUTION & DELIVERY
 -- ============================================================================
 
 -- 3.1 LG Intent Registration Table
-CREATE TABLE IF NOT EXISTS lg_delivery_intents (
+CREATE TABLE lg_delivery_intents (
   id SERIAL PRIMARY KEY,
   customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
   lg_customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
@@ -123,7 +187,7 @@ CREATE TABLE IF NOT EXISTS lg_delivery_intents (
 );
 
 -- 3.2 OTP tracking table for bean distribution
-CREATE TABLE IF NOT EXISTS bean_distribution_otps (
+CREATE TABLE bean_distribution_otps (
   id SERIAL PRIMARY KEY,
   customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
   lg_customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
@@ -137,7 +201,7 @@ CREATE TABLE IF NOT EXISTS bean_distribution_otps (
 );
 
 -- 3.3 Delivery confirmations table
-CREATE TABLE IF NOT EXISTS bean_delivery_confirmations (
+CREATE TABLE bean_delivery_confirmations (
   id SERIAL PRIMARY KEY,
   customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
   lg_customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
@@ -152,29 +216,12 @@ CREATE TABLE IF NOT EXISTS bean_delivery_confirmations (
 );
 
 -- ============================================================================
--- SECTION 4: HOUSEHOLD SURVEY & CLAIMS
+-- SECTION 4: HOUSEHOLD SURVEY & CLAIMS (with JSON Storage)
 -- ============================================================================
 
--- 4.1 Household Survey Responses (encrypted, collected by LG)
-CREATE TABLE IF NOT EXISTS household_survey_responses (
-  id SERIAL PRIMARY KEY,
-  lg_customer_id VARCHAR(10) NOT NULL,
-  customer_id VARCHAR(10) NOT NULL,
-  beneficiary_category TEXT,
-  child_max_age TEXT,
-  bean_intake_frequency TEXT,
-  price_specification TEXT,
-  awareness_iron_beans TEXT,
-  knows_nutritional_benefits TEXT,
-  nutritional_benefit_details TEXT,
-  confirm_action_antenatal_card_verified TEXT,
-  all_fields_completed BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
--- 4.2 Household Claims (submitted by LG on behalf of customer)
-CREATE TABLE IF NOT EXISTS household_claims (
+-- 4.1 Household Claims (submitted by LG on behalf of customer)
+-- Includes embedded survey responses in survey_form JSONB field
+CREATE TABLE household_claims (
   id SERIAL PRIMARY KEY,
   lg_customer_id VARCHAR(10),
   customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
@@ -184,6 +231,8 @@ CREATE TABLE IF NOT EXISTS household_claims (
   claim_status VARCHAR(50),
   bean_voucher_allocated BOOLEAN DEFAULT FALSE,
   claims_bot_response JSONB,
+  survey_form TEXT,
+  survey_form_updated_at TIMESTAMP,
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
@@ -192,7 +241,7 @@ CREATE TABLE IF NOT EXISTS household_claims (
 -- ============================================================================
 
 -- 5.1 Audit log table
-CREATE TABLE IF NOT EXISTS audit_log (
+CREATE TABLE audit_log (
   id SERIAL PRIMARY KEY,
   event_type VARCHAR(50) NOT NULL,
   customer_id VARCHAR(10),
@@ -206,50 +255,53 @@ CREATE TABLE IF NOT EXISTS audit_log (
 -- ============================================================================
 
 -- Core table indexes
-CREATE INDEX IF NOT EXISTS idx_phones_phone_number ON phones(phone_number);
-CREATE INDEX IF NOT EXISTS idx_customers_customer_id ON customers(customer_id);
-CREATE INDEX IF NOT EXISTS idx_customers_role ON customers(role);
-CREATE INDEX IF NOT EXISTS idx_customer_phones_customer_id ON customer_phones(customer_id);
-CREATE INDEX IF NOT EXISTS idx_customer_phones_phone_id ON customer_phones(phone_id);
-CREATE INDEX IF NOT EXISTS idx_ixo_profiles_customer_id ON ixo_profiles(customer_id);
-CREATE INDEX IF NOT EXISTS idx_ixo_profiles_household_id ON ixo_profiles(household_id);
-CREATE INDEX IF NOT EXISTS idx_ixo_profiles_did ON ixo_profiles(did);
-CREATE INDEX IF NOT EXISTS idx_ixo_accounts_profile_id ON ixo_accounts(ixo_profile_id);
-CREATE INDEX IF NOT EXISTS idx_ixo_accounts_address ON ixo_accounts(address);
-CREATE INDEX IF NOT EXISTS idx_matrix_vaults_profile_id ON matrix_vaults(ixo_profile_id);
+CREATE INDEX idx_phones_phone_number ON phones(phone_number);
+CREATE INDEX idx_customers_customer_id ON customers(customer_id);
+CREATE INDEX idx_customers_role ON customers(role);
+CREATE INDEX idx_customer_phones_customer_id ON customer_phones(customer_id);
+CREATE INDEX idx_customer_phones_phone_id ON customer_phones(phone_id);
+CREATE INDEX idx_ixo_profiles_customer_id ON ixo_profiles(customer_id);
+CREATE INDEX idx_ixo_profiles_household_id ON ixo_profiles(household_id);
+CREATE INDEX idx_ixo_profiles_did ON ixo_profiles(did);
+CREATE INDEX idx_ixo_accounts_profile_id ON ixo_accounts(ixo_profile_id);
+CREATE INDEX idx_ixo_accounts_address ON ixo_accounts(address);
+CREATE INDEX idx_matrix_vaults_profile_id ON matrix_vaults(ixo_profile_id);
 
 -- Activation & eligibility indexes
 -- Note: eligibility_verifications indexes not included - table not in schema
 -- Note: distribution_otps indexes not included - table superseded by bean_distribution_otps
+-- Note: household_survey_responses indexes not included - table replaced by survey_form JSONB
 
 -- Bean distribution indexes
-CREATE INDEX IF NOT EXISTS idx_lg_intents_customer ON lg_delivery_intents(customer_id);
-CREATE INDEX IF NOT EXISTS idx_lg_intents_lg ON lg_delivery_intents(lg_customer_id);
-CREATE INDEX IF NOT EXISTS idx_lg_intents_status ON lg_delivery_intents(voucher_status);
-CREATE INDEX IF NOT EXISTS idx_bean_otps_customer ON bean_distribution_otps(customer_id);
-CREATE INDEX IF NOT EXISTS idx_bean_otps_lg ON bean_distribution_otps(lg_customer_id);
-CREATE INDEX IF NOT EXISTS idx_bean_otps_intent ON bean_distribution_otps(intent_id);
-CREATE INDEX IF NOT EXISTS idx_bean_otps_valid ON bean_distribution_otps(is_valid);
-CREATE INDEX IF NOT EXISTS idx_bean_confirmations_customer ON bean_delivery_confirmations(customer_id);
-CREATE INDEX IF NOT EXISTS idx_bean_confirmations_lg ON bean_delivery_confirmations(lg_customer_id);
-CREATE INDEX IF NOT EXISTS idx_bean_confirmations_deadline ON bean_delivery_confirmations(confirmation_deadline);
+CREATE INDEX idx_lg_intents_customer ON lg_delivery_intents(customer_id);
+CREATE INDEX idx_lg_intents_lg ON lg_delivery_intents(lg_customer_id);
+CREATE INDEX idx_lg_intents_status ON lg_delivery_intents(voucher_status);
+CREATE INDEX idx_bean_otps_customer ON bean_distribution_otps(customer_id);
+CREATE INDEX idx_bean_otps_lg ON bean_distribution_otps(lg_customer_id);
+CREATE INDEX idx_bean_otps_intent ON bean_distribution_otps(intent_id);
+CREATE INDEX idx_bean_otps_valid ON bean_distribution_otps(is_valid);
+CREATE INDEX idx_bean_confirmations_customer ON bean_delivery_confirmations(customer_id);
+CREATE INDEX idx_bean_confirmations_lg ON bean_delivery_confirmations(lg_customer_id);
+CREATE INDEX idx_bean_confirmations_deadline ON bean_delivery_confirmations(confirmation_deadline);
 
--- Household survey & claims indexes
-CREATE UNIQUE INDEX IF NOT EXISTS idx_household_survey_lg_customer_unique ON household_survey_responses(lg_customer_id, customer_id);
-CREATE INDEX IF NOT EXISTS idx_household_survey_customer ON household_survey_responses(customer_id);
-CREATE INDEX IF NOT EXISTS idx_household_survey_lg ON household_survey_responses(lg_customer_id);
-CREATE INDEX IF NOT EXISTS idx_household_survey_completion ON household_survey_responses(all_fields_completed);
-CREATE INDEX IF NOT EXISTS idx_household_survey_created ON household_survey_responses(created_at);
-CREATE INDEX IF NOT EXISTS idx_household_claims_customer ON household_claims(customer_id);
-CREATE INDEX IF NOT EXISTS idx_household_claims_lg ON household_claims(lg_customer_id);
-CREATE INDEX IF NOT EXISTS idx_household_claims_lg_customer ON household_claims(lg_customer_id, customer_id);
-CREATE INDEX IF NOT EXISTS idx_household_claims_status ON household_claims(claim_status);
+-- Household claims indexes (with JSON support)
+CREATE INDEX idx_household_claims_customer ON household_claims(customer_id);
+CREATE INDEX idx_household_claims_lg ON household_claims(lg_customer_id);
+CREATE INDEX idx_household_claims_lg_customer_composite ON household_claims(lg_customer_id, customer_id);
+CREATE INDEX idx_household_claims_status ON household_claims(claim_status);
+
+-- GIN index on survey_form JSONB column for efficient JSON querying
+-- Note: We store as TEXT but can cast to JSONB for querying
+CREATE INDEX idx_household_claims_survey_form ON household_claims USING GIN ((survey_form::jsonb));
+
+-- Index on survey_form_updated_at for tracking recent updates
+CREATE INDEX idx_household_claims_survey_updated ON household_claims(survey_form_updated_at) WHERE survey_form IS NOT NULL;
 
 -- Audit log indexes
-CREATE INDEX IF NOT EXISTS idx_audit_log_event_type ON audit_log(event_type);
-CREATE INDEX IF NOT EXISTS idx_audit_log_customer ON audit_log(customer_id);
-CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
-CREATE INDEX IF NOT EXISTS idx_audit_log_pin_reset ON audit_log(event_type) WHERE event_type = 'PIN_RESET';
+CREATE INDEX idx_audit_log_event_type ON audit_log(event_type);
+CREATE INDEX idx_audit_log_customer ON audit_log(customer_id);
+CREATE INDEX idx_audit_log_created ON audit_log(created_at);
+CREATE INDEX idx_audit_log_pin_reset ON audit_log(event_type) WHERE event_type = 'PIN_RESET';
 
 -- ============================================================================
 -- SECTION 7: TABLE & COLUMN COMMENTS
@@ -266,15 +318,16 @@ COMMENT ON TABLE bean_distribution_otps IS 'Primary OTP tracking table for bean 
 COMMENT ON TABLE bean_delivery_confirmations IS 'Tracks dual confirmations (LG + Customer) for bean delivery within 7-day window';
 COMMENT ON COLUMN bean_delivery_confirmations.customer_confirmed_receipt IS 'TRUE = received beans, FALSE = did not receive, NULL = not yet confirmed';
 
-COMMENT ON TABLE household_survey_responses IS 'Stores encrypted household eligibility survey responses collected by Lead Generators for customers';
-COMMENT ON COLUMN household_survey_responses.lg_customer_id IS 'Lead Generator customer ID - who collected the survey';
-COMMENT ON COLUMN household_survey_responses.customer_id IS 'Customer being surveyed - who the survey is about';
-COMMENT ON COLUMN household_survey_responses.all_fields_completed IS 'Flag to gate LG claim submission - must be true before LG can submit 1000DayCustomerClaim';
-
-COMMENT ON TABLE household_claims IS '1,000 Day Household claims submitted by Lead Generators on behalf of customers';
+COMMENT ON TABLE household_claims IS '1,000 Day Household claims submitted by Lead Generators on behalf of customers. Includes embedded survey responses in survey_form JSONB field.';
 COMMENT ON COLUMN household_claims.lg_customer_id IS 'Lead Generator customer ID - who submitted the claim on behalf of the customer';
 COMMENT ON COLUMN household_claims.claim_status IS 'Status: PENDING, PROCESSED, FAILED, VOUCHER_ALLOCATED';
 COMMENT ON COLUMN household_claims.claims_bot_response IS 'Full JSON response from ixo-matrix-supamoto-claims-bot';
+COMMENT ON COLUMN household_claims.survey_form IS 'Encrypted JSONB field storing complete survey form definition and responses. Structure: {formDefinition: {...}, answers: {...}, metadata: {startedAt, lastUpdatedAt, completedAt, allFieldsCompleted, version}}';
+COMMENT ON COLUMN household_claims.survey_form_updated_at IS 'Timestamp of last survey form update. Used for tracking survey progress and session recovery.';
 
 COMMENT ON TABLE audit_log IS 'Audit trail for security events. Event types include: PIN_RESET, CUSTOMER_ACTIVATED, SMS_FAILED, BEAN_RECEIPT_DENIED, ACCOUNT_LOCKED, etc.';
+
+-- ============================================================================
+-- INITIALIZATION COMPLETE
+-- ============================================================================
 
