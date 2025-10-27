@@ -55,7 +55,7 @@ sequenceDiagram
     matrix-bot->>SUPA: transfer(bean-token, customer)
     SUPA->>subs-svc: Transfer BEAN token to Customer Subscription from ECS account
     subs-svc-->>SUPA: done
-    SUPA-->>matrix-bot: done?
+    SUPA-->>matrix-bot: done
     matrix-bot-->>USSD: sendSMS(customerID)
     USSD->>Customer: [SMS] You can now collect your first free bag of beans! Visit your LG.
 ```
