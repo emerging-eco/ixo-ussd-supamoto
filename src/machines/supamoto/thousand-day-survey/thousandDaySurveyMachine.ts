@@ -21,6 +21,7 @@ import { withNavigation } from "../utils/navigation-mixin.js";
 import { createModuleLogger } from "../../../services/logger.js";
 import { dataService } from "../../../services/database-storage.js";
 import { surveyResponseStorageService } from "../../../services/survey-response-storage.js";
+import { submit1000DayHouseholdClaim } from "../../../services/claims-bot.js";
 import {
   validateCustomerId,
   validateBeneficiaryCategory,
@@ -240,6 +241,14 @@ const submitClaimService = fromPromise(
       claimId: number;
       lgCustomerId: string;
       customerId: string;
+      beneficiaryCategory: string[];
+      childAge?: number;
+      beanIntakeFrequency: string;
+      priceSpecification: string;
+      awarenessIronBeans: string;
+      knowsNutritionalBenefits: string;
+      nutritionalBenefitDetails: string[];
+      antenatalCardVerified: boolean;
     };
   }) => {
     logger.info(
@@ -248,24 +257,62 @@ const submitClaimService = fromPromise(
         lgCustomerId: input.lgCustomerId.slice(-4),
         customerId: input.customerId.slice(-4),
       },
-      "Submitting 1,000 Day Household claim to blockchain"
+      "Submitting 1,000 Day Household claim to claims bot"
     );
 
-    // TODO: Implement actual blockchain submission using submitClaim from ixo-claims.ts
-    // For now, just update claim status to PROCESSED
-    await dataService.updateHouseholdClaim(input.claimId, {
-      claimStatus: "PROCESSED",
-      claimProcessedAt: new Date(),
-    });
+    try {
+      // Submit claim to claims bot
+      const response = await submit1000DayHouseholdClaim({
+        customerId: input.customerId,
+        beneficiaryCategory: input.beneficiaryCategory,
+        childMaxAge: input.childAge,
+        beanIntakeFrequency: input.beanIntakeFrequency,
+        priceSpecification: input.priceSpecification,
+        awarenessIronBeans: input.awarenessIronBeans,
+        knowsNutritionalBenefits: input.knowsNutritionalBenefits,
+        nutritionalBenefitDetails: input.nutritionalBenefitDetails,
+        antenatalCardVerified: input.antenatalCardVerified,
+      });
 
-    logger.info(
-      {
-        claimId: input.claimId,
-      },
-      "Claim submitted successfully"
-    );
+      // Update household claim with blockchain response
+      await dataService.updateHouseholdClaim(input.claimId, {
+        claimStatus: "PROCESSED",
+        claimProcessedAt: new Date(),
+        claimsBotResponse: response as any, // Store the full response
+      });
 
-    return { success: true };
+      logger.info(
+        {
+          claimId: input.claimId,
+          blockchainClaimId: response.data.claimId,
+        },
+        "Claim submitted successfully to claims bot"
+      );
+
+      return {
+        success: true,
+        blockchainClaimId: response.data.claimId,
+      };
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          claimId: input.claimId,
+        },
+        "Failed to submit claim to claims bot"
+      );
+
+      // Update claim status to FAILED
+      await dataService.updateHouseholdClaim(input.claimId, {
+        claimStatus: "FAILED",
+        claimsBotResponse: {
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString(),
+        } as any,
+      });
+
+      throw error;
+    }
   }
 );
 
@@ -1120,7 +1167,7 @@ export const thousandDaySurveyMachine = setup({
 
     submittingClaim: {
       entry: assign(() => ({
-        message: "Submitting claim to blockchain...",
+        message: "Submitting claim to claims bot...",
       })),
       invoke: {
         id: "submitClaim",
@@ -1129,6 +1176,14 @@ export const thousandDaySurveyMachine = setup({
           claimId: context.claimId || 0,
           lgCustomerId: context.lgCustomerId,
           customerId: context.customerId,
+          beneficiaryCategory: context.beneficiaryCategory || [],
+          childAge: context.childAge,
+          beanIntakeFrequency: context.beanIntakeFrequency || "",
+          priceSpecification: context.priceSpecification || "",
+          awarenessIronBeans: context.awarenessIronBeans || "",
+          knowsNutritionalBenefits: context.knowsNutritionalBenefits || "",
+          nutritionalBenefitDetails: context.nutritionalBenefitDetails || [],
+          antenatalCardVerified: context.antenatalCardVerified || false,
         }),
         onDone: {
           target: "claimSubmitted",

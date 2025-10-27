@@ -240,6 +240,10 @@ export const config = {
     SMS_RETRY_ATTEMPTS: parseInt(process.env.SMS_RETRY_ATTEMPTS || "3", 10),
     SMS_RETRY_DELAYS_SECONDS: [0, 10, 30], // Immediate, 10s, 30s for 3 attempts
   },
+  CLAIMS_BOT: {
+    URL: process.env.CLAIMS_BOT_URL || "",
+    ACCESS_TOKEN: process.env.CLAIMS_BOT_ACCESS_TOKEN || "",
+  },
 } as const;
 
 // Type for the config object
