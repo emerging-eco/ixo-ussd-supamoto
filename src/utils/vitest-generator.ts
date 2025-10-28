@@ -229,13 +229,20 @@ async function sendUssdRequest(text: string): Promise<string> {
     const escapedCumulativeText = this.escapeString(cumulativeText);
     const escapedExpected = this.escapeString(turn.serverReply);
 
+    // Add 2-second delay for all turns except the first (to simulate realistic user interaction)
+    // Turn 1 is the initial dial and doesn't need a delay
+    const delayCode =
+      turnNumber > 1
+        ? `\n  // Simulate realistic user interaction timing (2-second delay)\n  await new Promise(resolve => setTimeout(resolve, 2000));\n`
+        : "";
+
     // Add comment explaining cumulative text if not initial dial
     const cumulativeComment =
       cumulativeText !== "" && cumulativeText !== turn.textSent
         ? `\n  // Cumulative USSD text: "${escapedCumulativeText}"`
         : "";
 
-    return `it("Turn ${turnNumber}: ${escapedDescription}", async () => {${cumulativeComment}
+    return `it("Turn ${turnNumber}: ${escapedDescription}", async () => {${delayCode}${cumulativeComment}
   // Send user input (USSD requires cumulative text)
   const response = await sendUssdRequest("${escapedCumulativeText}");
 

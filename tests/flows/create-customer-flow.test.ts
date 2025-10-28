@@ -116,6 +116,9 @@ describe("create-customer-flow - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 2: Input: "2"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest("2");
 
@@ -128,6 +131,9 @@ describe("create-customer-flow - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 3: Input: "2"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*2"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest("2*2");
@@ -141,6 +147,9 @@ describe("create-customer-flow - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 4: Input: "Cust Omer"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*2*Cust Omer"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest("2*2*Cust Omer");
@@ -154,6 +163,9 @@ describe("create-customer-flow - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 5: Input: "cust@om.er"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*2*Cust Omer*cust@om.er"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest("2*2*Cust Omer*cust@om.er");
@@ -166,6 +178,9 @@ describe("create-customer-flow - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 6: Input: "10101"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*2*Cust Omer*cust@om.er*10101"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest("2*2*Cust Omer*cust@om.er*10101");
@@ -178,6 +193,9 @@ describe("create-customer-flow - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 7: Input: "10101"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*2*Cust Omer*cust@om.er*10101*10101"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
@@ -192,10 +210,8 @@ describe("create-customer-flow - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 8: Input: "1"', async () => {
-    // Wait for async account creation to complete
-    // Database operations typically complete in 100-200ms; 500ms provides a comfortable buffer
-    // This respects the USSD protocol's request-response nature
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Cumulative USSD text: "2*2*Cust Omer*cust@om.er*10101*10101*1"
     // Send user input (USSD requires cumulative text)
@@ -218,6 +234,9 @@ describe("create-customer-flow - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 9: Input: "1"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*2*Cust Omer*cust@om.er*10101*10101*1*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
@@ -233,6 +252,9 @@ describe("create-customer-flow - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 10: Input: "1"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*2*Cust Omer*cust@om.er*10101*10101*1*1*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
@@ -247,6 +269,9 @@ describe("create-customer-flow - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it("Turn 11: Input: Customer ID", async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Ensure we have a captured Customer ID from Turn 8
     expect(capturedCustomerId).not.toBeNull();
 
@@ -261,12 +286,12 @@ describe("create-customer-flow - USSD Flow Test", () => {
 
     // Assert response matches expected
     expect(response).toBe(expected);
-
-    // Add a delay to allow time for the database query
-    await new Promise(resolve => setTimeout(resolve, 500));
   }, 10000); // 10 second timeout for this test
 
   it('Turn 12: Input: "1"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     expect(capturedCustomerId).not.toBeNull();
 
     // Cumulative USSD text: "2*2*Cust Omer*cust@om.er*10101*10101*1*1*1*{CUSTOMER_ID}*1"
@@ -283,6 +308,9 @@ describe("create-customer-flow - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 13: Input: "10101"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     expect(capturedCustomerId).not.toBeNull();
 
     // Cumulative USSD text: "2*2*Cust Omer*cust@om.er*10101*10101*1*1*1*{CUSTOMER_ID}*1*10101"
@@ -296,12 +324,12 @@ describe("create-customer-flow - USSD Flow Test", () => {
 
     // Assert response matches expected
     expect(response).toBe(expected);
-
-    // Add a delay to allow time for the database query
-    await new Promise(resolve => setTimeout(resolve, 500));
   }, 10000); // 10 second timeout for this test
 
   it('Turn 14: Input: "1"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     expect(capturedCustomerId).not.toBeNull();
 
     // Cumulative USSD text: "2*2*Cust Omer*cust@om.er*10101*10101*1*1*1*{CUSTOMER_ID}*1*10101*1"
@@ -318,6 +346,9 @@ describe("create-customer-flow - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 15: Input: "1"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     expect(capturedCustomerId).not.toBeNull();
 
     // Cumulative USSD text: "2*2*Cust Omer*cust@om.er*10101*10101*1*1*1*{CUSTOMER_ID}*1*10101*1*1"
@@ -335,6 +366,9 @@ describe("create-customer-flow - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 16: Input: "0"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     expect(capturedCustomerId).not.toBeNull();
 
     // Cumulative USSD text: "2*2*Cust Omer*cust@om.er*10101*10101*1*1*1*{CUSTOMER_ID}*1*10101*1*1*0"
@@ -352,6 +386,9 @@ describe("create-customer-flow - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 17: Input: "*"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     expect(capturedCustomerId).not.toBeNull();
 
     // Cumulative USSD text: "2*2*Cust Omer*cust@om.er*10101*10101*1*1*1*{CUSTOMER_ID}*1*10101*1*1*0**"

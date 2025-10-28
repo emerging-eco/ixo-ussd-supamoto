@@ -100,6 +100,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 2: Input: "2"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest("2");
 
@@ -112,6 +115,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 3: Input: "1"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest("2*1");
@@ -124,6 +130,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 4: Input: "C73DE2A07"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest("2*1*C73DE2A07");
@@ -133,12 +142,12 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
 
     // Assert response matches expected
     expect(response).toBe(expected);
-
-    // Add a delay to allow time for the database query
-    await new Promise(resolve => setTimeout(resolve, 500));
   }, 10000); // 10 second timeout for this test
 
   it('Turn 5: Input: "1"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest("2*1*C73DE2A07*1");
@@ -151,6 +160,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 6: Input: "10101"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest("2*1*C73DE2A07*1*10101");
@@ -160,12 +172,12 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
 
     // Assert response matches expected
     expect(response).toBe(expected);
-
-    // Add a delay to allow time for the database query
-    await new Promise(resolve => setTimeout(resolve, 500));
   }, 10000); // 10 second timeout for this test
 
   it('Turn 7: Input: "1"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest("2*1*C73DE2A07*1*10101*1");
@@ -179,6 +191,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 8: Input: "1"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest("2*1*C73DE2A07*1*10101*1*1");
@@ -191,22 +206,28 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  // it("Turn 9: Input: \"2\"", async () => {
-  //   // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2"
-  //   // Send user input (USSD requires cumulative text)
-  //   const response = await sendUssdRequest("2*1*C73DE2A07*1*10101*1*1*2");
+  it('Turn 9: Input: "2"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
-  //   // Expected server response
-  //   const expected = "CON Loading survey...\n1. Continue";
+    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2"
+    // Send user input (USSD requires cumulative text)
+    const response = await sendUssdRequest("2*1*C73DE2A07*1*10101*1*1*2");
 
-  //   // Assert response matches expected
-  //   expect(response).toBe(expected);
+    // Expected server response
+    const expected = "CON Loading survey...\n1. Continue";
 
-  //   // Add a delay to allow time for the database query
-  //   await new Promise(resolve => setTimeout(resolve, 500));
-  // }, 10000); // 10 second timeout for this test
+    // Assert response matches expected
+    expect(response).toBe(expected);
+
+    // Add a delay to allow time for the database query
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }, 10000); // 10 second timeout for this test
 
   it('Turn 10: Input: "1"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest("2*1*C73DE2A07*1*10101*1*1*2*1");
@@ -220,6 +241,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 11: Input: "C1F53E2F7"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
@@ -235,6 +259,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 12: Input: "4"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
@@ -249,6 +276,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 13: Input: "18"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*18"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
@@ -264,6 +294,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 14: Input: "3"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*18*3"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
@@ -279,6 +312,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 15: Input: "10 ZMW"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*18*3*10 ZMW"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
@@ -294,6 +330,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 16: Input: "2"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*18*3*10 ZMW*2"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
@@ -309,6 +348,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 17: Input: "2"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*18*3*10 ZMW*2*2"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
@@ -324,6 +366,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 18: Input: "1"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*18*3*10 ZMW*2*2*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
@@ -339,6 +384,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 19: Input: "2"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*18*3*10 ZMW*2*2*1*2"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
@@ -354,6 +402,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 20: Input: "2"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*18*3*10 ZMW*2*2*1*2*2"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
@@ -369,6 +420,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 21: Input: "1"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*18*3*10 ZMW*2*2*1*2*2*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
@@ -384,6 +438,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 22: Input: "1"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*18*3*10 ZMW*2*2*1*2*2*1*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
@@ -399,6 +456,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
   }, 10000); // 10 second timeout for this test
 
   it('Turn 23: Input: "1"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*18*3*10 ZMW*2*2*1*2*2*1*1*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
