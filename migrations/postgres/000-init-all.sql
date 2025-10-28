@@ -291,8 +291,9 @@ CREATE INDEX idx_household_claims_lg_customer_composite ON household_claims(lg_c
 CREATE INDEX idx_household_claims_status ON household_claims(claim_status);
 
 -- GIN index on survey_form JSONB column for efficient JSON querying
--- Note: We store as TEXT but can cast to JSONB for querying
-CREATE INDEX idx_household_claims_survey_form ON household_claims USING GIN ((survey_form::jsonb));
+-- Note: DISABLED - We store encrypted TEXT which cannot be cast to JSONB
+-- If you need to query survey data, decrypt it first in application layer
+-- CREATE INDEX idx_household_claims_survey_form ON household_claims USING GIN ((survey_form::jsonb));
 
 -- Index on survey_form_updated_at for tracking recent updates
 CREATE INDEX idx_household_claims_survey_updated ON household_claims(survey_form_updated_at) WHERE survey_form IS NOT NULL;
