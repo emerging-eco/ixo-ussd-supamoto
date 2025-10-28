@@ -5,11 +5,11 @@
  *
  * Session Details:
  * - Flow: know-more-flow
- * - Session ID: interactive-test-1761632170101
+ * - Session ID: interactive-test-1761647447031
  * - Phone: +260971230001
  * - Service Code: *2233#
- * - Recorded: 2025-10-28T06:16:10.104Z
- * - Turns: 23
+ * - Recorded: 2025-10-28T10:30:47.033Z
+ * - Turns: 21
  *
  * ⚠️  IMPORTANT: How to run this test
  *
@@ -43,7 +43,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 // Test Configuration
 const SERVER_URL =
   process.env.USSD_TEST_SERVER_URL || "http://127.0.0.1:3005/api/ussd";
-const SESSION_ID = "interactive-test-1761632170101";
+const SESSION_ID = "interactive-test-1761647447031";
 const PHONE_NUMBER = "+260971230001";
 const SERVICE_CODE = "*2233#";
 const REQUEST_TIMEOUT = 5000; // 5 seconds
@@ -114,29 +114,13 @@ describe("know-more-flow - USSD Flow Test", () => {
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it('Turn 3: Input: "1"', async () => {
+  it('Turn 3: Input: "0"', async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "1*1"
+    // Cumulative USSD text: "1*0"
     // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest("1*1");
-
-    // Expected server response
-    const expected =
-      "CON Thank you for your interest. We have sent you a SMS with more information.\n1. Back to Main Menu\n0. Back";
-
-    // Assert response matches expected
-    expect(response).toBe(expected);
-  }, 10000); // 10 second timeout for this test
-
-  it('Turn 4: Input: "1"', async () => {
-    // Simulate realistic user interaction timing (2-second delay)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Cumulative USSD text: "1*1*1"
-    // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest("1*1*1");
+    const response = await sendUssdRequest("1*0");
 
     // Expected server response
     const expected =
@@ -146,47 +130,65 @@ describe("know-more-flow - USSD Flow Test", () => {
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it('Turn 5: Input: "2"', async () => {
+  it('Turn 4: Input: "1"', async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "1*1*1*2"
+    // Cumulative USSD text: "1*0*1"
     // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest("1*1*1*2");
+    const response = await sendUssdRequest("1*0*1");
 
     // Expected server response
     const expected =
-      "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back";
+      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in Product\n2. Pricing & accessories\n3. Can we deliver to you?\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it('Turn 6: Input: "1"', async () => {
+  it('Turn 5: Input: "1"', async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "1*1*1*2*1"
+    // Cumulative USSD text: "1*0*1*1"
     // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest("1*1*1*2*1");
+    const response = await sendUssdRequest("1*0*1*1");
 
     // Expected server response
-    const expected = "CON Enter your Customer ID to log in:\n0. Back";
+    const expected =
+      "CON Thank you for your interest. We have sent you a SMS with more information.\n1. Back to Main Menu\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it('Turn 7: Input: "C73DE2A07"', async () => {
+  it('Turn 6: Input: "0"', async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "1*1*1*2*1*C73DE2A07"
+    // Cumulative USSD text: "1*0*1*1*0"
     // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest("1*1*1*2*1*C73DE2A07");
+    const response = await sendUssdRequest("1*0*1*1*0");
 
     // Expected server response
-    const expected = "CON Verifying Customer ID...\n1. Continue";
+    const expected =
+      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in Product\n2. Pricing & accessories\n3. Can we deliver to you?\n0. Back";
+
+    // Assert response matches expected
+    expect(response).toBe(expected);
+  }, 10000); // 10 second timeout for this test
+
+  it('Turn 7: Input: "0"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Cumulative USSD text: "1*0*1*1*0*0"
+    // Send user input (USSD requires cumulative text)
+    const response = await sendUssdRequest("1*0*1*1*0*0");
+
+    // Expected server response
+    const expected =
+      "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -196,27 +198,29 @@ describe("know-more-flow - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "1*1*1*2*1*C73DE2A07*1"
+    // Cumulative USSD text: "1*0*1*1*0*0*1"
     // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest("1*1*1*2*1*C73DE2A07*1");
+    const response = await sendUssdRequest("1*0*1*1*0*0*1");
 
     // Expected server response
-    const expected = "CON Enter your PIN:\n0. Back";
+    const expected =
+      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in Product\n2. Pricing & accessories\n3. Can we deliver to you?\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it('Turn 9: Input: "10101"', async () => {
+  it('Turn 9: Input: "1"', async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "1*1*1*2*1*C73DE2A07*1*10101"
+    // Cumulative USSD text: "1*0*1*1*0*0*1*1"
     // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest("1*1*1*2*1*C73DE2A07*1*10101");
+    const response = await sendUssdRequest("1*0*1*1*0*0*1*1");
 
     // Expected server response
-    const expected = "CON Verifying PIN...\n1. Continue";
+    const expected =
+      "CON Thank you for your interest. We have sent you a SMS with more information.\n1. Back to Main Menu\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -226,13 +230,13 @@ describe("know-more-flow - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "1*1*1*2*1*C73DE2A07*1*10101*1"
+    // Cumulative USSD text: "1*0*1*1*0*0*1*1*1"
     // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest("1*1*1*2*1*C73DE2A07*1*10101*1");
+    const response = await sendUssdRequest("1*0*1*1*0*0*1*1*1");
 
     // Expected server response
     const expected =
-      "CON Welcome, Lead Generator!\nLogin successful for Customer ID: C73DE2A07.\n1. Continue";
+      "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -242,13 +246,13 @@ describe("know-more-flow - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "1*1*1*2*1*C73DE2A07*1*10101*1*1"
+    // Cumulative USSD text: "1*0*1*1*0*0*1*1*1*1"
     // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest("1*1*1*2*1*C73DE2A07*1*10101*1*1");
+    const response = await sendUssdRequest("1*0*1*1*0*0*1*1*1*1");
 
     // Expected server response
     const expected =
-      "CON Agent Tools\n1. Activate a Customer\n2. 1,000 Day Survey\n3. Register Intent to Deliver Beans\n4. Submit Customer OTP\n5. Confirm Bean Delivery\n0. Back";
+      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in Product\n2. Pricing & accessories\n3. Can we deliver to you?\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -258,13 +262,13 @@ describe("know-more-flow - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "1*1*1*2*1*C73DE2A07*1*10101*1*1*2"
+    // Cumulative USSD text: "1*0*1*1*0*0*1*1*1*1*2"
     // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest("1*1*1*2*1*C73DE2A07*1*10101*1*1*2");
+    const response = await sendUssdRequest("1*0*1*1*0*0*1*1*1*1*2");
 
     // Expected server response
     const expected =
-      "CON A Lead Generator completes this survey on behalf of a Customer.\nWhat is the Customer ID for the Customer on whose behalf you are completing the survey?\n\n0. Back to Agent Tools";
+      "CON Thank you for your interest. We have sent you a SMS with more information.\n1. Back to Main Menu\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -274,191 +278,146 @@ describe("know-more-flow - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0"
+    // Cumulative USSD text: "1*0*1*1*0*0*1*1*1*1*2*0"
+    // Send user input (USSD requires cumulative text)
+    const response = await sendUssdRequest("1*0*1*1*0*0*1*1*1*1*2*0");
+
+    // Expected server response
+    const expected =
+      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in Product\n2. Pricing & accessories\n3. Can we deliver to you?\n0. Back";
+
+    // Assert response matches expected
+    expect(response).toBe(expected);
+  }, 10000); // 10 second timeout for this test
+
+  it('Turn 14: Input: "3"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Cumulative USSD text: "1*0*1*1*0*0*1*1*1*1*2*0*3"
+    // Send user input (USSD requires cumulative text)
+    const response = await sendUssdRequest("1*0*1*1*0*0*1*1*1*1*2*0*3");
+
+    // Expected server response
+    const expected =
+      "CON Thank you for your interest. We have sent you a SMS with more information.\n1. Back to Main Menu\n0. Back";
+
+    // Assert response matches expected
+    expect(response).toBe(expected);
+  }, 10000); // 10 second timeout for this test
+
+  it('Turn 15: Input: "0"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Cumulative USSD text: "1*0*1*1*0*0*1*1*1*1*2*0*3*0"
+    // Send user input (USSD requires cumulative text)
+    const response = await sendUssdRequest("1*0*1*1*0*0*1*1*1*1*2*0*3*0");
+
+    // Expected server response
+    const expected =
+      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in Product\n2. Pricing & accessories\n3. Can we deliver to you?\n0. Back";
+
+    // Assert response matches expected
+    expect(response).toBe(expected);
+  }, 10000); // 10 second timeout for this test
+
+  it('Turn 16: Input: "2"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Cumulative USSD text: "1*0*1*1*0*0*1*1*1*1*2*0*3*0*2"
+    // Send user input (USSD requires cumulative text)
+    const response = await sendUssdRequest("1*0*1*1*0*0*1*1*1*1*2*0*3*0*2");
+
+    // Expected server response
+    const expected =
+      "CON Thank you for your interest. We have sent you a SMS with more information.\n1. Back to Main Menu\n0. Back";
+
+    // Assert response matches expected
+    expect(response).toBe(expected);
+  }, 10000); // 10 second timeout for this test
+
+  it('Turn 17: Input: "1"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Cumulative USSD text: "1*0*1*1*0*0*1*1*1*1*2*0*3*0*2*1"
+    // Send user input (USSD requires cumulative text)
+    const response = await sendUssdRequest("1*0*1*1*0*0*1*1*1*1*2*0*3*0*2*1");
+
+    // Expected server response
+    const expected =
+      "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit";
+
+    // Assert response matches expected
+    expect(response).toBe(expected);
+  }, 10000); // 10 second timeout for this test
+
+  it('Turn 18: Input: "1"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Cumulative USSD text: "1*0*1*1*0*0*1*1*1*1*2*0*3*0*2*1*1"
+    // Send user input (USSD requires cumulative text)
+    const response = await sendUssdRequest("1*0*1*1*0*0*1*1*1*1*2*0*3*0*2*1*1");
+
+    // Expected server response
+    const expected =
+      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in Product\n2. Pricing & accessories\n3. Can we deliver to you?\n0. Back";
+
+    // Assert response matches expected
+    expect(response).toBe(expected);
+  }, 10000); // 10 second timeout for this test
+
+  it('Turn 19: Input: "3"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Cumulative USSD text: "1*0*1*1*0*0*1*1*1*1*2*0*3*0*2*1*1*3"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
-      "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0"
+      "1*0*1*1*0*0*1*1*1*1*2*0*3*0*2*1*1*3"
     );
 
     // Expected server response
     const expected =
-      "CON Agent Tools\n1. Activate a Customer\n2. 1,000 Day Survey\n3. Register Intent to Deliver Beans\n4. Submit Customer OTP\n5. Confirm Bean Delivery\n0. Back";
+      "CON Thank you for your interest. We have sent you a SMS with more information.\n1. Back to Main Menu\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it('Turn 14: Input: "2"', async () => {
+  it('Turn 20: Input: "1"', async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2"
+    // Cumulative USSD text: "1*0*1*1*0*0*1*1*1*1*2*0*3*0*2*1*1*3*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
-      "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2"
+      "1*0*1*1*0*0*1*1*1*1*2*0*3*0*2*1*1*3*1"
     );
 
     // Expected server response
     const expected =
-      "CON A Lead Generator completes this survey on behalf of a Customer.\nWhat is the Customer ID for the Customer on whose behalf you are completing the survey?\n\n0. Back to Agent Tools";
+      "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit";
 
     // Assert response matches expected
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it('Turn 15: Input: "C1F53E2F7"', async () => {
+  it('Turn 21: Input: "*"', async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7"
+    // Cumulative USSD text: "1*0*1*1*0*0*1*1*1*1*2*0*3*0*2*1*1*3*1**"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
-      "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7"
+      "1*0*1*1*0*0*1*1*1*1*2*0*3*0*2*1*1*3*1**"
     );
 
     // Expected server response
-    const expected = "CON Creating claim record...\n0. Back";
-
-    // Assert response matches expected
-    expect(response).toBe(expected);
-  }, 10000); // 10 second timeout for this test
-
-  it('Turn 16: Input: "0"', async () => {
-    // Simulate realistic user interaction timing (2-second delay)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Cumulative USSD text: "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7*0"
-    // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest(
-      "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7*0"
-    );
-
-    // Expected server response
-    const expected =
-      "CON A Lead Generator completes this survey on behalf of a Customer.\nWhat is the Customer ID for the Customer on whose behalf you are completing the survey?\n\n0. Back to Agent Tools";
-
-    // Assert response matches expected
-    expect(response).toBe(expected);
-  }, 10000); // 10 second timeout for this test
-
-  it('Turn 17: Input: "0"', async () => {
-    // Simulate realistic user interaction timing (2-second delay)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Cumulative USSD text: "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7*0*0"
-    // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest(
-      "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7*0*0"
-    );
-
-    // Expected server response
-    const expected =
-      "CON Agent Tools\n1. Activate a Customer\n2. 1,000 Day Survey\n3. Register Intent to Deliver Beans\n4. Submit Customer OTP\n5. Confirm Bean Delivery\n0. Back";
-
-    // Assert response matches expected
-    expect(response).toBe(expected);
-  }, 10000); // 10 second timeout for this test
-
-  it('Turn 18: Input: "2"', async () => {
-    // Simulate realistic user interaction timing (2-second delay)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Cumulative USSD text: "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7*0*0*2"
-    // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest(
-      "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7*0*0*2"
-    );
-
-    // Expected server response
-    const expected =
-      "CON A Lead Generator completes this survey on behalf of a Customer.\nWhat is the Customer ID for the Customer on whose behalf you are completing the survey?\n\n0. Back to Agent Tools";
-
-    // Assert response matches expected
-    expect(response).toBe(expected);
-  }, 10000); // 10 second timeout for this test
-
-  it('Turn 19: Input: "C1F53E2F7"', async () => {
-    // Simulate realistic user interaction timing (2-second delay)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Cumulative USSD text: "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7*0*0*2*C1F53E2F7"
-    // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest(
-      "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7*0*0*2*C1F53E2F7"
-    );
-
-    // Expected server response
-    const expected = "CON Creating claim record...\n0. Back";
-
-    // Assert response matches expected
-    expect(response).toBe(expected);
-  }, 10000); // 10 second timeout for this test
-
-  it("Turn 20: Initial dial", async () => {
-    // Simulate realistic user interaction timing (2-second delay)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Cumulative USSD text: "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7*0*0*2*C1F53E2F7"
-    // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest(
-      "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7*0*0*2*C1F53E2F7"
-    );
-
-    // Expected server response
-    const expected =
-      "CON Select all TRUE options for your household\nA: Pregnant Woman\nB: Breastfeeding Mother\nC: Child under 2 years\n\n1. A\n2. B\n3. C\n4. A + B\n5. A + C\n6. B + C\n7. All\n8. None\n\n0. Back";
-
-    // Assert response matches expected
-    expect(response).toBe(expected);
-  }, 10000); // 10 second timeout for this test
-
-  it('Turn 21: Input: "4"', async () => {
-    // Simulate realistic user interaction timing (2-second delay)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Cumulative USSD text: "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7*0*0*2*C1F53E2F7*4"
-    // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest(
-      "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7*0*0*2*C1F53E2F7*4"
-    );
-
-    // Expected server response
-    const expected = "CON Saving answer...\n0. Back";
-
-    // Assert response matches expected
-    expect(response).toBe(expected);
-  }, 10000); // 10 second timeout for this test
-
-  it("Turn 22: Initial dial", async () => {
-    // Simulate realistic user interaction timing (2-second delay)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Cumulative USSD text: "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7*0*0*2*C1F53E2F7*4"
-    // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest(
-      "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7*0*0*2*C1F53E2F7*4"
-    );
-
-    // Expected server response
-    const expected = "CON Error: An unexpected error occurred\n\n0. Back";
-
-    // Assert response matches expected
-    expect(response).toBe(expected);
-  }, 10000); // 10 second timeout for this test
-
-  it('Turn 23: Input: "0"', async () => {
-    // Simulate realistic user interaction timing (2-second delay)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Cumulative USSD text: "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7*0*0*2*C1F53E2F7*4*0"
-    // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest(
-      "1*1*1*2*1*C73DE2A07*1*10101*1*1*2*0*2*C1F53E2F7*0*0*2*C1F53E2F7*4*0"
-    );
-
-    // Expected server response
-    const expected =
-      "CON Agent Tools\n1. Activate a Customer\n2. 1,000 Day Survey\n3. Register Intent to Deliver Beans\n4. Submit Customer OTP\n5. Confirm Bean Delivery\n0. Back";
+    const expected = "CON Thank you for using USSD Supamoto App. Goodbye!";
 
     // Assert response matches expected
     expect(response).toBe(expected);
