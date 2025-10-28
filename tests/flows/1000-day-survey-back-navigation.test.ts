@@ -20,7 +20,8 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 // Test Configuration
 const SERVER_URL =
   process.env.USSD_TEST_SERVER_URL || "http://127.0.0.1:3005/api/ussd";
-const SESSION_ID = "test-1000-day-survey-back-nav-" + Date.now();
+// Dynamic session ID to prevent conflicts when running tests multiple times
+const SESSION_ID = `flow-test-1000-day-survey-back-nav-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 const PHONE_NUMBER = "+260971230001";
 const SERVICE_CODE = "*2233#";
 const REQUEST_TIMEOUT = 5000; // 5 seconds
@@ -130,7 +131,7 @@ describe("1,000 Day Survey - Back Navigation Test", () => {
 
   it("should handle exit (*) from survey initial state", async () => {
     // Use a different session ID for this test
-    const exitSessionId = "test-1000-day-survey-exit-" + Date.now();
+    const exitSessionId = `flow-test-1000-day-survey-exit-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
     async function sendExitRequest(text: string): Promise<string> {
       const response = await fetch(SERVER_URL, {

@@ -301,11 +301,11 @@ Each flow test should test a single, complete user journey. If you need to test 
 
 ### 3. Clean Session State
 
-For tests that require authentication or specific database state, consider:
+Flow tests automatically use unique session IDs for each test run, preventing session conflicts. For tests that require authentication or specific database state, consider:
 
-- Using unique session IDs
 - Resetting database state in `beforeAll`
 - Creating test-specific user accounts
+- Verifying session isolation between test runs
 
 ### 4. Document Custom Changes
 
@@ -364,11 +364,20 @@ it("Turn 5: Login with extracted ID", async () => {
 
 ### Parallel Test Execution
 
-To run flow tests in parallel, ensure each test uses a unique session ID:
+Flow tests automatically use unique session IDs to prevent conflicts. The session ID format is:
 
 ```typescript
-const SESSION_ID = `test-${Date.now()}-${Math.random()}`;
+const SESSION_ID = `flow-test-${flowName}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 ```
+
+This ensures:
+
+- Each test run gets a unique session ID
+- Tests can run multiple times without server restart
+- Parallel execution doesn't cause session conflicts
+- Session IDs are traceable in server logs (prefix shows flow name)
+
+**Note**: All newly generated tests automatically use this dynamic session ID format.
 
 ## Contributing
 

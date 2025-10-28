@@ -101,9 +101,15 @@ export class VitestGenerator {
    * Generate test configuration constants
    */
   private generateTestConfig(fixture: SessionFixture): string {
+    // Sanitize flow name for use in session ID (remove non-alphanumeric characters, convert to lowercase)
+    const flowNameForId = fixture.flowName
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "-");
+
     return `// Test Configuration
 const SERVER_URL = process.env.USSD_TEST_SERVER_URL || "http://127.0.0.1:3005/api/ussd";
-const SESSION_ID = "${fixture.sessionId}";
+// Dynamic session ID to prevent conflicts when running tests multiple times
+const SESSION_ID = \`flow-test-${flowNameForId}-\${Date.now()}-\${Math.random().toString(36).substring(2, 9)}\`;
 const PHONE_NUMBER = "${fixture.phoneNumber}";
 const SERVICE_CODE = "${fixture.serviceCode}";
 const REQUEST_TIMEOUT = 5000; // 5 seconds`;

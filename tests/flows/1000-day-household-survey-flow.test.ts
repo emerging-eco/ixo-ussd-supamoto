@@ -43,7 +43,8 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 // Test Configuration
 const SERVER_URL =
   process.env.USSD_TEST_SERVER_URL || "http://127.0.0.1:3005/api/ussd";
-const SESSION_ID = "interactive-test-1761543921905";
+// Dynamic session ID to prevent conflicts when running tests multiple times
+const SESSION_ID = `flow-test-1000-day-household-survey-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 const PHONE_NUMBER = "+260971230001";
 const SERVICE_CODE = "*2233#";
 const REQUEST_TIMEOUT = 5000; // 5 seconds
