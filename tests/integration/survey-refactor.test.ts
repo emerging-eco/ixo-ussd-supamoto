@@ -35,12 +35,12 @@ describe("Survey Refactor Integration Tests", () => {
 
   describe("Complete survey flow with JSON storage", () => {
     it("should save survey answers incrementally and retrieve them", async () => {
-      // Save first answer
+      // Save first answer (array value for beneficiaryCategory)
       await surveyResponseStorageService.saveSurveyAnswer(
         testLgCustomerId,
         testCustomerId,
         "beneficiaryCategory",
-        "pregnant_woman"
+        ["pregnant_woman"]
       );
 
       // Retrieve state
@@ -50,7 +50,7 @@ describe("Survey Refactor Integration Tests", () => {
       );
 
       expect(state).toBeTruthy();
-      expect(state?.answers.beneficiaryCategory).toBe("pregnant_woman");
+      expect(state?.answers.beneficiaryCategory).toEqual(["pregnant_woman"]);
       expect(state?.allFieldsCompleted).toBe(false);
 
       // Save second answer
@@ -67,18 +67,18 @@ describe("Survey Refactor Integration Tests", () => {
         testCustomerId
       );
 
-      expect(state?.answers.beneficiaryCategory).toBe("pregnant_woman");
+      expect(state?.answers.beneficiaryCategory).toEqual(["pregnant_woman"]);
       expect(state?.answers.childMaxAge).toBe("6_months");
       expect(state?.allFieldsCompleted).toBe(false);
     });
 
     it("should mark survey as complete", async () => {
-      // Save some answers
+      // Save some answers (array value for beneficiaryCategory)
       await surveyResponseStorageService.saveSurveyAnswer(
         testLgCustomerId,
         testCustomerId,
         "beneficiaryCategory",
-        "pregnant_woman"
+        ["pregnant_woman"]
       );
 
       await surveyResponseStorageService.saveSurveyAnswer(
@@ -101,17 +101,17 @@ describe("Survey Refactor Integration Tests", () => {
       );
 
       expect(state?.allFieldsCompleted).toBe(true);
-      expect(state?.answers.beneficiaryCategory).toBe("pregnant_woman");
+      expect(state?.answers.beneficiaryCategory).toEqual(["pregnant_woman"]);
       expect(state?.answers.childMaxAge).toBe("6_months");
     });
 
     it("should handle session interruption and recovery", async () => {
-      // Start survey - save first answer
+      // Start survey - save first answer (array value)
       await surveyResponseStorageService.saveSurveyAnswer(
         testLgCustomerId,
         testCustomerId,
         "beneficiaryCategory",
-        "pregnant_woman"
+        ["pregnant_woman"]
       );
 
       // Simulate session interruption (no explicit action needed)
@@ -123,7 +123,7 @@ describe("Survey Refactor Integration Tests", () => {
       );
 
       expect(state).toBeTruthy();
-      expect(state?.answers.beneficiaryCategory).toBe("pregnant_woman");
+      expect(state?.answers.beneficiaryCategory).toEqual(["pregnant_woman"]);
 
       // Continue survey - save next answer
       await surveyResponseStorageService.saveSurveyAnswer(
@@ -140,19 +140,21 @@ describe("Survey Refactor Integration Tests", () => {
           testCustomerId
         );
 
-      expect(finalState?.answers.beneficiaryCategory).toBe("pregnant_woman");
+      expect(finalState?.answers.beneficiaryCategory).toEqual([
+        "pregnant_woman",
+      ]);
       expect(finalState?.answers.childMaxAge).toBe("6_months");
     });
   });
 
   describe("Survey completion check before claim submission", () => {
     it("should block claim submission if survey not complete", async () => {
-      // Save partial survey
+      // Save partial survey (array value)
       await surveyResponseStorageService.saveSurveyAnswer(
         testLgCustomerId,
         testCustomerId,
         "beneficiaryCategory",
-        "pregnant_woman"
+        ["pregnant_woman"]
       );
 
       // Check completion
@@ -165,12 +167,12 @@ describe("Survey Refactor Integration Tests", () => {
     });
 
     it("should allow claim submission if survey complete", async () => {
-      // Save complete survey
+      // Save complete survey (array value)
       await surveyResponseStorageService.saveSurveyAnswer(
         testLgCustomerId,
         testCustomerId,
         "beneficiaryCategory",
-        "pregnant_woman"
+        ["pregnant_woman"]
       );
 
       await surveyResponseStorageService.saveSurveyAnswer(
@@ -198,12 +200,12 @@ describe("Survey Refactor Integration Tests", () => {
 
   describe("Data encryption and decryption", () => {
     it("should encrypt survey data in database", async () => {
-      // Save answer
+      // Save answer (array value)
       await surveyResponseStorageService.saveSurveyAnswer(
         testLgCustomerId,
         testCustomerId,
         "beneficiaryCategory",
-        "pregnant_woman"
+        ["pregnant_woman"]
       );
 
       // Get raw data from database
@@ -222,12 +224,12 @@ describe("Survey Refactor Integration Tests", () => {
     });
 
     it("should decrypt survey data correctly", async () => {
-      // Save answer
+      // Save answer (array value)
       await surveyResponseStorageService.saveSurveyAnswer(
         testLgCustomerId,
         testCustomerId,
         "beneficiaryCategory",
-        "pregnant_woman"
+        ["pregnant_woman"]
       );
 
       // Retrieve through service (should decrypt)
@@ -236,14 +238,14 @@ describe("Survey Refactor Integration Tests", () => {
         testCustomerId
       );
 
-      expect(state?.answers.beneficiaryCategory).toBe("pregnant_woman");
+      expect(state?.answers.beneficiaryCategory).toEqual(["pregnant_woman"]);
     });
   });
 
   describe("Multiple survey answers at once", () => {
     it("should save multiple answers in one call", async () => {
       const answers = {
-        beneficiaryCategory: "pregnant_woman",
+        beneficiaryCategory: ["pregnant_woman"],
         childMaxAge: "6_months",
         beanIntakeFrequency: "daily",
       };
@@ -263,12 +265,12 @@ describe("Survey Refactor Integration Tests", () => {
     });
 
     it("should merge new answers with existing ones", async () => {
-      // Save first batch
+      // Save first batch (array value)
       await surveyResponseStorageService.saveSurveyAnswers(
         testLgCustomerId,
         testCustomerId,
         {
-          beneficiaryCategory: "pregnant_woman",
+          beneficiaryCategory: ["pregnant_woman"],
           childMaxAge: "6_months",
         }
       );
@@ -289,7 +291,7 @@ describe("Survey Refactor Integration Tests", () => {
       );
 
       expect(state?.answers).toEqual({
-        beneficiaryCategory: "pregnant_woman",
+        beneficiaryCategory: ["pregnant_woman"],
         childMaxAge: "6_months",
         beanIntakeFrequency: "daily",
         priceSpecification: "affordable",

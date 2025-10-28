@@ -13,7 +13,7 @@ const logger = createModuleLogger("survey-response-storage");
 
 export interface SurveyAnswer {
   questionName: string;
-  answer: string | boolean | number;
+  answer: string | boolean | number | string[] | number[];
 }
 
 export interface SurveyResponseState {
@@ -133,11 +133,16 @@ class SurveyResponseStorageService {
   /**
    * Save a single survey answer
    */
+  /**
+   * Save a single survey answer
+   * Supports primitive types (string, boolean, number) and array types (string[], number[])
+   * Arrays are used for multi-select questions like beneficiaryCategory
+   */
   async saveSurveyAnswer(
     lgCustomerId: string,
     customerId: string,
     questionName: string,
-    answer: string | boolean | number,
+    answer: string | boolean | number | string[] | number[],
     formDefinition?: ParsedSurveyForm
   ): Promise<void> {
     logger.info(
@@ -145,6 +150,9 @@ class SurveyResponseStorageService {
         lgCustomerId: lgCustomerId.slice(-4),
         customerId: customerId.slice(-4),
         questionName,
+        answerType: Array.isArray(answer)
+          ? `array[${answer.length}]`
+          : typeof answer,
       },
       "Saving survey answer"
     );
