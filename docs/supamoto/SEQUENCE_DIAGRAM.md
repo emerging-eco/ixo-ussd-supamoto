@@ -83,8 +83,8 @@ sequenceDiagram
 
 - **Insert**: New row in `customers` table
 - **Update**: `customers.encrypted_pin` with bcrypt-encrypted PIN
-- **Insert**: `household_survey_responses` table with encrypted survey answers
-- **Update**: `household_survey_responses.all_fields_completed` when survey complete
+- **Insert/Update**: `household_claims.survey_form` JSONB field with encrypted survey answers
+- **Update**: `household_claims.survey_form` metadata when survey complete
 - **Insert**: `household_claims` table with claim data
 - **Log**: Event logged in `audit_log` table with type "CUSTOMER_ACTIVATED"
 - **Log**: Event logged in `audit_log` table with type "SURVEY_COMPLETED"

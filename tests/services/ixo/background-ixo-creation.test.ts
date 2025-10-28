@@ -14,27 +14,47 @@ vi.mock("../../../src/services/ixo/ixo-profile.js", () => ({
   })),
 }));
 
-vi.mock("../../../src/services/ixo/ixo-claims.js", () => ({
-  submitClaim: vi.fn(async () => ({
-    transactionHash: "TX123",
-    height: 100,
-    rawLog: "",
-    code: 0,
-    gasUsed: 100000,
-    gasWanted: 200000,
-  })),
+// Mock the SDK instead of direct blockchain submission
+const mockSubmitLeadCreationClaim = vi.fn(async () => ({
+  data: {
+    claimId: "claim-123",
+  },
 }));
 
-vi.mock("../../../src/services/ixo/config.js", () => ({
-  getIxoConfig: vi.fn(() => ({
-    chainRpcUrl: "https://rpc.test",
-    feegrantGranter: "",
-    matrixHomeserverUrl: "https://matrix.test",
-    roomBotUrl: "https://bot.test",
+vi.mock("@ixo/supamoto-bot-sdk", () => ({
+  createClaimsBotClient: vi.fn(() => ({
+    claims: {
+      v1: {
+        submitLeadCreationClaim: mockSubmitLeadCreationClaim,
+      },
+    },
   })),
+  ClaimsBotTypes: {
+    LeadGenerator: {
+      ussdSignup: "USSD Signup",
+    },
+  },
 }));
 
-vi.mock("../../db/index.js", () => ({
+vi.mock("../../../src/config.js", () => ({
+  config: {
+    CLAIMS_BOT: {
+      URL: "https://test-claims-bot.com",
+      ACCESS_TOKEN: "test-token",
+    },
+  },
+  ENV: {
+    IS_TEST: true,
+    IS_PRODUCTION: false,
+    IS_DEVELOPMENT: false,
+    IS_DEV_OR_TEST: true,
+    IS_VITEST: true,
+    IS_ANY_TEST: true,
+    CURRENT: "test",
+  },
+}));
+
+vi.mock("../../../src/db/index.js", () => ({
   db: {
     transaction: () => ({
       execute: async (fn: any) =>
@@ -60,42 +80,33 @@ vi.mock("../../db/index.js", () => ({
 describe("background IXO creation flow (smoke)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.LEADGEN_COLLECTION_ID = "leadgen-1";
   });
 
-  it("creates IXO account, saves to DB, and submits LeadGeneration claim", async () => {
+  it("creates IXO account, saves to DB, and submits lead creation claim via SDK", async () => {
     const customerId = "CABCDEF1";
-    const templateUrl =
-      "https://devmx.ixo.earth/_matrix/media/v3/download/devmx.ixo.earth/LWCamzPswXpgrfwyyJvcjzoK";
-    process.env.LEADGEN_COLLECTION_ID = "410";
-    process.env.LEADGEN_TEMPLATE_URL = templateUrl;
+    const fullName = "Test User";
+    const phoneNumber = "+123";
 
     const res = await createIxoAccountBackground({
       customerId,
       customerRecordId: 1,
-      phoneNumber: "+123",
-      fullName: "Test User",
+      phoneNumber,
+      fullName,
       pin: "1234",
     });
 
     expect(res.success).toBe(true);
 
-    // Verify deterministic claimId derivation and that submitClaim received it
-    const { submitClaim } = await import(
-      "../../../src/services/ixo/ixo-claims.js"
-    );
-    const submitMock: any = submitClaim as any;
-    const call = submitMock.mock.calls[0];
-    const args = call[0];
+    // Verify SDK was called with correct parameters
+    expect(mockSubmitLeadCreationClaim).toHaveBeenCalledWith({
+      customerId,
+      leadGenerator: "USSD Signup",
+      givenName: "Test",
+      familyName: "User",
+      telephone: phoneNumber,
+    });
 
-    // Recompute expected claimId
-    const { sha256 } = await import("@cosmjs/crypto");
-    const { toHex } = await import("@cosmjs/encoding");
-    const expectedClaimId = toHex(
-      sha256(new TextEncoder().encode(`${customerId}|${templateUrl}`))
-    );
-
-    expect(args.claim.claimId).toBe(expectedClaimId);
-    expect(args.claim.collectionId).toBe("410");
+    // Verify it was called exactly once
+    expect(mockSubmitLeadCreationClaim).toHaveBeenCalledTimes(1);
   });
 });
