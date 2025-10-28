@@ -68,6 +68,11 @@ export interface WalletValidationOptions {}
 export interface BooleanValidationOptions {}
 
 /**
+ * Options for national ID validation (currently no specific options)
+ */
+export interface NationalIdValidationOptions {}
+
+/**
  * Mapped type that associates each validation type with its corresponding options interface
  */
 export type ValidationOptionsMap = {
@@ -79,6 +84,7 @@ export type ValidationOptionsMap = {
   wallet: WalletValidationOptions;
   text: TextValidationOptions;
   boolean: BooleanValidationOptions;
+  nationalId: NationalIdValidationOptions;
 };
 
 // =================================================================================================
@@ -175,6 +181,12 @@ export const isValidBooleanInput: CombinedGuard =
  */
 export const isValidPhoneInput: CombinedGuard = createValidationGuard("phone");
 
+/**
+ * Validates Zambian National ID (NRC) input
+ */
+export const isValidNationalId: CombinedGuard =
+  createValidationGuard("nationalId");
+
 // =================================================================================================
 // COMPOSITE VALIDATION GUARDS
 // =================================================================================================
@@ -222,6 +234,7 @@ export const validationGuards = {
   isValidTextInput,
   isValidBooleanInput,
   isValidPhoneInput,
+  isValidNationalId,
   isValidMenuChoice,
   isValidMainMenuChoice,
   isValidSubMenuChoice,

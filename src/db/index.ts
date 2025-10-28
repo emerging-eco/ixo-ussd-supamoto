@@ -99,6 +99,7 @@ export interface Database {
     customer_id: string;
     full_name: string | null;
     email: string | null;
+    national_id: string | null;
     encrypted_pin: string | null; // Allow null for PIN clearing
     preferred_language: string | null;
     date_added: Date;

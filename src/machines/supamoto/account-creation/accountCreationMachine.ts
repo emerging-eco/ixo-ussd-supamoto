@@ -6,9 +6,11 @@ import { NavigationPatterns } from "../utils/navigation-patterns.js";
 import { dataService } from "../../../services/database-storage.js";
 import { createIxoAccountBackground } from "../../../services/ixo/background-ixo-creation.js";
 import { messages } from "../../../constants/branding.js";
+import { validateUserInput } from "../../../utils/input-validation.js";
 
 // Constants
 export const SKIP_EMAIL_INPUT = "00"; // Use "00" to avoid conflict with navigation "0" (back)
+export const SKIP_NATIONAL_ID_INPUT = "00"; // Use "00" to skip national ID entry
 
 /**
  * Account Creation Machine - New User Registration
@@ -39,6 +41,8 @@ export interface AccountCreationContext {
   fullName: string;
   email: string;
   isEmailSkipped: boolean;
+  nationalId: string;
+  isNationalIdSkipped: boolean;
   pin: string;
   confirmPin: string;
   generatedCustomerId?: string;
@@ -52,6 +56,7 @@ export interface AccountCreationContext {
   currentStep:
     | "nameEntry"
     | "emailEntry"
+    | "nationalIdEntry"
     | "pinEntry"
     | "confirmPin"
     | "creatingAccount"
@@ -96,6 +101,7 @@ export const accountCreationMachine = setup({
           phoneNumber: string;
           fullName: string;
           email: string;
+          nationalId: string;
           pin: string;
         };
       }) => {
@@ -110,6 +116,7 @@ export const accountCreationMachine = setup({
           {
             fullName: input.fullName,
             email: input.email || undefined,
+            nationalId: input.nationalId || undefined,
             pin: input.pin,
             preferredLanguage: "eng",
             lastCompletedAction: "account_creation",
@@ -122,6 +129,7 @@ export const accountCreationMachine = setup({
           customerRecordId: customerRecord.id,
           phoneNumber: input.phoneNumber,
           fullName: input.fullName,
+          nationalId: input.nationalId || undefined,
           pin: input.pin,
         }).catch(error => {
           // Error is already logged in the background service
@@ -151,6 +159,11 @@ export const accountCreationMachine = setup({
     setEmailMessage: assign(() => ({
       message: `Enter your email address (optional):\n${SKIP_EMAIL_INPUT}. Skip`,
       currentStep: "emailEntry" as const,
+    })),
+
+    setNationalIdMessage: assign(() => ({
+      message: `Enter your National ID (format: 123456/12/1):\n${SKIP_NATIONAL_ID_INPUT}. Skip`,
+      currentStep: "nationalIdEntry" as const,
     })),
 
     setPinMessage: assign(() => ({
@@ -191,6 +204,21 @@ export const accountCreationMachine = setup({
     setSkipEmail: assign(() => ({
       email: "", // Empty string for skipped email
       isEmailSkipped: true, // Clear boolean flag
+    })),
+
+    setNationalId: assign(({ event }) => {
+      if (event.type !== "INPUT")
+        return { nationalId: "", isNationalIdSkipped: false };
+      const validation = validateUserInput(event.input, "nationalId");
+      return {
+        nationalId: validation.isValid ? validation.value : event.input,
+        isNationalIdSkipped: false,
+      };
+    }),
+
+    setSkipNationalId: assign(() => ({
+      nationalId: "", // Empty string for skipped national ID
+      isNationalIdSkipped: true, // Set boolean flag
     })),
 
     setPin: assign(({ event }) => ({
@@ -259,6 +287,15 @@ export const accountCreationMachine = setup({
     isValidEmailAddress: ({ event }) =>
       event.type === "INPUT" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(event.input),
 
+    isSkipNationalId: ({ event }) =>
+      event.type === "INPUT" && event.input === SKIP_NATIONAL_ID_INPUT,
+
+    isValidNationalIdValue: ({ event }) => {
+      if (event.type !== "INPUT") return false;
+      const validation = validateUserInput(event.input, "nationalId");
+      return validation.isValid;
+    },
+
     isValidName: ({ event }) =>
       validationGuards.isValidTextInput(null as any, event as any),
 
@@ -282,6 +319,8 @@ export const accountCreationMachine = setup({
     fullName: "",
     email: "",
     isEmailSkipped: false,
+    nationalId: "",
+    isNationalIdSkipped: false,
     pin: "",
     confirmPin: "",
     nextParentState: AccountCreationOutput.UNDEFINED,
@@ -319,19 +358,51 @@ export const accountCreationMachine = setup({
           [
             // Handle skip email first (before navigation)
             {
-              target: "pinEntry",
+              target: "nationalIdEntry",
               guard: "isSkipEmail",
               actions: ["setSkipEmail", "clearErrors"],
             },
             // Handle valid email
             {
-              target: "pinEntry",
+              target: "nationalIdEntry",
               guard: "isValidEmailAddress",
               actions: ["setEmail", "clearErrors"],
             },
           ],
           {
             backTarget: "nameEntry",
+            exitTarget: "routeToMain",
+            enableBack: true,
+            enableExit: true,
+          }
+        ),
+        ERROR: {
+          target: "error",
+          actions: "setError",
+        },
+      },
+    },
+
+    nationalIdEntry: {
+      entry: "setNationalIdMessage",
+      on: {
+        INPUT: withNavigation(
+          [
+            // Handle skip national ID first (before navigation)
+            {
+              target: "pinEntry",
+              guard: "isSkipNationalId",
+              actions: ["setSkipNationalId", "clearErrors"],
+            },
+            // Handle valid national ID
+            {
+              target: "pinEntry",
+              guard: "isValidNationalIdValue",
+              actions: ["setNationalId", "clearErrors"],
+            },
+          ],
+          {
+            backTarget: "emailEntry",
             exitTarget: "routeToMain",
             enableBack: true,
             enableExit: true,
@@ -361,7 +432,7 @@ export const accountCreationMachine = setup({
             },
           ],
           {
-            backTarget: "emailEntry",
+            backTarget: "nationalIdEntry",
             exitTarget: "routeToMain",
             enableBack: true,
             enableExit: true,
@@ -413,6 +484,7 @@ export const accountCreationMachine = setup({
           phoneNumber: context.phoneNumber,
           fullName: context.fullName,
           email: context.isEmailSkipped ? "" : context.email,
+          nationalId: context.isNationalIdSkipped ? "" : context.nationalId,
           pin: context.pin,
         }),
         onDone: {

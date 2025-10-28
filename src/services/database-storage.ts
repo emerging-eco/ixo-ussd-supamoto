@@ -19,6 +19,7 @@ export interface PhoneRecord {
 export interface CustomerData {
   fullName: string;
   email?: string;
+  nationalId?: string;
   pin: string;
   preferredLanguage: string;
   lastCompletedAction: string;
@@ -29,6 +30,7 @@ export interface CustomerRecord {
   customerId: string;
   fullName: string;
   email?: string;
+  nationalId?: string;
   encryptedPin: string | null; // Allow null when PIN is cleared
   preferredLanguage: string;
   lastCompletedAction: string;
@@ -278,6 +280,7 @@ class DataService {
             customer_id: customerId,
             full_name: customerData.fullName,
             email: customerData.email || null,
+            national_id: customerData.nationalId || null,
             encrypted_pin: encryptedPin,
             preferred_language: customerData.preferredLanguage,
             date_added: new Date(),

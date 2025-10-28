@@ -35,6 +35,7 @@ export interface BackgroundIxoParams {
   customerRecordId: number;
   phoneNumber: string;
   fullName: string;
+  nationalId?: string;
   pin: string;
 }
 
@@ -116,7 +117,7 @@ export async function createIxoAccountBackground(
         givenName: givenName || undefined, // Only include if not empty
         familyName: familyName || undefined, // Only include if not empty
         telephone: params.phoneNumber,
-        // nationalId: undefined,  // Not collected during USSD account creation
+        nationalId: params.nationalId || undefined,
         // leadGeneratorName: undefined,  // Not applicable for USSD signup
       });
 

@@ -104,6 +104,7 @@ CREATE TABLE customers (
   customer_id VARCHAR(10) NOT NULL UNIQUE,
   full_name VARCHAR(255),
   email VARCHAR(255),
+  national_id VARCHAR(20),
   encrypted_pin TEXT,
   preferred_language VARCHAR(10) DEFAULT 'eng',
   date_added TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -258,6 +259,7 @@ CREATE TABLE audit_log (
 CREATE INDEX idx_phones_phone_number ON phones(phone_number);
 CREATE INDEX idx_customers_customer_id ON customers(customer_id);
 CREATE INDEX idx_customers_role ON customers(role);
+CREATE INDEX idx_customers_national_id ON customers(national_id) WHERE national_id IS NOT NULL;
 CREATE INDEX idx_customer_phones_customer_id ON customer_phones(customer_id);
 CREATE INDEX idx_customer_phones_phone_id ON customer_phones(phone_id);
 CREATE INDEX idx_ixo_profiles_customer_id ON ixo_profiles(customer_id);
@@ -310,6 +312,7 @@ CREATE INDEX idx_audit_log_pin_reset ON audit_log(event_type) WHERE event_type =
 
 COMMENT ON TABLE customers IS 'Customer records with role-based access control';
 COMMENT ON COLUMN customers.role IS 'User role: customer (default), lead_generator (can use Agent Tools), call_center (can use Agent Tools + support functions), admin (full access)';
+COMMENT ON COLUMN customers.national_id IS 'Optional Zambian National Registration Card number (format: XXXXXX/XX/X)';
 
 COMMENT ON TABLE lg_delivery_intents IS 'Stores LG intent to deliver beans before sending to subscriptions-service-supamoto';
 COMMENT ON COLUMN lg_delivery_intents.voucher_status IS 'Status: HAS_VOUCHER, NO_VOUCHER, ERROR';
