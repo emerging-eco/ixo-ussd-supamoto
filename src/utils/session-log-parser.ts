@@ -170,18 +170,21 @@ export class SessionLogParser {
           i++;
 
           // Continue collecting lines until we hit a timestamp or separator
+          // Note: Empty lines within the response are preserved for formatting
           while (i < lines.length) {
             const followingLine = lines[i];
             if (
               followingLine.match(timestampRegex) ||
-              followingLine.startsWith("=") ||
-              followingLine.trim() === ""
+              followingLine.startsWith("=")
             ) {
               break;
             }
             serverResponse += "\n" + followingLine;
             i++;
           }
+
+          // Trim trailing empty lines from the response (log formatting)
+          serverResponse = serverResponse.replace(/\n+$/, "");
 
           entries.push({
             timestamp,
@@ -202,18 +205,21 @@ export class SessionLogParser {
               i++;
 
               // Continue collecting lines until we hit a timestamp or separator
+              // Note: Empty lines within the response are preserved for formatting
               while (i < lines.length) {
                 const followingLine = lines[i];
                 if (
                   followingLine.match(timestampRegex) ||
-                  followingLine.startsWith("=") ||
-                  followingLine.trim() === ""
+                  followingLine.startsWith("=")
                 ) {
                   break;
                 }
                 serverResponse += "\n" + followingLine;
                 i++;
               }
+
+              // Trim trailing empty lines from the response (log formatting)
+              serverResponse = serverResponse.replace(/\n+$/, "");
 
               entries.push({
                 timestamp,

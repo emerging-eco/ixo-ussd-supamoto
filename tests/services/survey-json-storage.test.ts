@@ -2,7 +2,7 @@
  * Unit tests for JSON-based survey storage
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   surveyResponseStorageService,
   ParsedSurveyForm,

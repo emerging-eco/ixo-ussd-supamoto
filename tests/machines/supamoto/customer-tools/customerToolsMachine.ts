@@ -78,7 +78,7 @@ export const customerToolsMachine = setup({
         );
 
         // Get or create delivery confirmation
-        let confirmation = await dataService.getDeliveryConfirmation(
+        const confirmation = await dataService.getDeliveryConfirmation(
           input.customerId,
           input.lgCustomerId
         );

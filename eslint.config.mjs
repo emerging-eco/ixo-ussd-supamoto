@@ -18,7 +18,7 @@ const compat = new FlatCompat({
 export default defineConfig([
     globalIgnores(["**/dist/", "**/node_modules/", "**/coverage/", "**/*.d.ts"]),
     {
-        files: ["src/**/*.{ts,tsx,js,jsx}"],
+        files: ["src/**/*.{ts,tsx,js,jsx}", "tests/**/*.{ts,tsx,js,jsx}"],
         extends: compat.extends("eslint:recommended"),
 
         plugins: {
@@ -28,6 +28,16 @@ export default defineConfig([
         languageOptions: {
             globals: {
                 ...globals.node,
+                // Test globals
+                describe: "readonly",
+                it: "readonly",
+                test: "readonly",
+                expect: "readonly",
+                beforeAll: "readonly",
+                afterAll: "readonly",
+                beforeEach: "readonly",
+                afterEach: "readonly",
+                vi: "readonly",
             },
 
             parser: tsParser,
@@ -62,21 +72,6 @@ export default defineConfig([
             "**/test/**/*",
             "**/tests/**/*",
         ],
-
-        languageOptions: {
-            globals: {
-                ...globals.node,
-                describe: "readonly",
-                it: "readonly",
-                test: "readonly",
-                expect: "readonly",
-                beforeAll: "readonly",
-                afterAll: "readonly",
-                beforeEach: "readonly",
-                afterEach: "readonly",
-                vi: "readonly",
-            },
-        },
 
         rules: {
             "no-console": "off",

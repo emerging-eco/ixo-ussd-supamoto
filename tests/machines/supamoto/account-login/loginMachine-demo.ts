@@ -10,8 +10,6 @@
  * - Navigation and cancellation
  */
 
-/* eslint-disable no-console */
-
 import { createActor } from "xstate";
 import { loginMachine } from "./loginMachine.js";
 import { config } from "../../../../src/config.js";

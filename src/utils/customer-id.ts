@@ -4,6 +4,13 @@ import { createModuleLogger } from "../services/logger.js";
 const logger = createModuleLogger("customer-id");
 
 /**
+ * Customer ID format validation pattern
+ * Format: C followed by 8 hexadecimal characters (0-9, A-F, uppercase)
+ * Examples: C1F53E2F7, CDDA2FB60, C21009802
+ */
+export const CUSTOMER_ID_PATTERN = /^C[A-F0-9]{8}$/;
+
+/**
  * Generates a unique Customer ID in the format C21009802
  * Uses high-precision timestamp + deterministic hashing for guaranteed uniqueness
  *

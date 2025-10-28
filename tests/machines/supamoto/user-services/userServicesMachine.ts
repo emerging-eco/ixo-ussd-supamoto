@@ -1,10 +1,7 @@
 import { setup, assign, fromPromise, sendTo } from "xstate";
 import { withNavigation } from "../utils/navigation-mixin.js";
 import { navigationGuards } from "../guards/navigation.guards.js";
-import {
-  dataService,
-  type CustomerRecord,
-} from "../../../../src/services/database-storage.js";
+import { dataService } from "../../../../src/services/database-storage.js";
 import { config } from "../../../../src/config.js";
 import {
   loginWithVault,
@@ -85,7 +82,9 @@ export const userServicesMachine = setup({
                 return { source: "matrix" as const, profile };
               }
             }
-          } catch {}
+          } catch {
+            // Ignore Matrix errors, fall back to database
+          }
         }
         const record = await dataService.getCustomerByPhone(input.phoneNumber);
         return { source: "db" as const, profile: record };
@@ -110,7 +109,9 @@ export const userServicesMachine = setup({
                 roomId: room.roomId,
               });
             }
-          } catch {}
+          } catch {
+            // Ignore Matrix errors, return null
+          }
         }
         return null;
       }
@@ -134,7 +135,9 @@ export const userServicesMachine = setup({
                 roomId: room.roomId,
               });
             }
-          } catch {}
+          } catch {
+            // Ignore Matrix errors, return empty array
+          }
         }
         return [] as any[];
       }
@@ -158,7 +161,9 @@ export const userServicesMachine = setup({
                 roomId: room.roomId,
               });
             }
-          } catch {}
+          } catch {
+            // Ignore Matrix errors, return empty array
+          }
         }
         return [] as any[];
       }

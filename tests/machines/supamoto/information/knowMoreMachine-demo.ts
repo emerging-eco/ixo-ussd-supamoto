@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { createActor } from "xstate";
 import { knowMoreMachine } from "../../../../src/machines/supamoto/information/knowMoreMachine.js";
 

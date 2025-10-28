@@ -23,10 +23,6 @@ import {
   sendActivationSMS,
   sendEligibilityConfirmationSMS,
 } from "../../../../src/services/sms.js";
-import { submitClaim } from "../../../../src/services/ixo/ixo-claims.js";
-import { navigationGuards } from "../guards/navigation.guards.js";
-import { withNavigation } from "../utils/navigation-mixin.js";
-import { NavigationPatterns } from "../utils/navigation-patterns.js";
 
 const logger = createModuleLogger("customerActivation");
 

@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { createActor } from "xstate";
 import { userServicesMachine } from "./userServicesMachine.js";
 

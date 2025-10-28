@@ -83,7 +83,7 @@ export class MockDatabaseService {
         const fileContent = fs.readFileSync(dataFile, "utf-8");
         return { ...defaultData, ...JSON.parse(fileContent) };
       }
-    } catch (error) {
+    } catch {
       console.warn("⚠️ Could not load mock data file, using defaults");
     }
 

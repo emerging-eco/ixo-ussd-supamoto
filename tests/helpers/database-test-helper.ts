@@ -141,7 +141,7 @@ export async function forceReset(): Promise<void> {
     await databaseManager.forceReset();
     isInitialized = false;
     testIdCounter = 0;
-  } catch (error) {
+  } catch {
     // Ignore errors during force reset
     logger.debug("Ignoring error during force reset");
   }

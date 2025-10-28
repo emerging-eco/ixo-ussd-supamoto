@@ -83,7 +83,7 @@ export class ReplayTestHelper {
         try {
           const fixture = this.loadFixture(file);
           fixtures.push(fixture);
-        } catch (error) {
+        } catch {
           console.error(`⚠️ Skipping invalid fixture: ${file}`);
         }
       }

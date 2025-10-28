@@ -125,7 +125,7 @@ export const accountCreationMachine = setup({
           pin: input.pin,
         }).catch(error => {
           // Error is already logged in the background service
-          /* eslint-disable no-console */
+
           console.error(
             `Background IXO creation failed for customer ${customerRecord.customerId}:`,
             error.message
@@ -148,12 +148,12 @@ export const accountCreationMachine = setup({
       currentStep: "nameEntry" as const,
     })),
 
-    setEmailMessage: assign(({ context }) => ({
+    setEmailMessage: assign(() => ({
       message: `Enter your email address (optional):\n${SKIP_EMAIL_INPUT}. Skip`,
       currentStep: "emailEntry" as const,
     })),
 
-    setPinMessage: assign(({ context }) => ({
+    setPinMessage: assign(() => ({
       message: `Create a 5-digit PIN for your account:\n`,
       currentStep: "pinEntry" as const,
     })),

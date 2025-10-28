@@ -48,7 +48,7 @@ export const knowMoreMachine = setup({
       message: infoMenuMessage,
     })),
 
-    setGenericMessage: assign(({ event }) => ({
+    setGenericMessage: assign(() => ({
       message: genericMessage,
     })),
 

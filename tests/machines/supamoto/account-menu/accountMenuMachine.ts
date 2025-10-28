@@ -73,7 +73,7 @@ export const accountMenuMachine = setup({
       if ("error" in event) {
         details += ` | error: ${event.error}`;
       }
-      /* eslint-disable no-console*/
+
       console.log(details);
     },
   },

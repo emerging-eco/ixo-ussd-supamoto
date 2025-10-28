@@ -4,7 +4,6 @@
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { surveyResponseStorageService } from "../../src/services/survey-response-storage.js";
-import { dataService } from "../../src/services/database-storage.js";
 import { databaseManager } from "../../src/services/database-manager.js";
 
 describe("Survey Refactor Integration Tests", () => {

@@ -18,6 +18,7 @@
 
 import { setup, assign, fromPromise } from "xstate";
 import { withNavigation } from "../utils/navigation-mixin.js";
+import { navigationGuards } from "../guards/navigation.guards.js";
 import { createModuleLogger } from "../../../services/logger.js";
 import { dataService } from "../../../services/database-storage.js";
 import { surveyResponseStorageService } from "../../../services/survey-response-storage.js";
@@ -107,22 +108,45 @@ const createClaimService = fromPromise(
       "Creating household claim for 1,000 Day Survey"
     );
 
-    const claim = await dataService.createHouseholdClaim(
-      input.lgCustomerId,
-      input.customerId,
-      true // is1000DayHousehold
-    );
+    try {
+      const claim = await dataService.createHouseholdClaim(
+        input.lgCustomerId,
+        input.customerId,
+        true // is1000DayHousehold
+      );
 
-    logger.info(
-      {
-        claimId: claim.id,
-        lgCustomerId: input.lgCustomerId.slice(-4),
-        customerId: input.customerId.slice(-4),
-      },
-      "Household claim created successfully"
-    );
+      logger.info(
+        {
+          claimId: claim.id,
+          lgCustomerId: input.lgCustomerId.slice(-4),
+          customerId: input.customerId.slice(-4),
+        },
+        "Household claim created successfully"
+      );
 
-    return { claimId: claim.id };
+      return { claimId: claim.id };
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          lgCustomerId: input.lgCustomerId.slice(-4),
+          customerId: input.customerId.slice(-4),
+        },
+        "Failed to create household claim in survey machine"
+      );
+
+      // Re-throw with more context
+      if (
+        error instanceof Error &&
+        error.message.includes("violates foreign key constraint")
+      ) {
+        throw new Error(
+          `Customer ID ${input.customerId} not found in the system. Please verify the Customer ID.`
+        );
+      }
+
+      throw error;
+    }
   }
 );
 
@@ -324,8 +348,11 @@ export const thousandDaySurveyMachine = setup({
   },
   guards: {
     isValidCustomerId: ({ event }) => {
-      if (event.type !== "INPUT") return false;
-      return validateCustomerId(event.input).valid;
+      if (event.type !== "INPUT") {
+        return false;
+      }
+      const validation = validateCustomerId(event.input);
+      return validation.valid;
     },
     isValidBeneficiaryCategory: ({ event }) => {
       if (event.type !== "INPUT") return false;
@@ -353,6 +380,11 @@ export const thousandDaySurveyMachine = setup({
         shouldShowChildAgeQuestion(context.beneficiaryCategory)
       );
     },
+    // Navigation guards
+    isBack: ({ event }) =>
+      navigationGuards.isBackCommand(null as any, event as any),
+    isExit: ({ event }) =>
+      navigationGuards.isExitCommand(null as any, event as any),
   },
   actors: {
     createClaimService,
@@ -400,8 +432,10 @@ export const thousandDaySurveyMachine = setup({
               target: "creatingClaim",
               guard: "isValidCustomerId",
               actions: assign({
-                customerId: ({ event }) =>
-                  event.type === "INPUT" ? event.input : "",
+                customerId: ({ event }) => {
+                  const id = event.type === "INPUT" ? event.input : "";
+                  return id;
+                },
               }),
             },
             {
@@ -426,9 +460,11 @@ export const thousandDaySurveyMachine = setup({
     },
 
     creatingClaim: {
-      entry: assign(() => ({
-        message: "Creating claim record...",
-      })),
+      entry: assign(() => {
+        return {
+          message: "Creating claim record...",
+        };
+      }),
       invoke: {
         id: "createClaim",
         src: "createClaimService",
@@ -444,7 +480,15 @@ export const thousandDaySurveyMachine = setup({
         },
         onError: {
           target: "error",
-          actions: "setError",
+          actions: assign({
+            error: ({ event }) => {
+              const errorMessage =
+                event.error instanceof Error
+                  ? event.error.message
+                  : String(event.error);
+              return errorMessage;
+            },
+          }),
         },
       },
     },
