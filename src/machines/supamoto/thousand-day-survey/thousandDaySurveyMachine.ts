@@ -462,7 +462,7 @@ export const thousandDaySurveyMachine = setup({
     creatingClaim: {
       entry: assign(() => {
         return {
-          message: "Creating claim record...",
+          message: "Creating claim record...\n\n1. Continue",
         };
       }),
       invoke: {
@@ -473,7 +473,6 @@ export const thousandDaySurveyMachine = setup({
           customerId: context.customerId,
         }),
         onDone: {
-          target: "recoveringSession",
           actions: assign({
             claimId: ({ event }) => event.output.claimId,
           }),
@@ -491,11 +490,16 @@ export const thousandDaySurveyMachine = setup({
           }),
         },
       },
+      on: {
+        INPUT: {
+          target: "recoveringSession",
+        },
+      },
     },
 
     recoveringSession: {
       entry: assign(() => ({
-        message: "Checking for existing survey data...",
+        message: "Checking for existing survey data...\n\n1. Continue",
       })),
       invoke: {
         id: "recoverSession",
@@ -505,7 +509,6 @@ export const thousandDaySurveyMachine = setup({
           customerId: context.customerId,
         }),
         onDone: {
-          target: "askBeneficiaryCategory",
           actions: assign({
             // Populate context with recovered answers if they exist
             beneficiaryCategory: ({ event }) =>
@@ -529,7 +532,12 @@ export const thousandDaySurveyMachine = setup({
           }),
         },
         onError: {
-          // No existing data, start fresh
+          // No existing data, start fresh - still transition to askBeneficiaryCategory
+          target: "askBeneficiaryCategory",
+        },
+      },
+      on: {
+        INPUT: {
           target: "askBeneficiaryCategory",
         },
       },
@@ -576,7 +584,7 @@ export const thousandDaySurveyMachine = setup({
 
     savingBeneficiaryCategory: {
       entry: assign(() => ({
-        message: "Saving answer...",
+        message: "Saving answer...\n\n1. Continue",
       })),
       invoke: {
         id: "saveBeneficiaryCategory",
@@ -587,7 +595,16 @@ export const thousandDaySurveyMachine = setup({
           questionName: "ecs:beneficiaryCategory",
           answer: context.beneficiaryCategory,
         }),
-        onDone: [
+        onDone: {
+          // No target - just complete the save
+        },
+        onError: {
+          target: "error",
+          actions: "setError",
+        },
+      },
+      on: {
+        INPUT: [
           {
             target: "askChildAge",
             guard: "shouldShowChildAge",
@@ -596,10 +613,6 @@ export const thousandDaySurveyMachine = setup({
             target: "askBeanIntakeFrequency",
           },
         ],
-        onError: {
-          target: "error",
-          actions: "setError",
-        },
       },
     },
 
@@ -641,7 +654,7 @@ export const thousandDaySurveyMachine = setup({
 
     savingChildAge: {
       entry: assign(() => ({
-        message: "Saving answer...",
+        message: "Saving answer...\n\n1. Continue",
       })),
       invoke: {
         id: "saveChildAge",
@@ -653,11 +666,16 @@ export const thousandDaySurveyMachine = setup({
           answer: context.childAge,
         }),
         onDone: {
-          target: "askBeanIntakeFrequency",
+          // No target - just complete the save
         },
         onError: {
           target: "error",
           actions: "setError",
+        },
+      },
+      on: {
+        INPUT: {
+          target: "askBeanIntakeFrequency",
         },
       },
     },
@@ -703,7 +721,7 @@ export const thousandDaySurveyMachine = setup({
 
     savingBeanIntakeFrequency: {
       entry: assign(() => ({
-        message: "Saving answer...",
+        message: "Saving answer...\n\n1. Continue",
       })),
       invoke: {
         id: "saveBeanIntakeFrequency",
@@ -715,11 +733,16 @@ export const thousandDaySurveyMachine = setup({
           answer: context.beanIntakeFrequency,
         }),
         onDone: {
-          target: "askPriceSpecification",
+          // No target - just complete the save
         },
         onError: {
           target: "error",
           actions: "setError",
+        },
+      },
+      on: {
+        INPUT: {
+          target: "askPriceSpecification",
         },
       },
     },
@@ -765,7 +788,7 @@ export const thousandDaySurveyMachine = setup({
 
     savingPriceSpecification: {
       entry: assign(() => ({
-        message: "Saving answer...",
+        message: "Saving answer...\n\n1. Continue",
       })),
       invoke: {
         id: "savePriceSpecification",
@@ -777,11 +800,16 @@ export const thousandDaySurveyMachine = setup({
           answer: context.priceSpecification,
         }),
         onDone: {
-          target: "askAwarenessIronBeans",
+          // No target - just complete the save
         },
         onError: {
           target: "error",
           actions: "setError",
+        },
+      },
+      on: {
+        INPUT: {
+          target: "askAwarenessIronBeans",
         },
       },
     },
@@ -825,7 +853,7 @@ export const thousandDaySurveyMachine = setup({
 
     savingAwarenessIronBeans: {
       entry: assign(() => ({
-        message: "Saving answer...",
+        message: "Saving answer...\n\n1. Continue",
       })),
       invoke: {
         id: "saveAwarenessIronBeans",
@@ -837,11 +865,16 @@ export const thousandDaySurveyMachine = setup({
           answer: context.awarenessIronBeans,
         }),
         onDone: {
-          target: "askKnowsNutritionalBenefits",
+          // No target - just complete the save
         },
         onError: {
           target: "error",
           actions: "setError",
+        },
+      },
+      on: {
+        INPUT: {
+          target: "askKnowsNutritionalBenefits",
         },
       },
     },
@@ -885,7 +918,7 @@ export const thousandDaySurveyMachine = setup({
 
     savingKnowsNutritionalBenefits: {
       entry: assign(() => ({
-        message: "Saving answer...",
+        message: "Saving answer...\n\n1. Continue",
       })),
       invoke: {
         id: "saveKnowsNutritionalBenefits",
@@ -897,11 +930,16 @@ export const thousandDaySurveyMachine = setup({
           answer: context.knowsNutritionalBenefits,
         }),
         onDone: {
-          target: "askNutritionalBenefit1",
+          // No target - just complete the save
         },
         onError: {
           target: "error",
           actions: "setError",
+        },
+      },
+      on: {
+        INPUT: {
+          target: "askNutritionalBenefit1",
         },
       },
     },
@@ -1105,7 +1143,7 @@ export const thousandDaySurveyMachine = setup({
 
     savingNutritionalBenefits: {
       entry: assign(() => ({
-        message: "Saving answers...",
+        message: "Saving answers...\n\n1. Continue",
       })),
       invoke: {
         id: "saveNutritionalBenefits",
@@ -1117,11 +1155,16 @@ export const thousandDaySurveyMachine = setup({
           answer: context.nutritionalBenefitDetails,
         }),
         onDone: {
-          target: "askAntenatalCardVerified",
+          // No target - just complete the save
         },
         onError: {
           target: "error",
           actions: "setError",
+        },
+      },
+      on: {
+        INPUT: {
+          target: "askAntenatalCardVerified",
         },
       },
     },
@@ -1167,7 +1210,7 @@ export const thousandDaySurveyMachine = setup({
 
     savingAntenatalCardVerified: {
       entry: assign(() => ({
-        message: "Saving answer...",
+        message: "Saving answer...\n\n1. Continue",
       })),
       invoke: {
         id: "saveAntenatalCardVerified",
@@ -1179,18 +1222,23 @@ export const thousandDaySurveyMachine = setup({
           answer: context.antenatalCardVerified,
         }),
         onDone: {
-          target: "markingComplete",
+          // No target - just complete the save
         },
         onError: {
           target: "error",
           actions: "setError",
         },
       },
+      on: {
+        INPUT: {
+          target: "markingComplete",
+        },
+      },
     },
 
     markingComplete: {
       entry: assign(() => ({
-        message: "Completing survey...",
+        message: "Completing survey...\n\n1. Continue",
       })),
       invoke: {
         id: "markComplete",
@@ -1200,18 +1248,23 @@ export const thousandDaySurveyMachine = setup({
           customerId: context.customerId,
         }),
         onDone: {
-          target: "submittingClaim",
+          // No target - just complete the operation
         },
         onError: {
           target: "error",
           actions: "setError",
         },
       },
+      on: {
+        INPUT: {
+          target: "submittingClaim",
+        },
+      },
     },
 
     submittingClaim: {
       entry: assign(() => ({
-        message: "Submitting claim to claims bot...",
+        message: "Submitting claim to claims bot...\n\n1. Continue",
       })),
       invoke: {
         id: "submitClaim",
@@ -1230,11 +1283,16 @@ export const thousandDaySurveyMachine = setup({
           antenatalCardVerified: context.antenatalCardVerified || false,
         }),
         onDone: {
-          target: "claimSubmitted",
+          // No target - just complete the submission
         },
         onError: {
           target: "claimSubmissionFailed",
           actions: "setError",
+        },
+      },
+      on: {
+        INPUT: {
+          target: "claimSubmitted",
         },
       },
     },
