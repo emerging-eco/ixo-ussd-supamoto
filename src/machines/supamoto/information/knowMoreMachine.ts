@@ -34,8 +34,6 @@ export type KnowMoreEvent =
   | { type: "INPUT"; input: string } // User input from USSD
   | { type: "ERROR"; error: string };
 
-import { messages } from "../../../constants/branding.js";
-
 // SMS Service Actor
 const sendInformationSMSService = fromPromise(
   async ({ input }: { input: { phoneNumber: string; option: number } }) => {
@@ -103,14 +101,16 @@ const sendInformationSMSService = fromPromise(
   }
 );
 
-const infoMenuMessage = `${messages.infoCenterTitle()}
-1. Interested in a stove
-2. Pellet Bag Prices & Accessories
-3. Can we deliver it to you?
-4. Can a stove be fixed?
-5. What is Performance?
-6. What is a digital voucher?
-7. What is a contract?`;
+// USSD has a 182-character limit per message
+// This menu is shortened to fit within that limit (142 chars)
+const infoMenuMessage = `SupaMoto Info
+1. Get a stove
+2. Pellet prices
+3. Delivery info
+4. Stove repairs
+5. Performance
+6. Digital voucher
+7. Contract info`;
 
 const sendingMessage = "Sending information SMS...\n1. Continue";
 const successMessage =

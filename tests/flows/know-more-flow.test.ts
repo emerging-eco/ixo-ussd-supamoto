@@ -109,7 +109,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in a stove\n2. Pellet Bag Prices & Accessories\n3. Can we deliver it to you?\n4. Can a stove be fixed?\n5. What is Performance?\n6. What is a digital voucher?\n7. What is a contract?\n0. Back";
+      "CON SupaMoto Info\n1. Get a stove\n2. Pellet prices\n3. Delivery info\n4. Stove repairs\n5. Performance\n6. Digital voucher\n7. Contract info\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -141,7 +141,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in a stove\n2. Pellet Bag Prices & Accessories\n3. Can we deliver it to you?\n4. Can a stove be fixed?\n5. What is Performance?\n6. What is a digital voucher?\n7. What is a contract?\n0. Back";
+      "CON SupaMoto Info\n1. Get a stove\n2. Pellet prices\n3. Delivery info\n4. Stove repairs\n5. Performance\n6. Digital voucher\n7. Contract info\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -173,7 +173,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in a stove\n2. Pellet Bag Prices & Accessories\n3. Can we deliver it to you?\n4. Can a stove be fixed?\n5. What is Performance?\n6. What is a digital voucher?\n7. What is a contract?\n0. Back";
+      "CON SupaMoto Info\n1. Get a stove\n2. Pellet prices\n3. Delivery info\n4. Stove repairs\n5. Performance\n6. Digital voucher\n7. Contract info\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -205,7 +205,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in a stove\n2. Pellet Bag Prices & Accessories\n3. Can we deliver it to you?\n4. Can a stove be fixed?\n5. What is Performance?\n6. What is a digital voucher?\n7. What is a contract?\n0. Back";
+      "CON SupaMoto Info\n1. Get a stove\n2. Pellet prices\n3. Delivery info\n4. Stove repairs\n5. Performance\n6. Digital voucher\n7. Contract info\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -253,7 +253,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in a stove\n2. Pellet Bag Prices & Accessories\n3. Can we deliver it to you?\n4. Can a stove be fixed?\n5. What is Performance?\n6. What is a digital voucher?\n7. What is a contract?\n0. Back";
+      "CON SupaMoto Info\n1. Get a stove\n2. Pellet prices\n3. Delivery info\n4. Stove repairs\n5. Performance\n6. Digital voucher\n7. Contract info\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -285,7 +285,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in a stove\n2. Pellet Bag Prices & Accessories\n3. Can we deliver it to you?\n4. Can a stove be fixed?\n5. What is Performance?\n6. What is a digital voucher?\n7. What is a contract?\n0. Back";
+      "CON SupaMoto Info\n1. Get a stove\n2. Pellet prices\n3. Delivery info\n4. Stove repairs\n5. Performance\n6. Digital voucher\n7. Contract info\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -317,7 +317,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in a stove\n2. Pellet Bag Prices & Accessories\n3. Can we deliver it to you?\n4. Can a stove be fixed?\n5. What is Performance?\n6. What is a digital voucher?\n7. What is a contract?\n0. Back";
+      "CON SupaMoto Info\n1. Get a stove\n2. Pellet prices\n3. Delivery info\n4. Stove repairs\n5. Performance\n6. Digital voucher\n7. Contract info\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -365,7 +365,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in a stove\n2. Pellet Bag Prices & Accessories\n3. Can we deliver it to you?\n4. Can a stove be fixed?\n5. What is Performance?\n6. What is a digital voucher?\n7. What is a contract?\n0. Back";
+      "CON SupaMoto Info\n1. Get a stove\n2. Pellet prices\n3. Delivery info\n4. Stove repairs\n5. Performance\n6. Digital voucher\n7. Contract info\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);

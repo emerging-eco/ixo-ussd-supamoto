@@ -45,28 +45,20 @@ describe("knowMoreMachine", () => {
         phoneNumber: mockInput.phoneNumber,
         serviceCode: mockInput.serviceCode,
       });
-      expect(snapshot.context.message).toMatch(
-        /Welcome to .+ Information Center/
-      );
+      expect(snapshot.context.message).toContain("SupaMoto Info");
     });
   });
 
   describe("Menu Options", () => {
     it("should show all 7 menu options", () => {
       const snapshot = actor.getSnapshot();
-      expect(snapshot.context.message).toContain("1. Interested in a stove");
-      expect(snapshot.context.message).toContain(
-        "2. Pellet Bag Prices & Accessories"
-      );
-      expect(snapshot.context.message).toContain(
-        "3. Can we deliver it to you?"
-      );
-      expect(snapshot.context.message).toContain("4. Can a stove be fixed?");
-      expect(snapshot.context.message).toContain("5. What is Performance?");
-      expect(snapshot.context.message).toContain(
-        "6. What is a digital voucher?"
-      );
-      expect(snapshot.context.message).toContain("7. What is a contract?");
+      expect(snapshot.context.message).toContain("1. Get a stove");
+      expect(snapshot.context.message).toContain("2. Pellet prices");
+      expect(snapshot.context.message).toContain("3. Delivery info");
+      expect(snapshot.context.message).toContain("4. Stove repairs");
+      expect(snapshot.context.message).toContain("5. Performance");
+      expect(snapshot.context.message).toContain("6. Digital voucher");
+      expect(snapshot.context.message).toContain("7. Contract info");
     });
 
     it("should transition to sendingSMS on input '1'", () => {
