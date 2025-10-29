@@ -112,7 +112,24 @@ const infoMenuMessage = `SupaMoto Info
 6. Digital voucher
 7. Contract info`;
 
-const sendingMessage = "Sending information SMS...\n1. Continue";
+/**
+ * Get option-specific confirmation message
+ * Uses original (full) menu option wording to provide context
+ */
+function getSendingMessage(option: number): string {
+  const messages = [
+    "Interested in a stove? We have sent you an SMS with further details.\n1. Continue",
+    "Pellet Bag Prices & Accessories? We have sent you an SMS with further details.\n1. Continue",
+    "Can we deliver it to you? We have sent you an SMS with further details.\n1. Continue",
+    "Can a stove be fixed? We have sent you an SMS with further details.\n1. Continue",
+    "What is Performance? We have sent you an SMS with further details.\n1. Continue",
+    "What is a digital voucher? We have sent you an SMS with further details.\n1. Continue",
+    "What is a contract? We have sent you an SMS with further details.\n1. Continue",
+  ];
+
+  return messages[option - 1] || messages[0];
+}
+
 const successMessage =
   "SMS sent successfully! Check your phone for details.\n1. Back to Main Menu";
 const errorMessage = "Failed to send SMS. Please try again.\n0. Back\n*. Exit";
@@ -137,8 +154,8 @@ export const knowMoreMachine = setup({
       message: infoMenuMessage,
     })),
 
-    setSendingMessage: assign(() => ({
-      message: sendingMessage,
+    setSendingMessage: assign(({ context }) => ({
+      message: getSendingMessage(context.selectedOption || 1),
     })),
 
     setSuccessMessage: assign(() => ({

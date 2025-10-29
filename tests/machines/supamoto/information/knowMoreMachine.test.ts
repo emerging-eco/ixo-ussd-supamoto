@@ -90,6 +90,28 @@ describe("knowMoreMachine", () => {
   });
 
   describe("SMS Sending", () => {
+    it("should show option-specific confirmation for option 1", () => {
+      actor.send({ type: "INPUT", input: "1" });
+
+      const snapshot = actor.getSnapshot();
+      expect(snapshot.value).toBe("sendingSMS");
+      expect(snapshot.context.message).toContain("Interested in a stove?");
+      expect(snapshot.context.message).toContain(
+        "We have sent you an SMS with further details"
+      );
+    });
+
+    it("should show option-specific confirmation for option 4", () => {
+      actor.send({ type: "INPUT", input: "4" });
+
+      const snapshot = actor.getSnapshot();
+      expect(snapshot.value).toBe("sendingSMS");
+      expect(snapshot.context.message).toContain("Can a stove be fixed?");
+      expect(snapshot.context.message).toContain(
+        "We have sent you an SMS with further details"
+      );
+    });
+
     it("should send SMS for option 1 (Interested in stove)", async () => {
       actor.send({ type: "INPUT", input: "1" });
 
@@ -292,7 +314,10 @@ describe("knowMoreMachine", () => {
       const sendingMessage = actor.getSnapshot().context.message;
 
       expect(sendingMessage).not.toBe(initialMessage);
-      expect(sendingMessage).toContain("Sending information SMS");
+      expect(sendingMessage).toContain("Interested in a stove?");
+      expect(sendingMessage).toContain(
+        "We have sent you an SMS with further details"
+      );
     });
 
     it("should track selected option in context", () => {
