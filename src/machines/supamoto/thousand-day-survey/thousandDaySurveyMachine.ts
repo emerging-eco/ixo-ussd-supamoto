@@ -423,7 +423,7 @@ export const thousandDaySurveyMachine = setup({
     askCustomerId: {
       entry: assign(() => ({
         message:
-          "A Lead Generator completes this survey on behalf of a Customer.\nEnter the Customer ID on whose behalf you are completing the survey?\n\n0. Back to Agent Tools",
+          "A Lead Generator completes this survey on behalf of a Customer.\nEnter the Customer ID on whose behalf you are completing the survey.\n\n0. Back to Agent Tools",
       })),
       on: {
         INPUT: withNavigation(
