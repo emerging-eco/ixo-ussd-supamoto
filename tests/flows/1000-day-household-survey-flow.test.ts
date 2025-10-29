@@ -294,52 +294,19 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it('Turn 14: Input: "4"', async () => {
+  it('Turn 14: Input: "4" (A + B - no child)', async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4"
     // Send user input (USSD requires cumulative text)
+    // Option 4 = "A + B" (Pregnant Woman + Breastfeeding Mother) - NO child
+    // Child age and bean frequency questions should be SKIPPED
     const response = await sendUssdRequest(
       "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4"
     );
 
-    // Expected server response
-    const expected = "CON What is the child's age in months?\n0. Back";
-
-    // Assert response matches expected
-    expect(response).toBe(expected);
-  }, 10000); // 10 second timeout for this test
-
-  it('Turn 15: Input: "18"', async () => {
-    // Simulate realistic user interaction timing (2-second delay)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18"
-    // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18"
-    );
-
-    // Expected server response
-    const expected =
-      "CON How many times a week does the child eat beans?\n1. None at all\n2. 1–2 times a week\n3. 3–4 times a week\n4. 5–6 times a week\n5. Daily\n0. Back";
-
-    // Assert response matches expected
-    expect(response).toBe(expected);
-  }, 10000); // 10 second timeout for this test
-
-  it('Turn 16: Input: "3"', async () => {
-    // Simulate realistic user interaction timing (2-second delay)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3"
-    // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3"
-    );
-
-    // Expected server response
+    // Expected server response - should skip directly to price specification
     const expected =
       "CON How much are you willing to pay for a 1 kg bag of beans? (ZMW)\n0. Back";
 
@@ -347,14 +314,14 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it('Turn 17: Input: "10 ZMW"', async () => {
+  it('Turn 15: Input: "10 ZMW"', async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW"
+    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW"
+      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW"
     );
 
     // Expected server response
@@ -365,14 +332,14 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it('Turn 18: Input: "2"', async () => {
+  it('Turn 16: Input: "2"', async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW*2"
+    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW*2"
+      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2"
     );
 
     // Expected server response
@@ -383,14 +350,32 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it('Turn 19: Input: "2"', async () => {
+  it('Turn 17: Input: "2"', async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW*2*2"
+    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW*2*2"
+      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2"
+    );
+
+    // Expected server response
+    const expected =
+      "CON Do you know any nutritional benefits of iron-fortified beans (mbereshi beans)?\n1. Yes\n2. No\n0. Back";
+
+    // Assert response matches expected
+    expect(response).toBe(expected);
+  }, 10000); // 10 second timeout for this test
+
+  it('Turn 18: Input: "2"', async () => {
+    // Simulate realistic user interaction timing (2-second delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2"
+    // Send user input (USSD requires cumulative text)
+    const response = await sendUssdRequest(
+      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2"
     );
 
     // Expected server response
@@ -401,14 +386,14 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it('Turn 20: Input: "1"', async () => {
+  it('Turn 19: Input: "1"', async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW*2*2*1"
+    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW*2*2*1"
+      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2*1"
     );
 
     // Expected server response
@@ -419,14 +404,14 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it('Turn 21: Input: "2"', async () => {
+  it('Turn 20: Input: "2"', async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW*2*2*1*2"
+    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2*1*2"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW*2*2*1*2"
+      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2*1*2"
     );
 
     // Expected server response
@@ -437,14 +422,14 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it('Turn 22: Input: "2"', async () => {
+  it('Turn 21: Input: "2"', async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW*2*2*1*2*2"
+    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2*1*2*2"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW*2*2*1*2*2"
+      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2*1*2*2"
     );
 
     // Expected server response
@@ -455,14 +440,14 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it('Turn 23: Input: "1"', async () => {
+  it('Turn 22: Input: "1"', async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW*2*2*1*2*2*1"
+    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2*1*2*2*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW*2*2*1*2*2*1"
+      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2*1*2*2*1"
     );
 
     // Expected server response
@@ -473,14 +458,14 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it('Turn 24: Input: "1"', async () => {
+  it('Turn 23: Input: "1"', async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW*2*2*1*2*2*1*1"
+    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2*1*2*2*1*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW*2*2*1*2*2*1*1"
+      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2*1*2*2*1*1"
     );
 
     // Expected server response
@@ -491,14 +476,14 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it('Turn 25: Input: "1"', async () => {
+  it('Turn 24: Input: "1"', async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW*2*2*1*2*2*1*1*1"
+    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2*1*2*2*1*1*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*18*3*10 ZMW*2*2*1*2*2*1*1*1"
+      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2*1*2*2*1*1*1"
     );
 
     // Expected server response

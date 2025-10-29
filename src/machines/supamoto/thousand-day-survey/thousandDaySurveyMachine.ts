@@ -134,10 +134,38 @@ const createClaimService = fromPromise(
         lgCustomerId: input.lgCustomerId.slice(-4),
         customerId: input.customerId.slice(-4),
       },
-      "Creating household claim for 1,000 Day Survey"
+      "Checking for existing household claim for 1,000 Day Survey"
     );
 
     try {
+      // Check if a claim already exists for this LG/Customer combination
+      const existingClaim = await dataService.getClaimByLgAndCustomer(
+        input.lgCustomerId,
+        input.customerId
+      );
+
+      if (existingClaim) {
+        logger.info(
+          {
+            claimId: existingClaim.id,
+            lgCustomerId: input.lgCustomerId.slice(-4),
+            customerId: input.customerId.slice(-4),
+          },
+          "Existing household claim found - reusing claim"
+        );
+
+        return { claimId: existingClaim.id };
+      }
+
+      // No existing claim - create a new one
+      logger.info(
+        {
+          lgCustomerId: input.lgCustomerId.slice(-4),
+          customerId: input.customerId.slice(-4),
+        },
+        "No existing claim found - creating new household claim"
+      );
+
       const claim = await dataService.createHouseholdClaim(
         input.lgCustomerId,
         input.customerId,
@@ -409,6 +437,12 @@ export const thousandDaySurveyMachine = setup({
         shouldShowChildAgeQuestion(context.beneficiaryCategory)
       );
     },
+    shouldShowBeanFrequency: ({ context }) => {
+      return (
+        context.beneficiaryCategory !== undefined &&
+        shouldShowChildAgeQuestion(context.beneficiaryCategory)
+      );
+    },
     // Navigation guards
     isBack: ({ event }) =>
       navigationGuards.isBackCommand(null as any, event as any),
@@ -674,6 +708,10 @@ export const thousandDaySurveyMachine = setup({
           },
           {
             target: "askBeanIntakeFrequency",
+            guard: "shouldShowBeanFrequency",
+          },
+          {
+            target: "askPriceSpecification",
           },
         ],
       },
@@ -840,7 +878,7 @@ export const thousandDaySurveyMachine = setup({
             },
           ],
           {
-            backTarget: "askBeanIntakeFrequency",
+            backTarget: "askBeneficiaryCategory",
             exitTarget: "routeToMain",
             enableBack: true,
             enableExit: true,

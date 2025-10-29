@@ -340,7 +340,7 @@ export async function sendActivationSMS(
     "🔐 Sending activation SMS with temporary PIN"
   );
 
-  const message = `Welcome to SupaMoto! Your activation PIN is: ${tempPin}. This PIN expires in 30 minutes. Customer ID: ${customerId}`;
+  const message = `Welcome to SupaMoto! Your activation PIN is: ${tempPin}. This PIN expires in 30 minutes.`;
 
   const result = await sendSMS({
     to: phoneNumber,

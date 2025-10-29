@@ -63,7 +63,8 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
     name: "ecs:beanIntakeFrequency",
     title: "How many times a week does the child eat beans?",
     type: "radiogroup",
-    required: true,
+    required: false,
+    visibleIf: "{ecs:beneficiaryCategory} contains 'child_below_2_years'",
     choices: [
       { value: "none_at_all", text: "None at all" },
       { value: "1_2_times_week", text: "1–2 times a week" },

@@ -234,7 +234,8 @@ CREATE TABLE household_claims (
   claims_bot_response JSONB,
   survey_form TEXT,
   survey_form_updated_at TIMESTAMP,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  UNIQUE(lg_customer_id, customer_id)
 );
 
 -- ============================================================================
