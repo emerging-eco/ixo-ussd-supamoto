@@ -91,6 +91,35 @@ export enum ThousandDaySurveyOutput {
 }
 
 // Service definitions
+const validateCustomerExistsService = fromPromise(
+  async ({ input }: { input: { customerId: string } }) => {
+    logger.info(
+      { customerId: input.customerId.slice(-4) },
+      "Validating customer exists in database"
+    );
+
+    const customer = await dataService.getCustomerByCustomerId(
+      input.customerId
+    );
+
+    if (!customer) {
+      throw new Error(
+        `Customer ID ${input.customerId} not found in the system. Please verify the Customer ID.`
+      );
+    }
+
+    logger.info(
+      {
+        customerId: input.customerId.slice(-4),
+        customerName: customer.fullName,
+      },
+      "Customer validated successfully"
+    );
+
+    return { customer };
+  }
+);
+
 const createClaimService = fromPromise(
   async ({
     input,
@@ -388,6 +417,7 @@ export const thousandDaySurveyMachine = setup({
   },
   actors: {
     createClaimService,
+    validateCustomerExistsService,
     recoverSessionService,
     saveAnswerService,
     saveMultipleAnswersService,
@@ -429,7 +459,7 @@ export const thousandDaySurveyMachine = setup({
         INPUT: withNavigation(
           [
             {
-              target: "creatingClaim",
+              target: "validatingCustomer",
               guard: "isValidCustomerId",
               actions: assign({
                 customerId: ({ event }) => {
@@ -456,6 +486,39 @@ export const thousandDaySurveyMachine = setup({
             enableExit: true,
           }
         ),
+      },
+    },
+
+    validatingCustomer: {
+      entry: assign(() => ({
+        message: "Validating Customer ID...\n\n1. Continue",
+      })),
+      invoke: {
+        id: "validateCustomerExists",
+        src: "validateCustomerExistsService",
+        input: ({ context }) => ({
+          customerId: context.customerId,
+        }),
+        onDone: {
+          target: "creatingClaim",
+        },
+        onError: {
+          target: "error",
+          actions: assign({
+            error: ({ event }) => {
+              const errorMessage =
+                event.error instanceof Error
+                  ? event.error.message
+                  : String(event.error);
+              return errorMessage;
+            },
+          }),
+        },
+      },
+      on: {
+        INPUT: {
+          target: "creatingClaim",
+        },
       },
     },
 
