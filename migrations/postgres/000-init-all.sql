@@ -224,7 +224,7 @@ CREATE TABLE bean_delivery_confirmations (
 -- Includes embedded survey responses in survey_form JSONB field
 CREATE TABLE household_claims (
   id SERIAL PRIMARY KEY,
-  lg_customer_id VARCHAR(10),
+  lg_customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
   customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
   is_1000_day_household BOOLEAN NOT NULL,
   claim_submitted_at TIMESTAMP NOT NULL DEFAULT NOW(),
