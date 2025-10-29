@@ -109,7 +109,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in Product\n2. Pricing & accessories\n3. Can we deliver to you?\n0. Back";
+      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in a stove\n2. Pellet Bag Prices & Accessories\n3. Can we deliver it to you?\n4. Can a stove be fixed?\n5. What is Performance?\n6. What is a digital voucher?\n7. What is a contract?\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -141,7 +141,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in Product\n2. Pricing & accessories\n3. Can we deliver to you?\n0. Back";
+      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in a stove\n2. Pellet Bag Prices & Accessories\n3. Can we deliver it to you?\n4. Can a stove be fixed?\n5. What is Performance?\n6. What is a digital voucher?\n7. What is a contract?\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -157,7 +157,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Thank you for your interest. We have sent you a SMS with more information.\n1. Back to Main Menu\n0. Back";
+      "CON SMS sent successfully! Check your phone for details.\n1. Back to Main Menu\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -173,7 +173,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in Product\n2. Pricing & accessories\n3. Can we deliver to you?\n0. Back";
+      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in a stove\n2. Pellet Bag Prices & Accessories\n3. Can we deliver it to you?\n4. Can a stove be fixed?\n5. What is Performance?\n6. What is a digital voucher?\n7. What is a contract?\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -205,7 +205,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in Product\n2. Pricing & accessories\n3. Can we deliver to you?\n0. Back";
+      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in a stove\n2. Pellet Bag Prices & Accessories\n3. Can we deliver it to you?\n4. Can a stove be fixed?\n5. What is Performance?\n6. What is a digital voucher?\n7. What is a contract?\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -221,7 +221,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Thank you for your interest. We have sent you a SMS with more information.\n1. Back to Main Menu\n0. Back";
+      "CON SMS sent successfully! Check your phone for details.\n1. Back to Main Menu\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -253,7 +253,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in Product\n2. Pricing & accessories\n3. Can we deliver to you?\n0. Back";
+      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in a stove\n2. Pellet Bag Prices & Accessories\n3. Can we deliver it to you?\n4. Can a stove be fixed?\n5. What is Performance?\n6. What is a digital voucher?\n7. What is a contract?\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -269,7 +269,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Thank you for your interest. We have sent you a SMS with more information.\n1. Back to Main Menu\n0. Back";
+      "CON SMS sent successfully! Check your phone for details.\n1. Back to Main Menu\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -285,7 +285,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in Product\n2. Pricing & accessories\n3. Can we deliver to you?\n0. Back";
+      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in a stove\n2. Pellet Bag Prices & Accessories\n3. Can we deliver it to you?\n4. Can a stove be fixed?\n5. What is Performance?\n6. What is a digital voucher?\n7. What is a contract?\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -301,7 +301,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Thank you for your interest. We have sent you a SMS with more information.\n1. Back to Main Menu\n0. Back";
+      "CON SMS sent successfully! Check your phone for details.\n1. Back to Main Menu\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -317,7 +317,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in Product\n2. Pricing & accessories\n3. Can we deliver to you?\n0. Back";
+      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in a stove\n2. Pellet Bag Prices & Accessories\n3. Can we deliver it to you?\n4. Can a stove be fixed?\n5. What is Performance?\n6. What is a digital voucher?\n7. What is a contract?\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -333,7 +333,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Thank you for your interest. We have sent you a SMS with more information.\n1. Back to Main Menu\n0. Back";
+      "CON SMS sent successfully! Check your phone for details.\n1. Back to Main Menu\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -365,7 +365,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in Product\n2. Pricing & accessories\n3. Can we deliver to you?\n0. Back";
+      "CON Welcome to USSD Supamoto App Information Center\n1. Interested in a stove\n2. Pellet Bag Prices & Accessories\n3. Can we deliver it to you?\n4. Can a stove be fixed?\n5. What is Performance?\n6. What is a digital voucher?\n7. What is a contract?\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -383,7 +383,7 @@ describe("know-more-flow - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON Thank you for your interest. We have sent you a SMS with more information.\n1. Back to Main Menu\n0. Back";
+      "CON SMS sent successfully! Check your phone for details.\n1. Back to Main Menu\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);

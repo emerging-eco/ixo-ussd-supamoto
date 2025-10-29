@@ -5,11 +5,10 @@ import { knowMoreMachine } from "../../../../src/machines/supamoto/information/k
  * Know More Machine Demo
  *
  * Demonstrates the know more machine functionality including:
- * - Information menu navigation
- * - Product information display with pagination
- * - Service information display
- * - About and contact information
- * - Error handling and recovery
+ * - Information menu navigation (7 options)
+ * - SMS sending for each information request
+ * - Success and error handling
+ * - Navigation and recovery
  */
 
 console.log("🚀 Know More Machine Demo\n");
@@ -20,9 +19,9 @@ const mockInput = {
   serviceCode: "*2233#",
 };
 
-// Demo 1: Product Information with Pagination
+// Demo 1: Option 1 - Interested in a stove
 console.log("=".repeat(50));
-console.log("DEMO 1: Product Information with Pagination");
+console.log("DEMO 1: Option 1 - Interested in a stove (SMS)");
 console.log("=".repeat(50));
 
 const actor1 = createActor(knowMoreMachine, { input: mockInput });
@@ -43,17 +42,15 @@ actor1.subscribe(snapshot => {
 actor1.start();
 console.log("📱 User started know more flow (automatic)");
 
-actor1.send({ type: "INPUT", input: "1" }); // Product Information
-console.log("📱 User selected product information");
+actor1.send({ type: "INPUT", input: "1" }); // Option 1: Interested in a stove
+console.log("📱 User selected option 1 - Interested in a stove");
+console.log("📱 SMS will be sent (in stub mode if SMS_ENABLED=false)");
 
-actor1.send({ type: "INPUT", input: "1" }); // Back to Main Menu
-console.log("📱 User navigated back to main menu");
+console.log("✅ Option 1 flow complete!\n");
 
-console.log("✅ Product information flow complete!\n");
-
-// Demo 2: Service Information
+// Demo 2: Option 4 - Can a stove be fixed?
 console.log("=".repeat(50));
-console.log("DEMO 2: Service Information");
+console.log("DEMO 2: Option 4 - Can a stove be fixed? (SMS)");
 console.log("=".repeat(50));
 
 const actor2 = createActor(knowMoreMachine, { input: mockInput });
@@ -66,14 +63,15 @@ actor2.subscribe(snapshot => {
 });
 
 actor2.start();
-actor2.send({ type: "INPUT", input: "2" }); // Service Information
-console.log("📱 User selected service information");
+actor2.send({ type: "INPUT", input: "4" }); // Option 4: Can a stove be fixed?
+console.log("📱 User selected option 4 - Can a stove be fixed?");
+console.log("📱 SMS will be sent with repair information");
 
-console.log("✅ Service information displayed!\n");
+console.log("✅ Option 4 flow complete!\n");
 
-// Demo 3: About Information
+// Demo 3: Option 7 - What is a contract?
 console.log("=".repeat(50));
-console.log("DEMO 3: About Information");
+console.log("DEMO 3: Option 7 - What is a contract? (SMS)");
 console.log("=".repeat(50));
 
 const actor3 = createActor(knowMoreMachine, { input: mockInput });
@@ -86,10 +84,11 @@ actor3.subscribe(snapshot => {
 });
 
 actor3.start();
-actor3.send({ type: "INPUT", input: "3" }); // About Information
-console.log("📱 User selected about information");
+actor3.send({ type: "INPUT", input: "7" }); // Option 7: What is a contract?
+console.log("📱 User selected option 7 - What is a contract?");
+console.log("📱 SMS will be sent with contract information");
 
-console.log("✅ About information displayed!\n");
+console.log("✅ Option 7 flow complete!\n");
 
 // Demo 4: Navigation Flow
 console.log("=".repeat(50));
@@ -149,10 +148,11 @@ console.log("✅ Error handling complete!\n");
 
 console.log("\n🎉 Know More Machine Demo Complete!");
 console.log("\n📊 Machine Summary:");
-console.log("   • Handles information request flows");
-console.log("   • Displays product, service, about, and contact information");
-console.log("   • Supports pagination for multi-page content");
+console.log("   • Handles 7 information request options");
+console.log("   • Sends SMS with specific information for each option");
+console.log("   • Uses Africa's Talking SMS service");
 console.log("   • Provides proper navigation and back functionality");
-console.log("   • Includes error handling and recovery");
+console.log("   • Includes error handling for SMS failures");
 console.log("   • Routes back to main menu when requested");
 console.log("   • Type-safe with XState v5 setup() pattern");
+console.log("   • Follows activation machine pattern for SMS sending");

@@ -1,6 +1,16 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { createActor } from "xstate";
-import { knowMoreMachine } from "./knowMoreMachine.js";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { createActor, waitFor } from "xstate";
+import { knowMoreMachine } from "../../../../src/machines/supamoto/information/knowMoreMachine.js";
+
+// Mock the SMS service
+vi.mock("../../../../src/services/sms.js", () => ({
+  sendSMS: vi.fn().mockResolvedValue({
+    success: true,
+    messageId: "test-message-id-123",
+  }),
+}));
+
+import { sendSMS } from "../../../../src/services/sms.js";
 
 describe("knowMoreMachine", () => {
   const mockInput = {
@@ -12,6 +22,7 @@ describe("knowMoreMachine", () => {
   let actor: ReturnType<typeof createActor<typeof knowMoreMachine>>;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     actor = createActor(knowMoreMachine, {
       input: mockInput,
     });
@@ -40,23 +51,43 @@ describe("knowMoreMachine", () => {
     });
   });
 
-  describe("Service Overview State", () => {
-    it("should transition to benefits on input '1'", () => {
+  describe("Menu Options", () => {
+    it("should show all 7 menu options", () => {
+      const snapshot = actor.getSnapshot();
+      expect(snapshot.context.message).toContain("1. Interested in a stove");
+      expect(snapshot.context.message).toContain(
+        "2. Pellet Bag Prices & Accessories"
+      );
+      expect(snapshot.context.message).toContain(
+        "3. Can we deliver it to you?"
+      );
+      expect(snapshot.context.message).toContain("4. Can a stove be fixed?");
+      expect(snapshot.context.message).toContain("5. What is Performance?");
+      expect(snapshot.context.message).toContain(
+        "6. What is a digital voucher?"
+      );
+      expect(snapshot.context.message).toContain("7. What is a contract?");
+    });
+
+    it("should transition to sendingSMS on input '1'", () => {
       actor.send({ type: "INPUT", input: "1" });
       const snapshot = actor.getSnapshot();
-      expect(snapshot.value).toBe("sendSMS");
+      expect(snapshot.value).toBe("sendingSMS");
+      expect(snapshot.context.selectedOption).toBe(1);
     });
 
-    it("should transition to howItWorks on input '2'", () => {
-      actor.send({ type: "INPUT", input: "2" });
+    it("should transition to sendingSMS on input '4'", () => {
+      actor.send({ type: "INPUT", input: "4" });
       const snapshot = actor.getSnapshot();
-      expect(snapshot.value).toBe("sendSMS");
+      expect(snapshot.value).toBe("sendingSMS");
+      expect(snapshot.context.selectedOption).toBe(4);
     });
 
-    it("should transition to getStarted on input '3'", () => {
-      actor.send({ type: "INPUT", input: "3" });
+    it("should transition to sendingSMS on input '7'", () => {
+      actor.send({ type: "INPUT", input: "7" });
       const snapshot = actor.getSnapshot();
-      expect(snapshot.value).toBe("sendSMS");
+      expect(snapshot.value).toBe("sendingSMS");
+      expect(snapshot.context.selectedOption).toBe(7);
     });
 
     it("should handle back navigation correctly", () => {
@@ -64,66 +95,132 @@ describe("knowMoreMachine", () => {
       const snapshot = actor.getSnapshot();
       expect(snapshot.value).toBe("routeToMain");
     });
+  });
 
-    it("should handle invalid input and stay in same state", () => {
-      actor.send({ type: "INPUT", input: "9" });
+  describe("SMS Sending", () => {
+    it("should send SMS for option 1 (Interested in stove)", async () => {
+      actor.send({ type: "INPUT", input: "1" });
+
+      // Wait for SMS sending to complete
+      await waitFor(actor, state => state.matches("smsSent"), {
+        timeout: 5000,
+      });
+
       const snapshot = actor.getSnapshot();
-      expect(snapshot.value).toBe("sendSMS");
-      expect(snapshot.context.message).toContain("Thank you for your interest");
+      expect(snapshot.value).toBe("smsSent");
+      expect(sendSMS).toHaveBeenCalledWith({
+        to: mockInput.phoneNumber,
+        message: expect.stringContaining("Chinja Malasha, Chinya Umoyo!"),
+      });
+      expect(sendSMS).toHaveBeenCalledWith({
+        to: mockInput.phoneNumber,
+        message: expect.stringContaining("Interested in getting a stove"),
+      });
+    });
+
+    it("should send SMS for option 4 (Can a stove be fixed?)", async () => {
+      actor.send({ type: "INPUT", input: "4" });
+
+      await waitFor(actor, state => state.matches("smsSent"), {
+        timeout: 5000,
+      });
+
+      const snapshot = actor.getSnapshot();
+      expect(snapshot.value).toBe("smsSent");
+      expect(sendSMS).toHaveBeenCalledWith({
+        to: mockInput.phoneNumber,
+        message: expect.stringContaining("your stove can be fixed"),
+      });
+    });
+
+    it("should send correct SMS template for each option", async () => {
+      const options = [1, 2, 3, 4, 5, 6, 7];
+
+      for (const option of options) {
+        // Reset actor for each test
+        actor = createActor(knowMoreMachine, { input: mockInput });
+        actor.start();
+        vi.clearAllMocks();
+
+        actor.send({ type: "INPUT", input: option.toString() });
+
+        await waitFor(actor, state => state.matches("smsSent"), {
+          timeout: 5000,
+        });
+
+        expect(sendSMS).toHaveBeenCalledWith({
+          to: mockInput.phoneNumber,
+          message: expect.stringContaining("Chinja Malasha, Chinya Umoyo!"),
+        });
+      }
+    });
+
+    it("should handle SMS send failure gracefully", async () => {
+      // Mock SMS failure
+      vi.mocked(sendSMS).mockResolvedValueOnce({
+        success: false,
+        error: "Network error",
+      });
+
+      actor.send({ type: "INPUT", input: "1" });
+
+      await waitFor(actor, state => state.matches("smsError"), {
+        timeout: 5000,
+      });
+
+      const snapshot = actor.getSnapshot();
+      expect(snapshot.value).toBe("smsError");
+      expect(snapshot.context.error).toBe("SMS_SEND_FAILED");
+      expect(snapshot.context.message).toContain("Failed to send SMS");
+    });
+
+    it("should transition to smsSent state on successful SMS", async () => {
+      actor.send({ type: "INPUT", input: "2" });
+
+      await waitFor(actor, state => state.matches("smsSent"), {
+        timeout: 5000,
+      });
+
+      const snapshot = actor.getSnapshot();
+      expect(snapshot.value).toBe("smsSent");
+      expect(snapshot.context.message).toContain("SMS sent successfully");
     });
   });
 
-  describe("Benefits State", () => {
-    beforeEach(() => {
+  describe("SMS Sent State", () => {
+    it("should display success message", async () => {
       actor.send({ type: "INPUT", input: "1" });
-    });
 
-    it("should display benefits information", () => {
+      await waitFor(actor, state => state.matches("smsSent"), {
+        timeout: 5000,
+      });
+
       const snapshot = actor.getSnapshot();
-      expect(snapshot.context.message).toContain("Thank you for your interest");
+      expect(snapshot.context.message).toContain("SMS sent successfully");
+      expect(snapshot.context.message).toContain(
+        "Check your phone for details"
+      );
     });
 
-    it("should return to serviceOverview on back input", () => {
-      actor.send({ type: "INPUT", input: "0" });
-      const snapshot = actor.getSnapshot();
-      expect(snapshot.value).toBe("infoMenu");
-    });
+    it("should return to main menu on input '1'", async () => {
+      actor.send({ type: "INPUT", input: "1" });
 
-    it("should exit on exit input", () => {
-      actor.send({ type: "INPUT", input: "*" });
+      await waitFor(actor, state => state.matches("smsSent"), {
+        timeout: 5000,
+      });
+
+      actor.send({ type: "INPUT", input: "1" });
       const snapshot = actor.getSnapshot();
       expect(snapshot.value).toBe("routeToMain");
     });
-  });
 
-  describe("How It Works State", () => {
-    beforeEach(() => {
-      actor.send({ type: "INPUT", input: "2" });
-    });
+    it("should return to info menu on back input", async () => {
+      actor.send({ type: "INPUT", input: "1" });
 
-    it("should display how it works information", () => {
-      const snapshot = actor.getSnapshot();
-      expect(snapshot.context.message).toContain("Thank you for your interest");
-    });
+      await waitFor(actor, state => state.matches("smsSent"), {
+        timeout: 5000,
+      });
 
-    it("should return to serviceOverview on back input", () => {
-      actor.send({ type: "INPUT", input: "0" });
-      const snapshot = actor.getSnapshot();
-      expect(snapshot.value).toBe("infoMenu");
-    });
-  });
-
-  describe("Get Started State", () => {
-    beforeEach(() => {
-      actor.send({ type: "INPUT", input: "3" });
-    });
-
-    it("should display get started information", () => {
-      const snapshot = actor.getSnapshot();
-      expect(snapshot.context.message).toContain("Thank you for your interest");
-    });
-
-    it("should return to serviceOverview on back input", () => {
       actor.send({ type: "INPUT", input: "0" });
       const snapshot = actor.getSnapshot();
       expect(snapshot.value).toBe("infoMenu");
@@ -154,58 +251,39 @@ describe("knowMoreMachine", () => {
   });
 
   describe("Navigation Patterns", () => {
-    it("should handle navigation commands consistently across all states", () => {
-      const states = [
-        "serviceOverview",
-        "benefits",
-        "howItWorks",
-        "getStarted",
-      ];
-
-      states.forEach((stateName, index) => {
-        // Reset actor
-        actor = createActor(knowMoreMachine, { input: mockInput });
-        actor.start();
-
-        // Navigate to specific state
-        if (index > 0) {
-          actor.send({ type: "INPUT", input: index.toString() });
-        }
-
-        // Test back navigation
-        actor.send({ type: "INPUT", input: "0" });
-        const backSnapshot = actor.getSnapshot();
-
-        if (stateName === "serviceOverview") {
-          expect(backSnapshot.value).toBe("routeToMain");
-        } else {
-          expect(backSnapshot.value).toBe("infoMenu");
-        }
-      });
+    it("should handle exit commands from info menu", () => {
+      actor.send({ type: "INPUT", input: "*" });
+      const snapshot = actor.getSnapshot();
+      expect(snapshot.value).toBe("routeToMain");
     });
 
-    it("should handle exit commands from any state", () => {
-      const navigationInputs = ["1", "2", "3"];
-
-      navigationInputs.forEach(input => {
-        // Reset actor
-        actor = createActor(knowMoreMachine, { input: mockInput });
-        actor.start();
-
-        // Navigate to state
-        actor.send({ type: "INPUT", input });
-
-        // Test exit
-        actor.send({ type: "INPUT", input: "*" });
-        const snapshot = actor.getSnapshot();
-        expect(snapshot.value).toBe("routeToMain");
+    it("should handle exit commands from smsError state", async () => {
+      // Mock SMS failure
+      vi.mocked(sendSMS).mockResolvedValueOnce({
+        success: false,
+        error: "Network error",
       });
+
+      actor.send({ type: "INPUT", input: "1" });
+
+      await waitFor(actor, state => state.matches("smsError"), {
+        timeout: 5000,
+      });
+
+      actor.send({ type: "INPUT", input: "*" });
+      const snapshot = actor.getSnapshot();
+      expect(snapshot.value).toBe("routeToMain");
     });
   });
 
   describe("Context Updates", () => {
-    it("should maintain session information throughout navigation", () => {
+    it("should maintain session information throughout navigation", async () => {
       actor.send({ type: "INPUT", input: "1" });
+
+      await waitFor(actor, state => state.matches("smsSent"), {
+        timeout: 5000,
+      });
+
       actor.send({ type: "INPUT", input: "0" });
       actor.send({ type: "INPUT", input: "2" });
 
@@ -219,10 +297,16 @@ describe("knowMoreMachine", () => {
       const initialMessage = actor.getSnapshot().context.message;
 
       actor.send({ type: "INPUT", input: "1" });
-      const smsMessage = actor.getSnapshot().context.message;
+      const sendingMessage = actor.getSnapshot().context.message;
 
-      expect(smsMessage).not.toBe(initialMessage);
-      expect(smsMessage).toContain("Thank you for your interest");
+      expect(sendingMessage).not.toBe(initialMessage);
+      expect(sendingMessage).toContain("Sending information SMS");
+    });
+
+    it("should track selected option in context", () => {
+      actor.send({ type: "INPUT", input: "5" });
+      const snapshot = actor.getSnapshot();
+      expect(snapshot.context.selectedOption).toBe(5);
     });
   });
 
