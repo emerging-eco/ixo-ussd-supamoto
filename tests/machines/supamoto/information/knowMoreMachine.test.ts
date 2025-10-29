@@ -90,26 +90,34 @@ describe("knowMoreMachine", () => {
   });
 
   describe("SMS Sending", () => {
-    it("should show option-specific confirmation for option 1", () => {
+    it("should show option-specific confirmation for option 1 with key details", () => {
       actor.send({ type: "INPUT", input: "1" });
 
       const snapshot = actor.getSnapshot();
       expect(snapshot.value).toBe("sendingSMS");
       expect(snapshot.context.message).toContain("Interested in a stove?");
-      expect(snapshot.context.message).toContain(
-        "We have sent you an SMS with further details"
-      );
+      expect(snapshot.context.message).toContain("Call 2233");
+      expect(snapshot.context.message).toContain("apply via SMS link");
     });
 
-    it("should show option-specific confirmation for option 4", () => {
+    it("should show option-specific confirmation for option 2 with pricing", () => {
+      actor.send({ type: "INPUT", input: "2" });
+
+      const snapshot = actor.getSnapshot();
+      expect(snapshot.value).toBe("sendingSMS");
+      expect(snapshot.context.message).toContain("Pellet prices");
+      expect(snapshot.context.message).toContain("5kg K25");
+      expect(snapshot.context.message).toContain("50kg K205");
+    });
+
+    it("should show option-specific confirmation for option 4 with repair info", () => {
       actor.send({ type: "INPUT", input: "4" });
 
       const snapshot = actor.getSnapshot();
       expect(snapshot.value).toBe("sendingSMS");
-      expect(snapshot.context.message).toContain("Can a stove be fixed?");
-      expect(snapshot.context.message).toContain(
-        "We have sent you an SMS with further details"
-      );
+      expect(snapshot.context.message).toContain("Stove repairs?");
+      expect(snapshot.context.message).toContain("Replaceable parts");
+      expect(snapshot.context.message).toContain("Call 2233");
     });
 
     it("should send SMS for option 1 (Interested in stove)", async () => {
@@ -315,9 +323,8 @@ describe("knowMoreMachine", () => {
 
       expect(sendingMessage).not.toBe(initialMessage);
       expect(sendingMessage).toContain("Interested in a stove?");
-      expect(sendingMessage).toContain(
-        "We have sent you an SMS with further details"
-      );
+      expect(sendingMessage).toContain("Call 2233");
+      expect(sendingMessage).toContain("SMS sent with more info");
     });
 
     it("should track selected option in context", () => {

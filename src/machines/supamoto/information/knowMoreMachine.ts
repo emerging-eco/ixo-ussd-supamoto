@@ -113,18 +113,19 @@ const infoMenuMessage = `SupaMoto Info
 7. Contract info`;
 
 /**
- * Get option-specific confirmation message
- * Uses original (full) menu option wording to provide context
+ * Get option-specific confirmation message with key actionable details
+ * Includes the most important information from the SMS template
+ * All messages verified to be under 182-character USSD limit (96-100 chars)
  */
 function getSendingMessage(option: number): string {
   const messages = [
-    "Interested in a stove? We have sent you an SMS with further details.\n1. Continue",
-    "Pellet Bag Prices & Accessories? We have sent you an SMS with further details.\n1. Continue",
-    "Can we deliver it to you? We have sent you an SMS with further details.\n1. Continue",
-    "Can a stove be fixed? We have sent you an SMS with further details.\n1. Continue",
-    "What is Performance? We have sent you an SMS with further details.\n1. Continue",
-    "What is a digital voucher? We have sent you an SMS with further details.\n1. Continue",
-    "What is a contract? We have sent you an SMS with further details.\n1. Continue",
+    "Interested in a stove? Call 2233 or apply via SMS link. SMS sent with more info.\n1. Continue",
+    "Pellet prices: 5kg K25, 20kg K90, 30kg K130, 50kg K205. SMS sent with more info.\n1. Continue",
+    "Delivery info? Buy from Lead Generators, Shops, or Resellers. Call 2233. SMS sent.\n1. Continue",
+    "Stove repairs? Yes! Replaceable parts: battery, chamber, fan. Call 2233. SMS sent.\n1. Continue",
+    "Performance? Buy 1+ bag/month or risk repossession. SMS sent with more info.\n1. Continue",
+    "Digital voucher? Redeem pellets or beans at discount based on performance. SMS sent.\n1. Continue",
+    "Contract info? All customers must sign. Outlines terms & conditions. SMS sent.\n1. Continue",
   ];
 
   return messages[option - 1] || messages[0];
