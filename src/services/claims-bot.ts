@@ -107,16 +107,16 @@ export function mapYesNoToEnum(
 
 /**
  * Map nutritional benefits array to enum
- * Note: The SDK type definition shows NutritionalBenefitsDetails as a single enum,
+ * Note: The SDK type definition shows NutritionalBenefitsDetail as a single enum,
  * but according to requirements it should be an array. We'll map the first value
  * for now and log a warning if there are multiple values.
  */
 export function mapNutritionalBenefitsToEnum(
   benefits: string[]
-): ClaimsBotTypes.NutritionalBenefitsDetails {
+): ClaimsBotTypes.NutritionalBenefitsDetail {
   if (benefits.length === 0) {
     logger.warn("No nutritional benefits provided, using default");
-    return ClaimsBotTypes.NutritionalBenefitsDetails.ironStatus;
+    return ClaimsBotTypes.NutritionalBenefitsDetail.ironStatus;
   }
 
   if (benefits.length > 1) {
@@ -130,21 +130,21 @@ export function mapNutritionalBenefitsToEnum(
 
   switch (firstBenefit) {
     case "iron_status":
-      return ClaimsBotTypes.NutritionalBenefitsDetails.ironStatus;
+      return ClaimsBotTypes.NutritionalBenefitsDetail.ironStatus;
     case "cognitive_support":
-      return ClaimsBotTypes.NutritionalBenefitsDetails.cognitiveSupport;
+      return ClaimsBotTypes.NutritionalBenefitsDetail.cognitiveSupport;
     case "work_capacity":
-      return ClaimsBotTypes.NutritionalBenefitsDetails.workCapacity;
+      return ClaimsBotTypes.NutritionalBenefitsDetail.workCapacity;
     case "high_iron_zinc":
-      return ClaimsBotTypes.NutritionalBenefitsDetails.highIronZinc;
+      return ClaimsBotTypes.NutritionalBenefitsDetail.highIronZinc;
     case "protein_fiber":
-      return ClaimsBotTypes.NutritionalBenefitsDetails.protein_fiber;
+      return ClaimsBotTypes.NutritionalBenefitsDetail.protein_fiber;
     default:
       logger.warn(
         { benefit: firstBenefit },
         "Unknown nutritional benefit, defaulting to iron_status"
       );
-      return ClaimsBotTypes.NutritionalBenefitsDetails.ironStatus;
+      return ClaimsBotTypes.NutritionalBenefitsDetail.ironStatus;
   }
 }
 
@@ -152,6 +152,7 @@ export function mapNutritionalBenefitsToEnum(
  * Submit 1,000 Day Household Claim
  */
 export async function submit1000DayHouseholdClaim(params: {
+  leadGeneratorId: string;
   customerId: string;
   beneficiaryCategory: string[];
   childMaxAge?: number;
@@ -166,6 +167,7 @@ export async function submit1000DayHouseholdClaim(params: {
 
   logger.info(
     {
+      leadGeneratorId: params.leadGeneratorId.slice(-4),
       customerId: params.customerId.slice(-4),
       beneficiaryCategory: params.beneficiaryCategory,
       childMaxAge: params.childMaxAge,
@@ -175,10 +177,11 @@ export async function submit1000DayHouseholdClaim(params: {
 
   try {
     const response = await client.claims.v1.submit1000DayHouseholdClaim({
+      leadGeneratorId: params.leadGeneratorId,
       customerId: params.customerId,
-      beneficiaryCategory: mapBeneficiaryCategoryToEnum(
-        params.beneficiaryCategory
-      ),
+      beneficiaryCategory: [
+        mapBeneficiaryCategoryToEnum(params.beneficiaryCategory),
+      ],
       childMaxAge: params.childMaxAge || 0,
       beanIntakeFrequency: mapBeanIntakeFrequencyToEnum(
         params.beanIntakeFrequency
@@ -190,9 +193,9 @@ export async function submit1000DayHouseholdClaim(params: {
       knowsNutritionalBenefits: mapYesNoToEnum(
         params.knowsNutritionalBenefits
       ) as ClaimsBotTypes.KnowsNutritionalBenefits,
-      nutritionalBenefitsDetails: mapNutritionalBenefitsToEnum(
-        params.nutritionalBenefitDetails
-      ),
+      nutritionalBenefitsDetails: [
+        mapNutritionalBenefitsToEnum(params.nutritionalBenefitDetails),
+      ],
       antenatalCardVerified: params.antenatalCardVerified,
     });
 

@@ -344,6 +344,7 @@ const submitClaimService = fromPromise(
     try {
       // Submit claim to claims bot
       const response = await submit1000DayHouseholdClaim({
+        leadGeneratorId: input.lgCustomerId,
         customerId: input.customerId,
         beneficiaryCategory: input.beneficiaryCategory,
         childMaxAge: input.childAge,
