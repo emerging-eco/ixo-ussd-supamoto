@@ -192,6 +192,21 @@ export interface Database {
     survey_form_updated_at: Date | null; // Timestamp of last survey update
     created_at: Date;
   };
+  failed_claims_queue: {
+    id?: number;
+    claim_type: "lead_creation" | "1000_day_household";
+    customer_id: string;
+    claim_data: any; // JSONB - full claim payload for retry
+    error_message: string | null;
+    http_status_code: number | null;
+    retry_count: number;
+    max_retries: number;
+    next_retry_at: Date | null;
+    last_attempted_at: Date | null;
+    created_at: Date;
+    resolved_at: Date | null;
+    status: "pending" | "retrying" | "failed" | "resolved";
+  };
   audit_log: {
     id?: number;
     event_type: string;

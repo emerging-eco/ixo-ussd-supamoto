@@ -124,6 +124,7 @@ export const accountCreationMachine = setup({
         );
 
         // Step 3: Fire-and-forget IXO account creation (non-blocking)
+        // This is a safety net for background process - errors should not crash the server
         createIxoAccountBackground({
           customerId: customerRecord.customerId,
           customerRecordId: customerRecord.id,
@@ -132,12 +133,22 @@ export const accountCreationMachine = setup({
           nationalId: input.nationalId || undefined,
           pin: input.pin,
         }).catch(error => {
-          // Error is already logged in the background service
-          /* eslint-disable no-console */
-          console.error(
-            `Background IXO creation failed for customer ${customerRecord.customerId}:`,
-            error.message
-          );
+          // Robust error handling - ensure this catch handler never throws
+          try {
+            // Error is already logged in the background service
+            /* eslint-disable no-console */
+            console.error(
+              `Background IXO creation failed for customer ${customerRecord.customerId}:`,
+              error instanceof Error ? error.message : String(error),
+              error instanceof Error && error.stack ? error.stack : ""
+            );
+          } catch (loggingError) {
+            // Final safety net - even logging errors shouldn't crash
+            console.error(
+              "Error while logging background IXO creation failure:",
+              loggingError
+            );
+          }
         });
 
         return {

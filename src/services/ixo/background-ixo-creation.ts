@@ -50,149 +50,253 @@ export interface IxoCreationResult {
 
 /**
  * Creates IXO account in background with comprehensive error handling
+ * Wrapped in Promise.resolve() to catch even thenable errors
  */
 export async function createIxoAccountBackground(
   params: BackgroundIxoParams
 ): Promise<IxoCreationResult> {
-  const startTime = Date.now();
-
-  logger.info(
-    {
-      customerId: params.customerId,
-      phoneNumber: params.phoneNumber,
-      fullName: params.fullName,
-    },
-    "Starting background IXO account creation"
-  );
-
-  try {
-    // Step 1: Create IXO account with timeout
-    const ixoResult = await Promise.race([
-      createIxoAccount({
-        userId: params.customerId,
-        pin: params.pin,
-        lastMenuLocation: "account_creation",
-        lastCompletedAction: "account_creation",
-      }),
-      new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error("IXO creation timeout after 60 seconds")),
-          60000
-        )
-      ),
-    ]);
-
-    logger.info(
-      {
-        customerId: params.customerId,
-        address: ixoResult.address,
-        did: ixoResult.did,
-      },
-      "IXO account created successfully"
-    );
-
-    // Step 2: Save to database
-    const dbResult = await saveIxoAccountData(ixoResult, params);
-
-    // Step 3: Submit Lead Creation Claim via SDK (non-blocking failure)
-    try {
-      const claimsBot = getClaimsBotClient();
-
-      // Split full name into given name and family name
-      const nameParts = params.fullName.trim().split(/\s+/);
-      const givenName = nameParts[0] || "";
-      const familyName = nameParts.slice(1).join(" ") || "";
+  // Wrap entire function in Promise.resolve().then().catch() to ensure
+  // even thenable errors are caught and don't escape to global handler
+  return Promise.resolve()
+    .then(async () => {
+      const startTime = Date.now();
 
       logger.info(
         {
           customerId: params.customerId,
-          leadGenerator: "USSD Signup",
+          phoneNumber: params.phoneNumber,
+          fullName: params.fullName,
         },
-        "Submitting lead creation claim via SDK"
+        "Starting background IXO account creation"
       );
 
-      const response = await claimsBot.claims.v1.submitLeadCreationClaim({
-        customerId: params.customerId,
-        leadGenerator: ClaimsBotTypes.LeadGenerator.ussdSignup,
-        givenName: givenName || undefined, // Only include if not empty
-        familyName: familyName || undefined, // Only include if not empty
-        telephone: params.phoneNumber,
-        nationalId: params.nationalId || undefined,
-        // leadGeneratorName: undefined,  // Not applicable for USSD signup
-      });
+      try {
+        // Step 1: Create IXO account with timeout
+        const ixoResult = await Promise.race([
+          createIxoAccount({
+            userId: params.customerId,
+            pin: params.pin,
+            lastMenuLocation: "account_creation",
+            lastCompletedAction: "account_creation",
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error("IXO creation timeout after 60 seconds")),
+              60000
+            )
+          ),
+        ]);
 
-      logger.info(
-        {
-          customerId: params.customerId,
-          claimId: response.data.claimId,
-        },
-        "Lead creation claim submitted successfully via SDK"
-      );
-    } catch (claimError) {
-      const errorDetails: any = {
-        error:
-          claimError instanceof Error ? claimError.message : String(claimError),
-        customerId: params.customerId,
-      };
+        logger.info(
+          {
+            customerId: params.customerId,
+            address: ixoResult.address,
+            did: ixoResult.did,
+          },
+          "IXO account created successfully"
+        );
 
-      // Add HTTP-specific error details if available
-      if ((claimError as any)?.response) {
-        errorDetails.statusCode = (claimError as any).response.status;
-        errorDetails.responseData = (claimError as any).response.data;
+        // Step 2: Save to database
+        const dbResult = await saveIxoAccountData(ixoResult, params);
+
+        // Step 3: Submit Lead Creation Claim via SDK (non-blocking failure)
+        // Split full name into given name and family name (outside try block for catch access)
+        const nameParts = params.fullName.trim().split(/\s+/);
+        const givenName = nameParts[0] || "";
+        const familyName = nameParts.slice(1).join(" ") || "";
+
+        try {
+          const claimsBot = getClaimsBotClient();
+
+          logger.info(
+            {
+              customerId: params.customerId,
+              leadGenerator: "USSD Signup",
+            },
+            "Submitting lead creation claim via SDK"
+          );
+
+          const response = await claimsBot.claims.v1.submitLeadCreationClaim({
+            customerId: params.customerId,
+            leadGenerator: ClaimsBotTypes.LeadGenerator.ussdSignup,
+            givenName: givenName || undefined, // Only include if not empty
+            familyName: familyName || undefined, // Only include if not empty
+            telephone: params.phoneNumber,
+            nationalId: params.nationalId || undefined,
+            // leadGeneratorName: undefined,  // Not applicable for USSD signup
+          });
+
+          logger.info(
+            {
+              customerId: params.customerId,
+              claimId: response.data.claimId,
+            },
+            "Lead creation claim submitted successfully via SDK"
+          );
+        } catch (claimError) {
+          // Comprehensive error handling to prevent server crash
+          try {
+            // Convert error to plain object immediately to prevent promise escape
+            const errorMessage =
+              claimError instanceof Error
+                ? claimError.message
+                : typeof claimError === "object" && claimError !== null
+                  ? JSON.stringify(claimError)
+                  : String(claimError);
+
+            // Extract HTTP status code if available
+            const httpStatusCode =
+              (claimError as any)?.response?.status ||
+              (claimError as any)?.statusCode ||
+              undefined;
+
+            const errorDetails: any = {
+              error: errorMessage,
+              customerId: params.customerId,
+              httpStatusCode,
+            };
+
+            // Add HTTP-specific error details if available
+            if ((claimError as any)?.response) {
+              errorDetails.responseData = (claimError as any).response.data;
+            }
+
+            logger.warn(
+              errorDetails,
+              "Lead creation claim submission failed (non-critical)"
+            );
+
+            // Prepare claim data for retry queue
+            const claimData = {
+              customerId: params.customerId,
+              leadGenerator: ClaimsBotTypes.LeadGenerator.ussdSignup,
+              givenName: givenName || undefined,
+              familyName: familyName || undefined,
+              telephone: params.phoneNumber,
+              nationalId: params.nationalId || undefined,
+            };
+
+            // Log to file for monitoring
+            await logClaimsSubmissionFailure({
+              customerId: params.customerId,
+              claimType: "lead_creation",
+              error: errorMessage,
+              httpStatusCode,
+              retryCount: 0,
+            });
+
+            // Queue for retry
+            const { dataService } = await import("../database-storage.js");
+            await dataService.insertFailedClaim({
+              claimType: "lead_creation",
+              customerId: params.customerId,
+              claimData,
+              errorMessage,
+              httpStatusCode,
+            });
+
+            // Create audit log entry
+            await dataService.createAuditLog({
+              eventType: "CLAIMS_SUBMISSION_FAILED",
+              customerId: params.customerId,
+              details: {
+                claimType: "lead_creation",
+                error: errorMessage,
+                httpStatusCode,
+                queuedForRetry: true,
+              },
+            });
+
+            logger.info(
+              {
+                customerId: params.customerId,
+                claimType: "lead_creation",
+              },
+              "Failed claim logged and queued for retry"
+            );
+          } catch (handlingError) {
+            // Final safety net - log but don't throw
+            logger.error(
+              {
+                error:
+                  handlingError instanceof Error
+                    ? handlingError.message
+                    : String(handlingError),
+                customerId: params.customerId,
+              },
+              "Error while handling claims submission failure (non-critical)"
+            );
+          }
+        }
+        const duration = Date.now() - startTime;
+
+        logger.info(
+          {
+            customerId: params.customerId,
+            ixoProfileId: dbResult.ixoProfileId,
+            ixoAccountId: dbResult.ixoAccountId,
+            matrixVaultId: dbResult.matrixVaultId,
+            duration,
+          },
+          "Background IXO account creation completed successfully"
+        );
+
+        return {
+          success: true,
+          ixoProfileId: dbResult.ixoProfileId,
+          ixoAccountId: dbResult.ixoAccountId,
+          matrixVaultId: dbResult.matrixVaultId,
+          duration,
+        };
+      } catch (error) {
+        const duration = Date.now() - startTime;
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+
+        logger.error(
+          {
+            customerId: params.customerId,
+            phoneNumber: params.phoneNumber,
+            error: errorMessage,
+            duration,
+          },
+          "Background IXO account creation failed"
+        );
+
+        // Log failure to monitoring file
+        await logIxoCreationFailure({
+          ...params,
+          error: errorMessage,
+          duration,
+        });
+
+        return {
+          success: false,
+          error: errorMessage,
+          duration,
+        };
       }
+    })
+    .catch(error => {
+      // Final safety net for any errors that escape the inner try-catch
+      // This prevents unhandled promise rejections from crashing the server
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
 
-      logger.warn(
-        errorDetails,
-        "Lead creation claim submission failed (non-critical)"
+      logger.error(
+        {
+          customerId: params.customerId,
+          error: errorMessage,
+        },
+        "Unhandled error in background IXO creation (final safety net)"
       );
-    }
-    const duration = Date.now() - startTime;
 
-    logger.info(
-      {
-        customerId: params.customerId,
-        ixoProfileId: dbResult.ixoProfileId,
-        ixoAccountId: dbResult.ixoAccountId,
-        matrixVaultId: dbResult.matrixVaultId,
-        duration,
-      },
-      "Background IXO account creation completed successfully"
-    );
-
-    return {
-      success: true,
-      ixoProfileId: dbResult.ixoProfileId,
-      ixoAccountId: dbResult.ixoAccountId,
-      matrixVaultId: dbResult.matrixVaultId,
-      duration,
-    };
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    const errorMessage = error instanceof Error ? error.message : String(error);
-
-    logger.error(
-      {
-        customerId: params.customerId,
-        phoneNumber: params.phoneNumber,
+      return {
+        success: false,
         error: errorMessage,
-        duration,
-      },
-      "Background IXO account creation failed"
-    );
-
-    // Log failure to monitoring file
-    await logIxoCreationFailure({
-      ...params,
-      error: errorMessage,
-      duration,
+        duration: Date.now() - Date.now(), // Approximate
+      };
     });
-
-    return {
-      success: false,
-      error: errorMessage,
-      duration,
-    };
-  }
 }
 
 /**
@@ -353,6 +457,51 @@ async function logIxoCreationFailure(
         customerId: params.customerId,
       },
       "Failed to log IXO creation failure"
+    );
+  }
+}
+
+/**
+ * Logs claims submission failures to monitoring file
+ */
+async function logClaimsSubmissionFailure(params: {
+  customerId: string;
+  claimType: "lead_creation" | "1000_day_household";
+  error: string;
+  httpStatusCode?: number;
+  retryCount: number;
+}): Promise<void> {
+  try {
+    const logDir = "./logs";
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+
+    const logFile = path.join(logDir, "claims-submission-failures.log");
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      customerId: params.customerId,
+      claimType: params.claimType,
+      error: params.error,
+      httpStatusCode: params.httpStatusCode,
+      retryCount: params.retryCount,
+    };
+
+    const logLine = JSON.stringify(logEntry) + "\n";
+
+    fs.appendFileSync(logFile, logLine);
+
+    logger.info(
+      { logFile, customerId: params.customerId, claimType: params.claimType },
+      "Claims submission failure logged to monitoring file"
+    );
+  } catch (logError) {
+    logger.error(
+      {
+        error: logError instanceof Error ? logError.message : String(logError),
+        customerId: params.customerId,
+      },
+      "Failed to log claims submission failure"
     );
   }
 }

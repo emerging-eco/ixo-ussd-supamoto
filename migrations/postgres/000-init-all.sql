@@ -62,6 +62,7 @@ DROP INDEX IF EXISTS idx_phones_phone_number;
 
 -- Drop tables in reverse dependency order
 DROP TABLE IF EXISTS audit_log;
+DROP TABLE IF EXISTS failed_claims_queue;
 DROP TABLE IF EXISTS household_claims;
 DROP TABLE IF EXISTS household_survey_responses;  -- Legacy table from before JSON refactor
 DROP TABLE IF EXISTS bean_delivery_confirmations;
@@ -239,10 +240,31 @@ CREATE TABLE household_claims (
 );
 
 -- ============================================================================
--- SECTION 5: AUDIT & LOGGING
+-- SECTION 5: FAILED CLAIMS RETRY QUEUE
 -- ============================================================================
 
--- 5.1 Audit log table
+-- 5.1 Failed Claims Queue (for automatic retry of failed claims submissions)
+CREATE TABLE failed_claims_queue (
+  id SERIAL PRIMARY KEY,
+  claim_type VARCHAR(50) NOT NULL CHECK (claim_type IN ('lead_creation', '1000_day_household')),
+  customer_id VARCHAR(10) NOT NULL,
+  claim_data JSONB NOT NULL,
+  error_message TEXT,
+  http_status_code INTEGER,
+  retry_count INTEGER DEFAULT 0,
+  max_retries INTEGER DEFAULT 3,
+  next_retry_at TIMESTAMP,
+  last_attempted_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  resolved_at TIMESTAMP NULL,
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'retrying', 'failed', 'resolved'))
+);
+
+-- ============================================================================
+-- SECTION 6: AUDIT & LOGGING
+-- ============================================================================
+
+-- 6.1 Audit log table
 CREATE TABLE audit_log (
   id SERIAL PRIMARY KEY,
   event_type VARCHAR(50) NOT NULL,
@@ -253,7 +275,7 @@ CREATE TABLE audit_log (
 );
 
 -- ============================================================================
--- SECTION 6: INDEXES FOR PERFORMANCE
+-- SECTION 7: INDEXES FOR PERFORMANCE
 -- ============================================================================
 
 -- Core table indexes
@@ -269,6 +291,11 @@ CREATE INDEX idx_ixo_profiles_did ON ixo_profiles(did);
 CREATE INDEX idx_ixo_accounts_profile_id ON ixo_accounts(ixo_profile_id);
 CREATE INDEX idx_ixo_accounts_address ON ixo_accounts(address);
 CREATE INDEX idx_matrix_vaults_profile_id ON matrix_vaults(ixo_profile_id);
+
+-- Failed claims queue indexes
+CREATE INDEX idx_failed_claims_status ON failed_claims_queue(status);
+CREATE INDEX idx_failed_claims_next_retry ON failed_claims_queue(next_retry_at) WHERE status = 'pending';
+CREATE INDEX idx_failed_claims_customer ON failed_claims_queue(customer_id);
 
 -- Activation & eligibility indexes
 -- Note: eligibility_verifications indexes not included - table not in schema
@@ -308,7 +335,7 @@ CREATE INDEX idx_audit_log_created ON audit_log(created_at);
 CREATE INDEX idx_audit_log_pin_reset ON audit_log(event_type) WHERE event_type = 'PIN_RESET';
 
 -- ============================================================================
--- SECTION 7: TABLE & COLUMN COMMENTS
+-- SECTION 8: TABLE & COLUMN COMMENTS
 -- ============================================================================
 
 COMMENT ON TABLE customers IS 'Customer records with role-based access control';
@@ -330,7 +357,13 @@ COMMENT ON COLUMN household_claims.claims_bot_response IS 'Full JSON response fr
 COMMENT ON COLUMN household_claims.survey_form IS 'Encrypted JSONB field storing complete survey form definition and responses. Structure: {formDefinition: {...}, answers: {...}, metadata: {startedAt, lastUpdatedAt, completedAt, allFieldsCompleted, version}}';
 COMMENT ON COLUMN household_claims.survey_form_updated_at IS 'Timestamp of last survey form update. Used for tracking survey progress and session recovery.';
 
-COMMENT ON TABLE audit_log IS 'Audit trail for security events. Event types include: PIN_RESET, CUSTOMER_ACTIVATED, SMS_FAILED, BEAN_RECEIPT_DENIED, ACCOUNT_LOCKED, etc.';
+COMMENT ON TABLE failed_claims_queue IS 'Retry queue for failed claims bot API submissions. Stores failed lead creation and 1000-day household claims for automatic retry with exponential backoff.';
+COMMENT ON COLUMN failed_claims_queue.claim_type IS 'Type of claim: lead_creation or 1000_day_household';
+COMMENT ON COLUMN failed_claims_queue.claim_data IS 'Full claim payload as JSONB for retry submission';
+COMMENT ON COLUMN failed_claims_queue.status IS 'Status: pending (awaiting retry), retrying (currently being retried), failed (max retries exceeded), resolved (successfully submitted)';
+COMMENT ON COLUMN failed_claims_queue.next_retry_at IS 'Timestamp for next retry attempt. Uses exponential backoff: 5min, 30min, 2hr';
+
+COMMENT ON TABLE audit_log IS 'Audit trail for security events. Event types include: PIN_RESET, CUSTOMER_ACTIVATED, SMS_FAILED, BEAN_RECEIPT_DENIED, ACCOUNT_LOCKED, CLAIMS_SUBMISSION_FAILED, etc.';
 
 -- ============================================================================
 -- INITIALIZATION COMPLETE

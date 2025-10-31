@@ -244,6 +244,11 @@ export const config = {
     URL: process.env.CLAIMS_BOT_URL || "",
     ACCESS_TOKEN: process.env.CLAIMS_BOT_ACCESS_TOKEN || "",
   },
+  CLAIMS_RETRY: {
+    MAX_RETRIES: parseInt(process.env.CLAIMS_MAX_RETRIES || "3", 10),
+    RETRY_DELAYS_MINUTES: [5, 30, 120], // 5min, 30min, 2hr
+    BATCH_SIZE: parseInt(process.env.CLAIMS_RETRY_BATCH_SIZE || "10", 10),
+  },
 } as const;
 
 // Type for the config object

@@ -1616,6 +1616,188 @@ class DataService {
       throw error;
     }
   }
+
+  /**
+   * Insert a failed claim into the retry queue
+   */
+  async insertFailedClaim(params: {
+    claimType: "lead_creation" | "1000_day_household";
+    customerId: string;
+    claimData: any;
+    errorMessage: string;
+    httpStatusCode?: number;
+  }): Promise<number> {
+    const db = databaseManager.getKysely();
+    const { config } = await import("../config.js");
+
+    // Calculate next retry time (5 minutes from now for first attempt)
+    const nextRetryAt = new Date(
+      Date.now() + config.CLAIMS_RETRY.RETRY_DELAYS_MINUTES[0] * 60 * 1000
+    );
+
+    logger.info(
+      {
+        claimType: params.claimType,
+        customerId: params.customerId.slice(-4),
+        httpStatusCode: params.httpStatusCode,
+        nextRetryAt,
+      },
+      "Inserting failed claim into retry queue"
+    );
+
+    try {
+      const result = await db
+        .insertInto("failed_claims_queue")
+        .values({
+          claim_type: params.claimType,
+          customer_id: params.customerId,
+          claim_data: JSON.stringify(params.claimData),
+          error_message: params.errorMessage,
+          http_status_code: params.httpStatusCode || null,
+          retry_count: 0,
+          max_retries: config.CLAIMS_RETRY.MAX_RETRIES,
+          next_retry_at: nextRetryAt,
+          last_attempted_at: new Date(),
+          created_at: new Date(),
+          status: "pending",
+        })
+        .returning("id")
+        .executeTakeFirstOrThrow();
+
+      logger.info(
+        {
+          queueId: result.id,
+          customerId: params.customerId.slice(-4),
+        },
+        "Failed claim queued for retry"
+      );
+
+      return result.id!;
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: params.customerId.slice(-4),
+        },
+        "Failed to insert failed claim into queue"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Get failed claims ready for retry
+   */
+  async getFailedClaimsForRetry(limit: number = 10): Promise<any[]> {
+    const db = databaseManager.getKysely();
+
+    try {
+      const results = await db
+        .selectFrom("failed_claims_queue")
+        .selectAll()
+        .where("status", "=", "pending")
+        .where("next_retry_at", "<=", new Date())
+        .orderBy("created_at", "asc")
+        .limit(limit)
+        .execute();
+
+      return results;
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+        },
+        "Failed to fetch claims for retry"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Update failed claim retry attempt
+   */
+  async updateFailedClaimRetry(
+    queueId: number,
+    retryCount: number,
+    errorMessage?: string
+  ): Promise<void> {
+    const db = databaseManager.getKysely();
+    const { config } = await import("../config.js");
+
+    // Calculate next retry time with exponential backoff
+    const delayIndex = Math.min(
+      retryCount,
+      config.CLAIMS_RETRY.RETRY_DELAYS_MINUTES.length - 1
+    );
+    const delayMinutes = config.CLAIMS_RETRY.RETRY_DELAYS_MINUTES[delayIndex];
+    const nextRetryAt = new Date(Date.now() + delayMinutes * 60 * 1000);
+
+    // Determine status based on retry count
+    const status =
+      retryCount >= config.CLAIMS_RETRY.MAX_RETRIES ? "failed" : "pending";
+
+    try {
+      await db
+        .updateTable("failed_claims_queue")
+        .set({
+          retry_count: retryCount,
+          last_attempted_at: new Date(),
+          next_retry_at: status === "failed" ? null : nextRetryAt,
+          status,
+          error_message: errorMessage || undefined,
+        })
+        .where("id", "=", queueId)
+        .execute();
+
+      logger.info(
+        {
+          queueId,
+          retryCount,
+          status,
+          nextRetryAt: status === "failed" ? null : nextRetryAt,
+        },
+        "Updated failed claim retry status"
+      );
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          queueId,
+        },
+        "Failed to update claim retry status"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Mark failed claim as resolved
+   */
+  async markFailedClaimResolved(queueId: number): Promise<void> {
+    const db = databaseManager.getKysely();
+
+    try {
+      await db
+        .updateTable("failed_claims_queue")
+        .set({
+          status: "resolved",
+          resolved_at: new Date(),
+        })
+        .where("id", "=", queueId)
+        .execute();
+
+      logger.info({ queueId }, "Marked failed claim as resolved");
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          queueId,
+        },
+        "Failed to mark claim as resolved"
+      );
+      throw error;
+    }
+  }
 }
 
 // Export singleton instance
