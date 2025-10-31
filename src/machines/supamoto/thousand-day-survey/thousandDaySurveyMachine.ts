@@ -444,6 +444,40 @@ export const thousandDaySurveyMachine = setup({
         shouldShowChildAgeQuestion(context.beneficiaryCategory)
       );
     },
+    // Session recovery guards - check if questions have been answered
+    hasBeneficiaryCategory: ({ context }) =>
+      context.beneficiaryCategory !== undefined &&
+      context.beneficiaryCategory !== null &&
+      (Array.isArray(context.beneficiaryCategory)
+        ? context.beneficiaryCategory.length > 0
+        : true),
+    hasChildAge: ({ context }) =>
+      context.childAge !== undefined && context.childAge !== null,
+    hasBeanIntakeFrequency: ({ context }) =>
+      context.beanIntakeFrequency !== undefined &&
+      context.beanIntakeFrequency !== null &&
+      context.beanIntakeFrequency !== "",
+    hasPriceSpecification: ({ context }) =>
+      context.priceSpecification !== undefined &&
+      context.priceSpecification !== null &&
+      context.priceSpecification !== "",
+    hasAwarenessIronBeans: ({ context }) =>
+      context.awarenessIronBeans !== undefined &&
+      context.awarenessIronBeans !== null &&
+      context.awarenessIronBeans !== "",
+    hasKnowsNutritionalBenefits: ({ context }) =>
+      context.knowsNutritionalBenefits !== undefined &&
+      context.knowsNutritionalBenefits !== null &&
+      context.knowsNutritionalBenefits !== "",
+    hasNutritionalBenefits: ({ context }) =>
+      context.nutritionalBenefitDetails !== undefined &&
+      context.nutritionalBenefitDetails !== null &&
+      (Array.isArray(context.nutritionalBenefitDetails)
+        ? context.nutritionalBenefitDetails.length > 0
+        : true),
+    hasAntenatalCardVerified: ({ context }) =>
+      context.antenatalCardVerified !== undefined &&
+      context.antenatalCardVerified !== null,
     // Navigation guards
     isBack: ({ event }) =>
       navigationGuards.isBackCommand(null as any, event as any),
@@ -635,9 +669,113 @@ export const thousandDaySurveyMachine = setup({
         },
       },
       on: {
-        INPUT: {
-          target: "askBeneficiaryCategory",
-        },
+        INPUT: withNavigation(
+          [
+            // Session recovery routing - evaluated in reverse question order
+            // Routes to the first unanswered question in the survey sequence
+            {
+              target: "askAntenatalCardVerified",
+              guard: "hasAntenatalCardVerified",
+              actions: () => {
+                logger.info(
+                  "Session recovery: Antenatal card already verified, showing last question"
+                );
+              },
+            },
+            {
+              target: "askAntenatalCardVerified",
+              guard: "hasNutritionalBenefits",
+              actions: () => {
+                logger.info(
+                  "Session recovery: Nutritional benefits answered, resuming at antenatal card question"
+                );
+              },
+            },
+            {
+              target: "askNutritionalBenefit1",
+              guard: "hasKnowsNutritionalBenefits",
+              actions: () => {
+                logger.info(
+                  "Session recovery: Knows nutritional benefits answered, resuming at multi-part question 1"
+                );
+              },
+            },
+            {
+              target: "askKnowsNutritionalBenefits",
+              guard: "hasAwarenessIronBeans",
+              actions: () => {
+                logger.info(
+                  "Session recovery: Awareness iron beans answered, resuming at knows nutritional benefits"
+                );
+              },
+            },
+            {
+              target: "askAwarenessIronBeans",
+              guard: "hasPriceSpecification",
+              actions: () => {
+                logger.info(
+                  "Session recovery: Price specification answered, resuming at awareness iron beans"
+                );
+              },
+            },
+            {
+              target: "askPriceSpecification",
+              guard: "hasBeanIntakeFrequency",
+              actions: () => {
+                logger.info(
+                  "Session recovery: Bean intake frequency answered, resuming at price specification"
+                );
+              },
+            },
+            {
+              target: "askBeanIntakeFrequency",
+              guard: "hasChildAge",
+              actions: () => {
+                logger.info(
+                  "Session recovery: Child age answered, resuming at bean intake frequency"
+                );
+              },
+            },
+            {
+              target: "askChildAge",
+              guard: ({ context }: { context: ThousandDaySurveyContext }) =>
+                context.beneficiaryCategory !== undefined &&
+                context.beneficiaryCategory !== null &&
+                (Array.isArray(context.beneficiaryCategory)
+                  ? context.beneficiaryCategory.length > 0
+                  : true) &&
+                shouldShowChildAgeQuestion(context.beneficiaryCategory),
+              actions: () => {
+                logger.info(
+                  "Session recovery: Beneficiary category answered (child selected), resuming at child age"
+                );
+              },
+            },
+            {
+              target: "askPriceSpecification",
+              guard: "hasBeneficiaryCategory",
+              actions: () => {
+                logger.info(
+                  "Session recovery: Beneficiary category answered (no child), resuming at price specification"
+                );
+              },
+            },
+            {
+              target: "askBeneficiaryCategory",
+              actions: () => {
+                logger.info(
+                  "Session recovery: No previous answers found, starting from beginning"
+                );
+              },
+            },
+          ],
+          {
+            backTarget: "askCustomerId",
+            exitTarget: "routeToMain",
+            enableBack: true,
+            enableExit: true,
+          }
+        ),
       },
     },
 

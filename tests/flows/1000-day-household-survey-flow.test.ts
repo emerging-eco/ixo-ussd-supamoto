@@ -2,6 +2,10 @@
  * Generated Test: 1000-day-household-survey
  *
  * This test was automatically generated from a recorded USSD session.
+ * It tests a complete survey flow from start to finish WITHOUT interruption.
+ *
+ * NOTE: This test does NOT test session recovery. For session recovery tests,
+ * see: tests/flows/1000-day-survey-session-recovery.test.ts
  *
  * Session Details:
  * - Flow: 1000-day-household-survey

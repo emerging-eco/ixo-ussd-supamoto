@@ -100,134 +100,188 @@ export async function createIxoAccountBackground(
         const dbResult = await saveIxoAccountData(ixoResult, params);
 
         // Step 3: Submit Lead Creation Claim via SDK (non-blocking failure)
-        // Split full name into given name and family name (outside try block for catch access)
-        const nameParts = params.fullName.trim().split(/\s+/);
-        const givenName = nameParts[0] || "";
-        const familyName = nameParts.slice(1).join(" ") || "";
+        // Fire-and-forget: Submit claim in background to prevent SDK errors from crashing server
+        // The SDK throws errors asynchronously that escape try-catch blocks
+        // Use setImmediate to completely detach from the current execution context
+        setImmediate(() => {
+          (async () => {
+            try {
+              // Split full name into given name and family name
+              const nameParts = params.fullName.trim().split(/\s+/);
+              const givenName = nameParts[0] || "";
+              const familyName = nameParts.slice(1).join(" ") || "";
 
-        try {
-          const claimsBot = getClaimsBotClient();
+              const claimsBot = getClaimsBotClient();
 
-          logger.info(
-            {
-              customerId: params.customerId,
-              leadGenerator: "USSD Signup",
-            },
-            "Submitting lead creation claim via SDK"
-          );
+              logger.info(
+                {
+                  customerId: params.customerId,
+                  leadGenerator: "USSD Signup",
+                },
+                "Submitting lead creation claim via SDK"
+              );
 
-          const response = await claimsBot.claims.v1.submitLeadCreationClaim({
-            customerId: params.customerId,
-            leadGenerator: ClaimsBotTypes.LeadGenerator.ussdSignup,
-            givenName: givenName || undefined, // Only include if not empty
-            familyName: familyName || undefined, // Only include if not empty
-            telephone: params.phoneNumber,
-            nationalId: params.nationalId || undefined,
-            // leadGeneratorName: undefined,  // Not applicable for USSD signup
-          });
+              const response =
+                await claimsBot.claims.v1.submitLeadCreationClaim({
+                  customerId: params.customerId,
+                  leadGenerator: ClaimsBotTypes.LeadGenerator.ussdSignup,
+                  givenName: givenName || undefined, // Only include if not empty
+                  familyName: familyName || undefined, // Only include if not empty
+                  telephone: params.phoneNumber,
+                  nationalId: params.nationalId || undefined,
+                  // leadGeneratorName: undefined,  // Not applicable for USSD signup
+                });
 
-          logger.info(
-            {
-              customerId: params.customerId,
-              claimId: response.data.claimId,
-            },
-            "Lead creation claim submitted successfully via SDK"
-          );
-        } catch (claimError) {
-          // Comprehensive error handling to prevent server crash
-          try {
-            // Convert error to plain object immediately to prevent promise escape
-            const errorMessage =
-              claimError instanceof Error
-                ? claimError.message
-                : typeof claimError === "object" && claimError !== null
-                  ? JSON.stringify(claimError)
-                  : String(claimError);
+              logger.info(
+                {
+                  customerId: params.customerId,
+                  claimId: response.data.claimId,
+                },
+                "Lead creation claim submitted successfully via SDK"
+              );
+            } catch (claimError) {
+              // Split full name for error handling
+              const nameParts = params.fullName.trim().split(/\s+/);
+              const givenName = nameParts[0] || "";
+              const familyName = nameParts.slice(1).join(" ") || "";
+              // Comprehensive error handling to prevent server crash
+              // DO NOT use await for any operations here - they must be fire-and-forget
+              // to prevent unhandled promise rejections from escaping
 
-            // Extract HTTP status code if available
-            const httpStatusCode =
-              (claimError as any)?.response?.status ||
-              (claimError as any)?.statusCode ||
-              undefined;
+              // Convert error to plain object immediately to prevent promise escape
+              const errorMessage =
+                claimError instanceof Error
+                  ? claimError.message
+                  : typeof claimError === "object" && claimError !== null
+                    ? JSON.stringify(claimError)
+                    : String(claimError);
 
-            const errorDetails: any = {
-              error: errorMessage,
-              customerId: params.customerId,
-              httpStatusCode,
-            };
+              // Extract HTTP status code if available
+              const httpStatusCode =
+                (claimError as any)?.response?.status ||
+                (claimError as any)?.statusCode ||
+                (claimError as any)?.code ||
+                undefined;
 
-            // Add HTTP-specific error details if available
-            if ((claimError as any)?.response) {
-              errorDetails.responseData = (claimError as any).response.data;
-            }
+              const errorDetails: any = {
+                error: errorMessage,
+                customerId: params.customerId,
+                httpStatusCode,
+              };
 
-            logger.warn(
-              errorDetails,
-              "Lead creation claim submission failed (non-critical)"
-            );
+              // Add HTTP-specific error details if available
+              if ((claimError as any)?.response) {
+                errorDetails.responseData = (claimError as any).response.data;
+              }
 
-            // Prepare claim data for retry queue
-            const claimData = {
-              customerId: params.customerId,
-              leadGenerator: ClaimsBotTypes.LeadGenerator.ussdSignup,
-              givenName: givenName || undefined,
-              familyName: familyName || undefined,
-              telephone: params.phoneNumber,
-              nationalId: params.nationalId || undefined,
-            };
+              logger.warn(
+                errorDetails,
+                "Lead creation claim submission failed (non-critical)"
+              );
 
-            // Log to file for monitoring
-            await logClaimsSubmissionFailure({
-              customerId: params.customerId,
-              claimType: "lead_creation",
-              error: errorMessage,
-              httpStatusCode,
-              retryCount: 0,
-            });
+              // Prepare claim data for retry queue
+              const claimData = {
+                customerId: params.customerId,
+                leadGenerator: ClaimsBotTypes.LeadGenerator.ussdSignup,
+                givenName: givenName || undefined,
+                familyName: familyName || undefined,
+                telephone: params.phoneNumber,
+                nationalId: params.nationalId || undefined,
+              };
 
-            // Queue for retry
-            const { dataService } = await import("../database-storage.js");
-            await dataService.insertFailedClaim({
-              claimType: "lead_creation",
-              customerId: params.customerId,
-              claimData,
-              errorMessage,
-              httpStatusCode,
-            });
-
-            // Create audit log entry
-            await dataService.createAuditLog({
-              eventType: "CLAIMS_SUBMISSION_FAILED",
-              customerId: params.customerId,
-              details: {
+              // Fire-and-forget: Log to file for monitoring (no await)
+              logClaimsSubmissionFailure({
+                customerId: params.customerId,
                 claimType: "lead_creation",
                 error: errorMessage,
                 httpStatusCode,
-                queuedForRetry: true,
-              },
-            });
+                retryCount: 0,
+              }).catch(logError => {
+                logger.error(
+                  {
+                    error:
+                      logError instanceof Error
+                        ? logError.message
+                        : String(logError),
+                    customerId: params.customerId,
+                  },
+                  "Failed to log claims submission failure to file"
+                );
+              });
 
-            logger.info(
-              {
-                customerId: params.customerId,
-                claimType: "lead_creation",
-              },
-              "Failed claim logged and queued for retry"
-            );
-          } catch (handlingError) {
-            // Final safety net - log but don't throw
+              // Fire-and-forget: Queue for retry and create audit log (no await)
+              (async () => {
+                try {
+                  const { dataService } = await import(
+                    "../database-storage.js"
+                  );
+
+                  await dataService.insertFailedClaim({
+                    claimType: "lead_creation",
+                    customerId: params.customerId,
+                    claimData,
+                    errorMessage,
+                    httpStatusCode,
+                  });
+
+                  await dataService.createAuditLog({
+                    eventType: "CLAIMS_SUBMISSION_FAILED",
+                    customerId: params.customerId,
+                    details: {
+                      claimType: "lead_creation",
+                      error: errorMessage,
+                      httpStatusCode,
+                      queuedForRetry: true,
+                    },
+                  });
+
+                  logger.info(
+                    {
+                      customerId: params.customerId,
+                      claimType: "lead_creation",
+                    },
+                    "Failed claim logged and queued for retry"
+                  );
+                } catch (dbError) {
+                  logger.error(
+                    {
+                      error:
+                        dbError instanceof Error
+                          ? dbError.message
+                          : String(dbError),
+                      customerId: params.customerId,
+                    },
+                    "Failed to queue claim for retry (non-critical)"
+                  );
+                }
+              })().catch(asyncError => {
+                logger.error(
+                  {
+                    error:
+                      asyncError instanceof Error
+                        ? asyncError.message
+                        : String(asyncError),
+                    customerId: params.customerId,
+                  },
+                  "Async error while handling claims submission failure (non-critical)"
+                );
+              });
+            }
+          })().catch(claimsError => {
+            // Final safety net for SDK errors that escape all other handlers
             logger.error(
               {
                 error:
-                  handlingError instanceof Error
-                    ? handlingError.message
-                    : String(handlingError),
+                  claimsError instanceof Error
+                    ? claimsError.message
+                    : String(claimsError),
                 customerId: params.customerId,
               },
-              "Error while handling claims submission failure (non-critical)"
+              "Claims submission error caught by outer handler (non-critical)"
             );
-          }
-        }
+          });
+        });
+
         const duration = Date.now() - startTime;
 
         logger.info(
