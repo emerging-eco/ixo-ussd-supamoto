@@ -175,29 +175,36 @@ export async function submit1000DayHouseholdClaim(params: {
     "Submitting 1,000 Day Household claim to claims bot"
   );
 
+  // Build payload object for logging and submission
+  const payload = {
+    leadGeneratorId: params.leadGeneratorId,
+    customerId: params.customerId,
+    beneficiaryCategory: [
+      mapBeneficiaryCategoryToEnum(params.beneficiaryCategory),
+    ],
+    // childMaxAge must be between 1-23 months per SDK requirements
+    // If not provided or 0 (no child in household), default to 1
+    childMaxAge:
+      params.childMaxAge && params.childMaxAge > 0 ? params.childMaxAge : 1,
+    beanIntakeFrequency: mapBeanIntakeFrequencyToEnum(
+      params.beanIntakeFrequency
+    ),
+    priceSpecification: params.priceSpecification,
+    awarenessIronBeans: mapYesNoToEnum(
+      params.awarenessIronBeans
+    ) as ClaimsBotTypes.AwarenessIronBeans,
+    knowsNutritionalBenefits: mapYesNoToEnum(
+      params.knowsNutritionalBenefits
+    ) as ClaimsBotTypes.KnowsNutritionalBenefits,
+    nutritionalBenefitsDetails: [
+      mapNutritionalBenefitsToEnum(params.nutritionalBenefitDetails),
+    ],
+    antenatalCardVerified: params.antenatalCardVerified,
+  };
+
   try {
-    const response = await client.claims.v1.submit1000DayHouseholdClaim({
-      leadGeneratorId: params.leadGeneratorId,
-      customerId: params.customerId,
-      beneficiaryCategory: [
-        mapBeneficiaryCategoryToEnum(params.beneficiaryCategory),
-      ],
-      childMaxAge: params.childMaxAge || 0,
-      beanIntakeFrequency: mapBeanIntakeFrequencyToEnum(
-        params.beanIntakeFrequency
-      ),
-      priceSpecification: params.priceSpecification,
-      awarenessIronBeans: mapYesNoToEnum(
-        params.awarenessIronBeans
-      ) as ClaimsBotTypes.AwarenessIronBeans,
-      knowsNutritionalBenefits: mapYesNoToEnum(
-        params.knowsNutritionalBenefits
-      ) as ClaimsBotTypes.KnowsNutritionalBenefits,
-      nutritionalBenefitsDetails: [
-        mapNutritionalBenefitsToEnum(params.nutritionalBenefitDetails),
-      ],
-      antenatalCardVerified: params.antenatalCardVerified,
-    });
+    const response =
+      await client.claims.v1.submit1000DayHouseholdClaim(payload);
 
     logger.info(
       {
