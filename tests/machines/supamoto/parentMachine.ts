@@ -1,8 +1,11 @@
 import { assign, sendTo, setup } from "xstate";
+import { DbTypes } from "@ixo/supamoto-bot-sdk";
 import {
   accountCreationMachine,
   AccountCreationOutput,
 } from "./account-creation/index.js";
+
+type ICustomerDecrypted = DbTypes.ICustomerDecrypted;
 import {
   accountMenuMachine,
   AccountMenuOutput,
@@ -36,6 +39,7 @@ export interface SupamotoMachineContext {
   customerId?: string; // Customer ID for PIN change and other operations
   customerName?: string;
   customerRole?: "customer" | "lead_generator" | "call_center" | "admin"; // Role-based access control
+  customerData?: ICustomerDecrypted; // Full decrypted customer data from SDK (loaded after login)
   currentBalance?: number;
   isAuthenticated: boolean;
   sessionStartTime: string;
@@ -352,6 +356,7 @@ export const supamotoMachine = setup({
                   customerId: output?.customer?.customerId,
                   customerName: output?.customer?.fullName || "Existing User",
                   customerRole: output?.customer?.role || "customer", // Store role for access control
+                  customerData: output?.customerData, // Store decrypted customer data from SDK
                   isAuthenticated: true,
                   // Thread session PIN for Matrix vault decryption in services
                   sessionPin: output?.sessionPin,

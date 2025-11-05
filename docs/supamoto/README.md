@@ -140,6 +140,7 @@ The database schema is initialized via a single consolidated migration file (`mi
 - **Claims Bot**: API service for submitting claims via `@ixo/supamoto-bot-sdk`
   - Lead creation claims (submitted during customer account creation)
   - 1,000 Day Household survey claims
+  - **SDK Documentation**: See [SUPAMOTO_BOT_SDK_GUIDE.md](./SUPAMOTO_BOT_SDK_GUIDE.md) for comprehensive SDK usage guide
 - **Matrix**: Secure vault for encrypted data storage
 - **SMS Provider**: Africa's Talking or similar for SMS delivery
 - **Subscriptions Service**: Bean voucher verification and allocation
@@ -205,7 +206,8 @@ The database schema is deployed using a single consolidated initialization scrip
 docs/supamoto/
 ├── README.md                    # This file - Overview and features
 ├── MENU_STRUCTURE.md           # Detailed menu navigation flows
-└── SEQUENCE_DIAGRAM.md         # Bean distribution sequence diagrams
+├── SEQUENCE_DIAGRAM.md         # Bean distribution sequence diagrams
+└── SUPAMOTO_BOT_SDK_GUIDE.md   # SupaMoto Bot SDK usage guide
 ```
 
 ## Related Documentation
@@ -215,6 +217,7 @@ docs/supamoto/
 - **State Machine Patterns**: `/docs/STATE_MACHINE_PATTERNS.md`
 - **API Reference**: `/docs/API.md`
 - **Getting Started**: `/docs/GETTING_STARTED.md`
+- **SupaMoto Bot SDK Guide**: `SUPAMOTO_BOT_SDK_GUIDE.md` - Comprehensive guide for using `@ixo/supamoto-bot-sdk`
 
 ## Support & Maintenance
 

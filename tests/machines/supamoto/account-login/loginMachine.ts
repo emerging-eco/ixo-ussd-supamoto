@@ -12,7 +12,10 @@
  */
 
 import { assign, fromPromise, setup } from "xstate";
+import { DbTypes } from "@ixo/supamoto-bot-sdk";
 import { createModuleLogger } from "../../../../src/services/logger.js";
+
+type ICustomerDecrypted = DbTypes.ICustomerDecrypted;
 import {
   dataService,
   type CustomerRecord,
@@ -23,6 +26,7 @@ import { withNavigation } from "../utils/navigation-mixin.js";
 import { NavigationPatterns } from "../utils/navigation-patterns.js";
 import { sendSMSWithRetry } from "../../../../src/services/sms.js";
 import { accountLockedSMS } from "../../../../src/templates/sms/index.js";
+import { getDecryptedCustomerData } from "../../../../src/services/supamoto-db-client.js";
 
 const logger = createModuleLogger("loginMachine");
 
@@ -35,6 +39,7 @@ export interface LoginContext {
   error?: string;
   customerId?: string;
   customer?: CustomerRecord;
+  customerData?: ICustomerDecrypted; // Decrypted customer data from SDK
   sessionPin?: string; // ephemeral, used for Matrix vault decryption in-session
   pinAttempts: number;
   nextParentState: LoginOutput;
@@ -245,6 +250,52 @@ const pinVerificationService = fromPromise(
   }
 );
 
+/**
+ * Service actor that loads decrypted customer data from SDK
+ * This is called after successful PIN verification to fetch full customer details
+ */
+const loadCustomerDataService = fromPromise(
+  async ({ input }: { input: { customerId: string } }) => {
+    logger.info(
+      { customerId: input.customerId.slice(-4) },
+      "Loading decrypted customer data from SDK"
+    );
+
+    try {
+      const customerData = await getDecryptedCustomerData(input.customerId);
+
+      if (!customerData) {
+        logger.warn(
+          { customerId: input.customerId.slice(-4) },
+          "Customer data not found in SDK"
+        );
+        return null;
+      }
+
+      logger.info(
+        {
+          customerId: customerData.customer_id,
+          hasFullName: !!customerData.full_name,
+          hasEmail: !!customerData.email,
+        },
+        "Customer data loaded successfully from SDK"
+      );
+
+      return customerData;
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: input.customerId.slice(-4),
+        },
+        "Failed to load customer data from SDK"
+      );
+      // Don't throw - we can still proceed with login even if SDK data fails
+      return null;
+    }
+  }
+);
+
 const isCustomerFound = ({ context }: { context: LoginContext }) => {
   return LoginOutput.CUSTOMER_FOUND === context.nextParentState;
 };
@@ -291,6 +342,7 @@ export const loginMachine = setup({
   actors: {
     customerLookupService,
     pinVerificationService,
+    loadCustomerDataService,
   },
 }).createMachine({
   id: "login",
@@ -310,7 +362,9 @@ export const loginMachine = setup({
     result: context.nextParentState,
     customerId: context.customerId,
     customer: context.customer,
+    customerData: context.customerData,
     sessionPin: context.sessionPin,
+    message: context.message,
   }),
   states: {
     customerIdEntry: {
@@ -468,12 +522,7 @@ export const loginMachine = setup({
           phoneNumber: context.phoneNumber,
         }),
         onDone: {
-          // No target state is set in this step. The next state is determined by the guards in the on: block
-          actions: [
-            assign({
-              nextParentState: LoginOutput.LOGIN_SUCCESS,
-            }),
-          ],
+          target: "loadingCustomerData",
         },
         onError: [
           {
@@ -510,6 +559,45 @@ export const loginMachine = setup({
             ],
           },
         ],
+      },
+      on: {
+        INPUT: withNavigation(
+          [
+            {
+              target: "loginSuccess",
+              guard: "isLoginSuccess",
+            },
+            {
+              target: "routeToMain",
+            },
+          ],
+          NavigationPatterns.loginChild
+        ),
+      },
+    },
+
+    loadingCustomerData: {
+      entry: assign({ message: "Loading customer data...\n1. Continue" }),
+      invoke: {
+        src: "loadCustomerDataService",
+        input: ({ context }) => ({ customerId: context.customerId! }),
+        onDone: {
+          actions: [
+            assign(({ event }) => ({
+              customerData: event.output || undefined,
+              nextParentState: LoginOutput.LOGIN_SUCCESS,
+            })),
+          ],
+        },
+        onError: {
+          // Even if loading customer data fails, we can still proceed with login
+          actions: [
+            assign({
+              customerData: undefined,
+              nextParentState: LoginOutput.LOGIN_SUCCESS,
+            }),
+          ],
+        },
       },
       on: {
         INPUT: withNavigation(

@@ -243,6 +243,7 @@ export const config = {
   CLAIMS_BOT: {
     URL: process.env.CLAIMS_BOT_URL || "",
     ACCESS_TOKEN: process.env.CLAIMS_BOT_ACCESS_TOKEN || "",
+    DB_ENCRYPTION_KEY: process.env.CLAIMS_BOT_DB_ENCRYPTION_KEY || "",
   },
   CLAIMS_RETRY: {
     MAX_RETRIES: parseInt(process.env.CLAIMS_MAX_RETRIES || "3", 10),
