@@ -250,6 +250,11 @@ export const config = {
     RETRY_DELAYS_MINUTES: [5, 30, 120], // 5min, 30min, 2hr
     BATCH_SIZE: parseInt(process.env.CLAIMS_RETRY_BATCH_SIZE || "10", 10),
   },
+  BEAN_DISTRIBUTION: {
+    COLLECTION_ID: process.env.BEAN_DISTRIBUTION_COLLECTION_ID || "120",
+    LG_WALLET_MNEMONIC: process.env.LG_WALLET_MNEMONIC || "",
+    EVALUATOR_WALLET_MNEMONIC: process.env.EVALUATOR_WALLET_MNEMONIC || "",
+  },
 } as const;
 
 // Type for the config object

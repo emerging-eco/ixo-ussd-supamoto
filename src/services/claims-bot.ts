@@ -226,3 +226,56 @@ export async function submit1000DayHouseholdClaim(params: {
     throw error;
   }
 }
+
+/**
+ * Submit Fuel Delivery Claim
+ * Used for record-keeping when LG confirms bean delivery
+ */
+export async function submitFuelDeliveryClaim(params: {
+  leadGeneratorId: string;
+  customerId: string;
+  deliveryDate: string; // ISO 8601 date string
+  beanQuantity: number; // Number of beans delivered (typically 1)
+}) {
+  const client = getClaimsBotClient();
+
+  logger.info(
+    {
+      leadGeneratorId: params.leadGeneratorId.slice(-4),
+      customerId: params.customerId.slice(-4),
+      deliveryDate: params.deliveryDate,
+      beanQuantity: params.beanQuantity,
+    },
+    "Submitting Fuel Delivery claim to claims bot"
+  );
+
+  const payload = {
+    leadGeneratorId: params.leadGeneratorId,
+    customerId: params.customerId,
+    deliveryDate: params.deliveryDate,
+    beanQuantity: params.beanQuantity,
+  };
+
+  try {
+    const response = await client.claims.v1.submitFuelDeliveryClaim(payload);
+
+    logger.info(
+      {
+        customerId: params.customerId.slice(-4),
+        claimId: response.data.claimId,
+      },
+      "Fuel Delivery claim submitted successfully"
+    );
+
+    return response;
+  } catch (error) {
+    logger.error(
+      {
+        error: error instanceof Error ? error.message : String(error),
+        customerId: params.customerId.slice(-4),
+      },
+      "Failed to submit Fuel Delivery claim"
+    );
+    throw error;
+  }
+}
