@@ -228,17 +228,18 @@ export async function submit1000DayHouseholdClaim(params: {
 }
 
 /**
- * Submit Fuel Delivery Claim
- * Used for record-keeping when LG confirms bean delivery
+ * Submit Bean Delivery Confirmation to Audit Log
+ * Note: The Claims Bot SDK does not have a specific bean delivery claim type.
+ * Bean delivery is tracked via blockchain claims (MsgEvaluateClaim) and database records.
+ * This function is a placeholder for future Claims Bot integration if a bean delivery
+ * claim type is added to the SDK.
  */
-export async function submitFuelDeliveryClaim(params: {
+export async function logBeanDeliveryConfirmation(params: {
   leadGeneratorId: string;
   customerId: string;
   deliveryDate: string; // ISO 8601 date string
   beanQuantity: number; // Number of beans delivered (typically 1)
 }) {
-  const client = getClaimsBotClient();
-
   logger.info(
     {
       leadGeneratorId: params.leadGeneratorId.slice(-4),
@@ -246,36 +247,16 @@ export async function submitFuelDeliveryClaim(params: {
       deliveryDate: params.deliveryDate,
       beanQuantity: params.beanQuantity,
     },
-    "Submitting Fuel Delivery claim to claims bot"
+    "Bean delivery confirmation logged (blockchain + database tracking)"
   );
 
-  const payload = {
-    leadGeneratorId: params.leadGeneratorId,
-    customerId: params.customerId,
-    deliveryDate: params.deliveryDate,
-    beanQuantity: params.beanQuantity,
+  // TODO: If Claims Bot adds a bean delivery claim type in the future, implement here
+  // For now, bean deliveries are tracked via:
+  // 1. Blockchain: MsgEvaluateClaim (APPROVED) releases payment
+  // 2. Database: bean_delivery_confirmations table with lg_confirmed_at timestamp
+
+  return {
+    success: true,
+    message: "Bean delivery tracked via blockchain and database",
   };
-
-  try {
-    const response = await client.claims.v1.submitFuelDeliveryClaim(payload);
-
-    logger.info(
-      {
-        customerId: params.customerId.slice(-4),
-        claimId: response.data.claimId,
-      },
-      "Fuel Delivery claim submitted successfully"
-    );
-
-    return response;
-  } catch (error) {
-    logger.error(
-      {
-        error: error instanceof Error ? error.message : String(error),
-        customerId: params.customerId.slice(-4),
-      },
-      "Failed to submit Fuel Delivery claim"
-    );
-    throw error;
-  }
 }
