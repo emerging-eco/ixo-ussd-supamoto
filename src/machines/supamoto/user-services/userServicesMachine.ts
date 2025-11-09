@@ -17,6 +17,10 @@ import {
 } from "../activation/customerActivationMachine.js";
 import { thousandDaySurveyMachine } from "../thousand-day-survey/thousandDaySurveyMachine.js";
 import { customerToolsMachine } from "../customer-tools/customerToolsMachine.js";
+import {
+  agentToolsMachine,
+  AgentToolsOutput,
+} from "../agent-tools/agentToolsMachine.js";
 
 /**
  * User Services Machine - Post-login user menu and simple stubs
@@ -172,6 +176,7 @@ export const userServicesMachine = setup({
     customerActivationMachine,
     thousandDaySurveyMachine,
     customerToolsMachine,
+    agentToolsMachine,
   },
   /*
     fetchContractDetailsService: fromPromise(async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
@@ -210,7 +215,7 @@ export const userServicesMachine = setup({
       }
       return [] as any[];
     }),
-*/
+    */
   actions: {
     setError: assign({
       error: ({ event }) =>
@@ -414,47 +419,139 @@ export const userServicesMachine = setup({
 
     // Agent: Register Intent to Deliver Beans
     agentRegisterIntent: {
-      entry: assign(() => ({
-        message:
-          "[Stub] Register Intent to Deliver Beans not yet implemented.\n\n1. Back",
-      })),
       on: {
-        INPUT: withNavigation([{ target: "agent", guard: "isInput1" }], {
-          backTarget: "agent",
-          exitTarget: "routeToMain",
-          enableBack: true,
-          enableExit: true,
+        INPUT: {
+          actions: sendTo(
+            "agentToolsRegisterIntentChild",
+            ({ event }) => event
+          ),
+        },
+      },
+      invoke: {
+        id: "agentToolsRegisterIntentChild",
+        src: "agentToolsMachine",
+        input: ({ context }) => ({
+          sessionId: context.sessionId,
+          phoneNumber: context.phoneNumber,
+          serviceCode: context.serviceCode,
+          lgCustomerId: context.customerId || "",
+          menuItem: "registerIntent" as const,
         }),
+        onDone: [
+          {
+            target: "agent",
+            guard: ({ event }) =>
+              (event.output as any)?.result === AgentToolsOutput.SUCCESS,
+          },
+          {
+            target: "agent",
+            guard: ({ event }) =>
+              (event.output as any)?.result === AgentToolsOutput.BACK,
+          },
+          {
+            target: "agent",
+          },
+        ],
+        onError: {
+          target: "error",
+          actions: "setError",
+        },
+        onSnapshot: {
+          actions: assign(({ event }) => ({
+            message: event.snapshot.context.message,
+          })),
+        },
       },
     },
 
     // Agent: Submit Customer OTP
     agentSubmitOTP: {
-      entry: assign(() => ({
-        message: "[Stub] Submit Customer OTP not yet implemented.\n\n1. Back",
-      })),
       on: {
-        INPUT: withNavigation([{ target: "agent", guard: "isInput1" }], {
-          backTarget: "agent",
-          exitTarget: "routeToMain",
-          enableBack: true,
-          enableExit: true,
+        INPUT: {
+          actions: sendTo("agentToolsSubmitOTPChild", ({ event }) => event),
+        },
+      },
+      invoke: {
+        id: "agentToolsSubmitOTPChild",
+        src: "agentToolsMachine",
+        input: ({ context }) => ({
+          sessionId: context.sessionId,
+          phoneNumber: context.phoneNumber,
+          serviceCode: context.serviceCode,
+          lgCustomerId: context.customerId || "",
+          menuItem: "submitOTP" as const,
         }),
+        onDone: [
+          {
+            target: "agent",
+            guard: ({ event }) =>
+              (event.output as any)?.result === AgentToolsOutput.SUCCESS,
+          },
+          {
+            target: "agent",
+            guard: ({ event }) =>
+              (event.output as any)?.result === AgentToolsOutput.BACK,
+          },
+          {
+            target: "agent",
+          },
+        ],
+        onError: {
+          target: "error",
+          actions: "setError",
+        },
+        onSnapshot: {
+          actions: assign(({ event }) => ({
+            message: event.snapshot.context.message,
+          })),
+        },
       },
     },
 
     // Agent: Confirm Bean Delivery
     agentConfirmDelivery: {
-      entry: assign(() => ({
-        message: "[Stub] Confirm Bean Delivery not yet implemented.\n\n1. Back",
-      })),
       on: {
-        INPUT: withNavigation([{ target: "agent", guard: "isInput1" }], {
-          backTarget: "agent",
-          exitTarget: "routeToMain",
-          enableBack: true,
-          enableExit: true,
+        INPUT: {
+          actions: sendTo(
+            "agentToolsConfirmDeliveryChild",
+            ({ event }) => event
+          ),
+        },
+      },
+      invoke: {
+        id: "agentToolsConfirmDeliveryChild",
+        src: "agentToolsMachine",
+        input: ({ context }) => ({
+          sessionId: context.sessionId,
+          phoneNumber: context.phoneNumber,
+          serviceCode: context.serviceCode,
+          lgCustomerId: context.customerId || "",
+          menuItem: "confirmDelivery" as const,
         }),
+        onDone: [
+          {
+            target: "agent",
+            guard: ({ event }) =>
+              (event.output as any)?.result === AgentToolsOutput.SUCCESS,
+          },
+          {
+            target: "agent",
+            guard: ({ event }) =>
+              (event.output as any)?.result === AgentToolsOutput.BACK,
+          },
+          {
+            target: "agent",
+          },
+        ],
+        onError: {
+          target: "error",
+          actions: "setError",
+        },
+        onSnapshot: {
+          actions: assign(({ event }) => ({
+            message: event.snapshot.context.message,
+          })),
+        },
       },
     },
 
