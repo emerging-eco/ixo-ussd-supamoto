@@ -226,3 +226,37 @@ export async function submit1000DayHouseholdClaim(params: {
     throw error;
   }
 }
+
+/**
+ * Submit Bean Delivery Confirmation to Audit Log
+ * Note: The Claims Bot SDK does not have a specific bean delivery claim type.
+ * Bean delivery is tracked via blockchain claims (MsgEvaluateClaim) and database records.
+ * This function is a placeholder for future Claims Bot integration if a bean delivery
+ * claim type is added to the SDK.
+ */
+export async function logBeanDeliveryConfirmation(params: {
+  leadGeneratorId: string;
+  customerId: string;
+  deliveryDate: string; // ISO 8601 date string
+  beanQuantity: number; // Number of beans delivered (typically 1)
+}) {
+  logger.info(
+    {
+      leadGeneratorId: params.leadGeneratorId.slice(-4),
+      customerId: params.customerId.slice(-4),
+      deliveryDate: params.deliveryDate,
+      beanQuantity: params.beanQuantity,
+    },
+    "Bean delivery confirmation logged (blockchain + database tracking)"
+  );
+
+  // TODO: If Claims Bot adds a bean delivery claim type in the future, implement here
+  // For now, bean deliveries are tracked via:
+  // 1. Blockchain: MsgEvaluateClaim (APPROVED) releases payment
+  // 2. Database: bean_delivery_confirmations table with lg_confirmed_at timestamp
+
+  return {
+    success: true,
+    message: "Bean delivery tracked via blockchain and database",
+  };
+}

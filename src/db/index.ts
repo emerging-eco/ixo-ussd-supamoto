@@ -151,6 +151,10 @@ export interface Database {
     has_bean_voucher: boolean;
     voucher_status: string | null;
     voucher_check_response: any; // JSONB
+    claim_intent_id: string | null;
+    claim_intent_tx_hash: string | null;
+    claim_intent_response: any; // JSONB
+    customer_claim_collection_id: string | null;
     created_at: Date;
   };
   bean_distribution_otps: {
@@ -175,6 +179,10 @@ export interface Database {
     customer_confirmed_receipt: boolean | null;
     token_transferred_at: Date | null;
     confirmation_deadline: Date;
+    claim_id: string | null;
+    claim_tx_hash: string | null;
+    claim_evaluation_tx_hash: string | null;
+    fuel_delivery_claim_id: string | null;
     created_at: Date;
     updated_at: Date;
   };
