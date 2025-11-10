@@ -364,6 +364,7 @@ railway status
 ```bash
 # Set individual variables
 railway variables set NODE_ENV=production
+railway variables set PORT=8080
 railway variables set LOG_LEVEL=info
 railway variables set SYSTEM_SECRET=$(openssl rand -hex 32)
 railway variables set PIN_ENCRYPTION_KEY=$(openssl rand -hex 32)
@@ -705,6 +706,7 @@ railway variables set VARIABLE_NAME=value
 
 # Example:
 railway variables set NODE_ENV=production
+railway variables set PORT=8080
 railway variables set LOG_LEVEL=info
 
 # Generate and set secrets
@@ -735,6 +737,9 @@ LOG_NAME=ixo-ussd-supamoto
 
 # Server settings
 SERVER_DISABLE_REQUEST_LOGGING=false
+
+# Port (Railway auto-injects, but can be set explicitly)
+PORT=8080
 TRUST_PROXY_ENABLED=true
 METRICS_ENABLED=true
 ```
@@ -1318,6 +1323,7 @@ echo "ENCRYPTION_KEY=$ENCRYPTION_KEY"
 ```bash
 # Server configuration
 railway variables set NODE_ENV=production
+railway variables set PORT=8080
 railway variables set LOG_LEVEL=info
 railway variables set LOG_NAME=ixo-ussd-supamoto
 railway variables set METRICS_ENABLED=true
@@ -3412,6 +3418,7 @@ railway variables get NODE_ENV
 
 # Set variable
 railway variables set NODE_ENV=production
+railway variables set PORT=8080
 
 # Set multiple variables
 railway variables set KEY1=value1 KEY2=value2
