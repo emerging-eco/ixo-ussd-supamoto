@@ -365,6 +365,10 @@ describe("Agent Tools Machine", () => {
         customerConfirmedReceipt: null,
         tokenTransferredAt: null,
         confirmationDeadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        claimId: null,
+        claimTxHash: null,
+        claimEvaluationTxHash: null,
+        fuelDeliveryClaimId: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -428,6 +432,10 @@ describe("Agent Tools Machine", () => {
         customerConfirmedReceipt: null,
         tokenTransferredAt: null,
         confirmationDeadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        claimId: null,
+        claimTxHash: null,
+        claimEvaluationTxHash: null,
+        fuelDeliveryClaimId: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
