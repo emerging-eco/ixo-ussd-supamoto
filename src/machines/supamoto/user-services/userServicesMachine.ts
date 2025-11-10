@@ -294,6 +294,7 @@ export const userServicesMachine = setup({
           phoneNumber: context.phoneNumber,
           serviceCode: context.serviceCode,
           customerId: context.customerId || "",
+          pin: context.pin || "",
         }),
         onDone: {
           target: "routeToMain",

@@ -9,6 +9,8 @@ import { CHAIN_RPC_URL } from "../../../constants/ixo-blockchain.js";
 import { evaluateClaim } from "../../../services/ixo/ixo-claims.js";
 import { sendSMS } from "../../../services/sms.js";
 import { lgTokenTransferredSMS } from "../../../templates/sms/delivery.js";
+import { generateOpenIDTokenFromCustomerId } from "../../../services/ixo/matrix-openid.js";
+import { fetchSubscriptionBalances, formatBalancesForUSSD } from "../../../services/subscriptions.js";
 
 const logger = createModuleLogger("customerTools");
 
@@ -29,13 +31,14 @@ export interface CustomerToolsContext {
   lgCustomerId?: string;
   message: string;
   error?: string;
+  pin?: string;
 }
 
 export type CustomerToolsEvent =
   | { type: "INPUT"; input: string }
   | { type: "ERROR"; error: string };
 
-const MENU_MESSAGE = "Customer Tools\n1. Confirm Receival of Beans\n0. Back";
+const MENU_MESSAGE = "Customer Tools\n1. Check Balances\n2. Confirm Receival of Beans\n0. Back";
 
 const RECEIPT_QUESTION =
   "Did you receive a bag of beans from your Lead Generator?\n1. Yes\n2. No\n0. Back";
@@ -49,6 +52,7 @@ export const customerToolsMachine = setup({
       phoneNumber: string;
       serviceCode: string;
       customerId: string;
+      pin?: string;
     },
   },
   guards: {
@@ -101,6 +105,54 @@ export const customerToolsMachine = setup({
           lgCustomerId: confirmation.lg_customer_id,
           confirmationId: confirmation.id,
         };
+      }
+    ),
+    fetchSubscriptionBalancesService: fromPromise(
+      async ({ input }: { input: { customerId: string; pin: string } }) => {
+        logger.info(
+          { customerId: input.customerId.slice(-4) },
+          "Fetching subscription balances for customer"
+        );
+
+        try {
+          // Step 1: Generate OpenID token
+          logger.debug("Generating OpenID access token");
+          const openIdToken = await generateOpenIDTokenFromCustomerId(
+            input.customerId,
+            input.pin
+          );
+
+          // Step 2: Fetch subscription balances
+          logger.debug("Fetching subscription balances from API");
+          const subscription = await fetchSubscriptionBalances(openIdToken);
+
+          // Step 3: Format for USSD display
+          const message = formatBalancesForUSSD(subscription);
+
+          logger.info(
+            {
+              customerId: input.customerId.slice(-4),
+              hasSubscription: !!subscription,
+              balanceCount: subscription?.balances?.length || 0,
+            },
+            "Subscription balances fetched successfully"
+          );
+
+          return {
+            success: true,
+            message,
+            subscription,
+          };
+        } catch (error) {
+          logger.error(
+            {
+              error: error instanceof Error ? error.message : String(error),
+              customerId: input.customerId.slice(-4),
+            },
+            "Failed to fetch subscription balances"
+          );
+          throw error;
+        }
       }
     ),
     submitReceiptAndEvaluateClaimService: fromPromise(
@@ -316,6 +368,7 @@ export const customerToolsMachine = setup({
     phoneNumber: input?.phoneNumber || "",
     serviceCode: input?.serviceCode || "",
     customerId: input?.customerId || "",
+    pin: input?.pin || "",
     message: MENU_MESSAGE,
     error: undefined,
   }),
@@ -327,7 +380,10 @@ export const customerToolsMachine = setup({
       })),
       on: {
         INPUT: withNavigation(
-          [{ target: "fetchingDeliveryConfirmation", guard: "isInput1" }],
+          [
+            { target: "checkingBalances", guard: "isInput1" },
+            { target: "fetchingDeliveryConfirmation", guard: "isInput2" },
+          ],
           {
             backTarget: "routeToMain",
             exitTarget: "routeToMain",
@@ -341,6 +397,62 @@ export const customerToolsMachine = setup({
             error: ({ event }) => event.error || "An error occurred",
           }),
         },
+      },
+    },
+
+    checkingBalances: {
+      entry: assign(() => ({
+        message: "Checking your balances...",
+      })),
+      invoke: {
+        src: "fetchSubscriptionBalancesService",
+        input: ({ context }) => ({
+          customerId: context.customerId,
+          pin: context.pin || "",
+        }),
+        onDone: {
+          target: "displayingBalances",
+          actions: assign({
+            message: ({ event }) => event.output.message,
+          }),
+        },
+        onError: {
+          target: "error",
+          actions: assign({
+            error: ({ event }) => {
+              const errorMessage =
+                event.error instanceof Error
+                  ? event.error.message
+                  : "Failed to fetch balances";
+              logger.error(
+                { error: errorMessage },
+                "Error in fetchSubscriptionBalancesService"
+              );
+              
+              // User-friendly error messages
+              if (errorMessage.includes("Matrix vault")) {
+                return "Account setup incomplete. Please contact support.\n\n1. Back";
+              } else if (errorMessage.includes("timeout")) {
+                return "Service temporarily unavailable. Please try again later.\n\n1. Back";
+              } else if (errorMessage.includes("incorrect PIN")) {
+                return "Authentication failed. Please try again.\n\n1. Back";
+              } else {
+                return "Unable to fetch balances. Please try again later.\n\n1. Back";
+              }
+            },
+          }),
+        },
+      },
+    },
+
+    displayingBalances: {
+      on: {
+        INPUT: withNavigation([{ target: "menu", guard: "isInput1" }], {
+          backTarget: "menu",
+          exitTarget: "routeToMain",
+          enableBack: false,
+          enableExit: true,
+        }),
       },
     },
 

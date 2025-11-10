@@ -255,6 +255,11 @@ export const config = {
     LG_WALLET_MNEMONIC: process.env.LG_WALLET_MNEMONIC || "",
     EVALUATOR_WALLET_MNEMONIC: process.env.EVALUATOR_WALLET_MNEMONIC || "",
   },
+  SUBSCRIPTIONS: {
+    API_BASE_URL: process.env.SUBSCRIPTIONS_API_BASE_URL || "https://subscriptions-api.alwyn-vanwyk.workers.dev",
+    MATRIX_SERVER: process.env.MATRIX_HOME_SERVER?.replace("https://", "") || "devmx.ixo.earth",
+    REQUEST_TIMEOUT_MS: parseInt(process.env.SUBSCRIPTIONS_REQUEST_TIMEOUT_MS || "10000", 10),
+  },
 } as const;
 
 // Type for the config object
