@@ -24,7 +24,9 @@
     "dist",
     "src/reference/**/*",
     "src/**/*-demo.ts",
-    "src/services/ixo-account.ts"
+    "src/services/ixo-account.ts",
+    "src/utils/session-log-parser.ts",
+    "src/utils/vitest-generator.ts"
   ],
   "ts-node": {
     "transpileOnly": true,
