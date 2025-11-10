@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "build": "rimraf dist && tsc --project tsconfig.json && tsc-alias -p tsconfig.json && pnpm copy-sql",
-    "copy-sql": "copyfiles -u 1 -f \"migrations/**/*.sql\" dist/src/migrations/postgres",
+    "copy-sql": "copyfiles -u 1 -f \"migrations/**/*.sql\" dist/migrations/postgres",
     "dev": "NODE_ENV=dev node --watch --env-file=.env --loader ts-node/esm src/index.ts --no-warnings",
     "start": "NODE_ENV=production node dist/migrations/run-migrations.js && sleep 2 && node dist/index.js",
     "test": "vitest --run --reporter=verbose",
