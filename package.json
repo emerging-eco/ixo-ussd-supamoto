@@ -9,7 +9,7 @@
     "build": "rimraf dist && tsc --project tsconfig.json && tsc-alias -p tsconfig.json && pnpm copy-sql",
     "copy-sql": "copyfiles -u 1 -f \"migrations/**/*.sql\" dist/src/migrations/postgres",
     "dev": "NODE_ENV=dev node --watch --env-file=.env --loader ts-node/esm src/index.ts --no-warnings",
-    "start": "NODE_ENV=production node dist/src/migrations/run-migrations.js && sleep 2 && node dist/src/index.js",
+    "start": "NODE_ENV=production ls -la dist/ && ls -la dist/src/ 2>/dev/null || echo 'No src dir' && node dist/src/migrations/run-migrations.js && sleep 2 && node dist/src/index.js",
     "test": "vitest --run --reporter=verbose",
     "test:watch": "vitest",
     "test:coverage": "vitest --coverage --run",
