@@ -298,7 +298,7 @@ const leadClaim = await claimsBot.claims.v1.submitLeadCreationClaim({
 console.log(leadClaim.data.claimId); // 'claim-123'
 ```
 
-**Current Usage**: See `src/services/ixo/background-ixo-creation.ts` lines 125-133 for implementation.
+**Current Usage**: See `src/services/ixo/lead-claim-submission.ts` for implementation.
 
 ### Submitting 1,000 Day Household Claims
 
@@ -1041,7 +1041,7 @@ async function submitClaimWithRetry(params: any) {
 
 - **SDK README**: [node_modules/@ixo/supamoto-bot-sdk/README.md](../../node_modules/@ixo/supamoto-bot-sdk/README.md)
 - **Current Claims Bot Usage**: [src/services/claims-bot.ts](../../src/services/claims-bot.ts)
-- **Background IXO Creation**: [src/services/ixo/background-ixo-creation.ts](../../src/services/ixo/background-ixo-creation.ts)
+- **Lead Claim Submission**: [src/services/ixo/lead-claim-submission.ts](../../src/services/ixo/lead-claim-submission.ts)
 - **SupaMoto Documentation**: [README.md](./README.md)
 - **Sequence Diagrams**: [SEQUENCE_DIAGRAM.md](./SEQUENCE_DIAGRAM.md)
 

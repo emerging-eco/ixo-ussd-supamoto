@@ -1,9 +1,9 @@
 /**
  * Matrix OpenID Token Service
- * 
+ *
  * Generates short-lived OpenID access tokens for authenticating with external services
  * that support Matrix OpenID authentication (e.g., subscriptions service).
- * 
+ *
  * Flow:
  * 1. Login to Matrix with username/password → Get Matrix access token
  * 2. Request OpenID token using Matrix access token → Get OpenID access token
@@ -25,7 +25,7 @@ export interface OpenIDToken {
 
 /**
  * Generate OpenID access token for a customer
- * 
+ *
  * @param params - Customer credentials
  * @param params.address - Customer's blockchain address (from ixo_accounts table)
  * @param params.matrixPassword - Customer's Matrix password (decrypted from matrix_vaults)
@@ -36,7 +36,7 @@ export async function generateOpenIDToken(params: {
   matrixPassword: string;
 }): Promise<string> {
   const { address, matrixPassword } = params;
-  
+
   logger.info(
     { address: address.slice(-8) },
     "Generating OpenID access token for customer"
@@ -50,7 +50,7 @@ export async function generateOpenIDToken(params: {
     }
 
     const username = `did-ixo-${address}`;
-    
+
     logger.debug(
       { username, homeServerUrl },
       "Logging in to Matrix to get access token"
@@ -85,7 +85,7 @@ export async function generateOpenIDToken(params: {
       const response = await fetch(openIdUrl, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${matrixAuth.accessToken}`,
+          Authorization: `Bearer ${matrixAuth.accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({}),
@@ -133,7 +133,7 @@ export async function generateOpenIDToken(params: {
 /**
  * Generate OpenID token from customer ID
  * Retrieves Matrix credentials from database and generates token
- * 
+ *
  * @param customerId - Customer ID
  * @param pin - Customer's PIN (used to decrypt Matrix password)
  * @returns OpenID access token

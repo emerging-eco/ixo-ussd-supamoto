@@ -1,20 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createIxoAccountBackground } from "../../../src/services/ixo/background-ixo-creation.js";
+import { submitLeadCreationClaim } from "../../../src/services/ixo/lead-claim-submission.js";
 
-vi.mock("../../../src/services/ixo/ixo-profile.js", () => ({
-  createIxoAccount: vi.fn(async () => ({
-    userId: "CABCDEF1",
-    mnemonic: "test mnemonic",
-    address: "ixo1testaddress",
-    did: "did:ixo:test",
-    matrix: {
-      mxUsername: "@user:matrix",
-      mxPassword: "pass",
-    },
-  })),
-}));
-
-// Mock the SDK instead of direct blockchain submission
+// Mock the SDK
 const mockSubmitLeadCreationClaim = vi.fn(async () => ({
   data: {
     claimId: "claim-123",
@@ -54,48 +41,31 @@ vi.mock("../../../src/config.js", () => ({
   },
 }));
 
-vi.mock("../../../src/db/index.js", () => ({
-  db: {
-    transaction: () => ({
-      execute: async (fn: any) =>
-        fn({
-          insertInto: () => ({
-            values: () => ({
-              returning: () => ({
-                executeTakeFirstOrThrow: async () => ({ id: 1 }),
-              }),
-            }),
-            returning: () => ({
-              executeTakeFirstOrThrow: async () => ({ id: 1 }),
-            }),
-          }),
-          updateTable: () => ({
-            set: () => ({ where: () => ({ execute: async () => ({}) }) }),
-          }),
-        }),
-    }),
+vi.mock("../../../src/services/database-storage.js", () => ({
+  dataService: {
+    insertFailedClaim: vi.fn(async () => ({})),
+    createAuditLog: vi.fn(async () => ({})),
   },
 }));
 
-describe("background IXO creation flow (smoke)", () => {
+describe("Lead Claim Submission", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("creates IXO account, saves to DB, and submits lead creation claim via SDK", async () => {
+  it("submits lead creation claim via SDK", async () => {
     const customerId = "CABCDEF1";
     const fullName = "Test User";
     const phoneNumber = "+123";
 
-    const res = await createIxoAccountBackground({
+    const res = await submitLeadCreationClaim({
       customerId,
-      customerRecordId: 1,
       phoneNumber,
       fullName,
-      pin: "1234",
     });
 
     expect(res.success).toBe(true);
+    expect(res.claimId).toBe("claim-123");
 
     // Verify SDK was called with correct parameters
     expect(mockSubmitLeadCreationClaim).toHaveBeenCalledWith({
@@ -104,9 +74,26 @@ describe("background IXO creation flow (smoke)", () => {
       givenName: "Test",
       familyName: "User",
       telephone: phoneNumber,
+      nationalId: undefined,
     });
 
     // Verify it was called exactly once
     expect(mockSubmitLeadCreationClaim).toHaveBeenCalledTimes(1);
+  });
+
+  it("handles claim submission timeout", async () => {
+    // Mock timeout
+    mockSubmitLeadCreationClaim.mockImplementationOnce(
+      () => new Promise((_resolve, _reject) => setTimeout(() => {}, 20000))
+    );
+
+    const res = await submitLeadCreationClaim({
+      customerId: "CABCDEF1",
+      phoneNumber: "+123",
+      fullName: "Test User",
+    });
+
+    expect(res.success).toBe(false);
+    expect(res.error).toContain("timeout");
   });
 });

@@ -1,6 +1,6 @@
 /**
  * Subscriptions Service
- * 
+ *
  * Handles communication with the subscriptions API to fetch customer balances
  * and subscription information.
  */
@@ -31,7 +31,7 @@ export interface SubscriptionDetails {
 
 /**
  * Fetch subscription balances from subscriptions API
- * 
+ *
  * @param openIdToken - OpenID access token for authentication
  * @returns Subscription details with balances
  */
@@ -58,7 +58,7 @@ export async function fetchSubscriptionBalances(
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        "Authorization": `Bearer ${openIdToken}`,
+        Authorization: `Bearer ${openIdToken}`,
         "Content-Type": "application/json",
       },
       signal: controller.signal,
@@ -90,7 +90,9 @@ export async function fetchSubscriptionBalances(
     return data;
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Request timeout: Subscriptions API did not respond in time");
+      throw new Error(
+        "Request timeout: Subscriptions API did not respond in time"
+      );
     }
 
     logger.error(
@@ -107,7 +109,7 @@ export async function fetchSubscriptionBalances(
 
 /**
  * Format subscription balances for USSD display
- * 
+ *
  * @param subscription - Subscription details
  * @returns Formatted message for USSD display
  */

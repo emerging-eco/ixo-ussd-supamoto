@@ -1,5 +1,4 @@
 import { config, ENV } from "../../src/config.js";
-import { getIxoConfig } from "../../src/services/ixo/config.js";
 
 export type TestEnvironment = "real" | "mocked";
 
@@ -240,11 +239,6 @@ export class EnvironmentSetup {
         }
       }
 
-      if (this.currentConfig.useRealIxoServices) {
-        if (!getIxoConfig().chainRpcUrl) {
-          errors.push("Real IXO services require RPC endpoint configuration");
-        }
-      }
 
       if (this.currentConfig.useRealMatrix) {
         if (!config.MATRIX?.homeServerUrl) {
