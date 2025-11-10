@@ -1,0 +1,127 @@
+version: '3.8'
+
+# ============================================================================
+# Production Docker Compose Configuration for IXO USSD SupaMoto Server
+# ============================================================================
+# Usage:
+#   docker-compose -f docker-compose.production.yml up -d
+#
+# This configuration provides:
+# - PostgreSQL database with persistent storage and backups
+# - IXO USSD application server with health checks
+# - Network isolation and security
+# - Resource limits for production stability
+# - Automatic restarts and logging
+# ============================================================================
+
+services:
+  # ==========================================================================
+  # PostgreSQL Database Service
+  # ==========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: ixo-ussd-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PG_USER:-postgres}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-postgres}
+      POSTGRES_DB: ${PG_DATABASE:-ixo_ussd_supamoto}
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+    ports:
+      - "${PG_PORT:-5432}:5432"
+    volumes:
+      # Persistent data storage
+      - postgres_data:/var/lib/postgresql/data
+      # Optional: Database backups
+      - ./backups:/backups
+    networks:
+      - ixo-ussd-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-postgres} -d ${PG_DATABASE:-ixo_ussd_supamoto}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==========================================================================
+  # IXO USSD Application Service
+  # ==========================================================================
+  ixo-ussd:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: ixo-ussd-supamoto:latest
+    container_name: ixo-ussd-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env.production
+    environment:
+      # Override specific values
+      NODE_ENV: production
+      PG_HOST: postgres
+      PG_PORT: 5432
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      # Persistent logs
+      - app_logs:/app/logs
+      # Optional: Mount secrets from file
+      # - ./secrets:/app/secrets:ro
+    networks:
+      - ixo-ussd-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  ixo-ussd-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  app_logs:
+    driver: local
+

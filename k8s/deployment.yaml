@@ -1,0 +1,308 @@
+# ============================================================================
+# Kubernetes Deployment Configuration for IXO USSD SupaMoto Server
+# ============================================================================
+# This is an optional advanced deployment configuration for Kubernetes
+# Use this if deploying to GKE, EKS, AKS, or other Kubernetes clusters
+# ============================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ixo-ussd
+  labels:
+    name: ixo-ussd
+
+---
+# ============================================================================
+# ConfigMap for Non-Sensitive Configuration
+# ============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ixo-ussd-config
+  namespace: ixo-ussd
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  LOG_LEVEL: "info"
+  LOG_NAME: "ixo-ussd-supamoto"
+  METRICS_ENABLED: "true"
+  USSD_MACHINE_TYPE: "supamoto"
+  ZM_SERVICE_CODES: "*2233#"
+  ZM_SUPPORT_PHONE: "+260700000000"
+  OTP_VALIDITY_MINUTES: "10"
+  MAX_PIN_ATTEMPTS: "3"
+  DELIVERY_CONFIRMATION_DAYS: "7"
+  SMS_RETRY_ATTEMPTS: "3"
+  TIMEZONE: "Africa/Nairobi"
+  CHAIN_NETWORK: "mainnet"
+  CHAIN_RPC_URL: "https://rpc.ixo.earth"
+  FEEGRANT_URL: "https://feegrant.ixo.earth"
+  MATRIX_HOME_SERVER: "https://mx.ixo.earth"
+  MATRIX_BOT_URL: "https://rooms.bot.mx.ixo.earth"
+  MATRIX_STATE_BOT_URL: "https://state.bot.mx.ixo.earth"
+  MATRIX_READ_ENABLED: "true"
+  SMS_ENABLED: "true"
+  AFRICASTALKING_USERNAME: "supamoto"
+  BEAN_DISTRIBUTION_COLLECTION_ID: "120"
+  PG_HOST: "postgres-service"
+  PG_PORT: "5432"
+  PG_DATABASE: "ixo_ussd_supamoto"
+  PG_USER: "postgres"
+
+---
+# ============================================================================
+# Secret for Sensitive Configuration
+# ============================================================================
+# NOTE: In production, use external secrets management (e.g., AWS Secrets Manager, HashiCorp Vault)
+# This is a template - DO NOT commit actual secrets to version control
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ixo-ussd-secrets
+  namespace: ixo-ussd
+type: Opaque
+stringData:
+  DATABASE_URL: "postgres://postgres:CHANGE_ME@postgres-service:5432/ixo_ussd_supamoto"
+  PG_PASSWORD: "CHANGE_ME_STRONG_PASSWORD"
+  SYSTEM_SECRET: "CHANGE_ME_GENERATE_RANDOM_64_CHAR_HEX"
+  PIN_ENCRYPTION_KEY: "CHANGE_ME_GENERATE_RANDOM_64_CHAR_HEX"
+  ENCRYPTION_KEY: "CHANGE_ME_GENERATE_RANDOM_64_CHAR_HEX"
+  AFRICASTALKING_API_KEY: "YOUR_PRODUCTION_API_KEY_HERE"
+  AFRICASTALKING_SENDER_ID: "SupaMoto"
+  CLAIMS_BOT_URL: "https://your-claims-bot-production-url.com"
+  CLAIMS_BOT_ACCESS_TOKEN: "YOUR_PRODUCTION_ACCESS_TOKEN_HERE"
+  FEEGRANT_GRANTER: "ixo1xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  FEEGRANT_AUTH_MAINNET: "YOUR_FEEGRANT_AUTH_TOKEN_HERE"
+  LG_WALLET_MNEMONIC: "word1 word2 word3 ... word24"
+  EVALUATOR_WALLET_MNEMONIC: "word1 word2 word3 ... word24"
+
+---
+# ============================================================================
+# PostgreSQL StatefulSet
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: ixo-ussd
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+  clusterIP: None
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: ixo-ussd
+spec:
+  serviceName: postgres-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: ixo-ussd-config
+                  key: PG_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ixo-ussd-secrets
+                  key: PG_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: ixo-ussd-config
+                  key: PG_DATABASE
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+            initialDelaySeconds: 5
+            periodSeconds: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 20Gi
+
+---
+# ============================================================================
+# IXO USSD Application Deployment
+# ============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ixo-ussd-app
+  namespace: ixo-ussd
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ixo-ussd
+  template:
+    metadata:
+      labels:
+        app: ixo-ussd
+    spec:
+      containers:
+        - name: ixo-ussd
+          image: ixo-ussd-supamoto:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: ixo-ussd-config
+            - secretRef:
+                name: ixo-ussd-secrets
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "2000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: app-logs
+              mountPath: /app/logs
+      volumes:
+        - name: app-logs
+          emptyDir: {}
+
+---
+# ============================================================================
+# Service for IXO USSD Application
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: ixo-ussd-service
+  namespace: ixo-ussd
+spec:
+  type: LoadBalancer
+  selector:
+    app: ixo-ussd
+  ports:
+    - port: 80
+      targetPort: 3000
+      protocol: TCP
+      name: http
+
+---
+# ============================================================================
+# Horizontal Pod Autoscaler (Optional)
+# ============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ixo-ussd-hpa
+  namespace: ixo-ussd
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ixo-ussd-app
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+# ============================================================================
+# Ingress (Optional - for HTTPS/domain routing)
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ixo-ussd-ingress
+  namespace: ixo-ussd
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+    - hosts:
+        - ussd.example.com
+      secretName: ixo-ussd-tls
+  rules:
+    - host: ussd.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ixo-ussd-service
+                port:
+                  number: 80
+

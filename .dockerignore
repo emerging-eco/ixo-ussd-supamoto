@@ -1,0 +1,84 @@
+# ============================================================================
+# Docker Ignore File
+# ============================================================================
+# Excludes unnecessary files from Docker build context for faster builds
+# ============================================================================
+
+# Node modules (will be installed in container)
+node_modules/
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Build output (will be built in container)
+dist/
+build/
+*.tsbuildinfo
+
+# Environment files (use docker-compose env_file instead)
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+coverage/
+.nyc_output/
+*.test.ts
+*.spec.ts
+tests/
+__tests__/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+.cache/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Optional dependencies
+.husky/
+.lint-staged
+
+# Scripts (not needed in production)
+scripts/
+!scripts/validate-machines.js
+
+# Reference files
+src/reference/
+
