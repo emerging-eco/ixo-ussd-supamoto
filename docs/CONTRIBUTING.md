@@ -50,7 +50,27 @@ git merge upstream/main
 
 ---
 
-## 4. Contributing Back
+## 4. Code Quality and Formatting
+
+Before committing your changes, please ensure your code is properly formatted and linted:
+
+```bash
+# Format code with Prettier
+pnpm format
+
+# Lint code with ESLint
+pnpm lint
+```
+
+**Pre-commit Checklist:**
+- [ ] Run `pnpm format` to format all code
+- [ ] Run `pnpm lint` to check for linting errors
+- [ ] Run `pnpm test` to ensure all tests pass
+- [ ] Verify your changes work as expected
+
+---
+
+## 5. Contributing Back
 
 If you build something that could benefit the wider community, we encourage you to contribute it back to the original repository:
 
@@ -80,7 +100,7 @@ When submitting a PR, please:
 
 ---
 
-## 5. Questions and Support
+## 6. Questions and Support
 
 If you have questions or need help:
 
