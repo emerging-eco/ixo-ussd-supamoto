@@ -117,6 +117,10 @@ export interface BeanDeliveryConfirmationRecord {
   customerConfirmedReceipt: boolean | null;
   tokenTransferredAt: Date | null;
   confirmationDeadline: Date;
+  claimId: string | null;
+  claimTxHash: string | null;
+  claimEvaluationTxHash: string | null;
+  fuelDeliveryClaimId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -1142,6 +1146,10 @@ class DataService {
         customerConfirmedReceipt: result.customer_confirmed_receipt,
         tokenTransferredAt: result.token_transferred_at,
         confirmationDeadline: result.confirmation_deadline,
+        claimId: result.claim_id,
+        claimTxHash: result.claim_tx_hash,
+        claimEvaluationTxHash: result.claim_evaluation_tx_hash,
+        fuelDeliveryClaimId: result.fuel_delivery_claim_id,
         createdAt: result.created_at,
         updatedAt: result.updated_at,
       };
@@ -1251,6 +1259,10 @@ class DataService {
         customerConfirmedReceipt: result.customer_confirmed_receipt,
         tokenTransferredAt: result.token_transferred_at,
         confirmationDeadline: result.confirmation_deadline,
+        claimId: result.claim_id,
+        claimTxHash: result.claim_tx_hash,
+        claimEvaluationTxHash: result.claim_evaluation_tx_hash,
+        fuelDeliveryClaimId: result.fuel_delivery_claim_id,
         createdAt: result.created_at,
         updatedAt: result.updated_at,
       };
