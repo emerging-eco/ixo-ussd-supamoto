@@ -18,7 +18,7 @@ import Fastify, { FastifyInstance } from "fastify";
 import metrics from "fastify-metrics";
 import fp from "fastify-plugin";
 import { config, ENV } from "./config.js";
-import { getProductionPlugins } from "../src/plugins/index.js";
+import { getProductionPlugins } from "./plugins/index.js";
 import { ussdRoutes } from "./routes/ussd.js";
 import { logger } from "./services/logger.js";
 
