@@ -5,15 +5,26 @@
 -- for fresh database deployments. All tables, indexes, and constraints are
 -- created in a single idempotent script.
 --
+-- CONSOLIDATION HISTORY:
+-- - Merged migrations/postgres/000-init-all.sql (base schema)
+-- - Merged migrations/postgres/001-add-bean-distribution-claim-tracking.sql
+-- - Merged migrations/postgres/002-remove-obsolete-ixo-tables.sql
+--
+-- REMOVED TABLES (delegated to Claims Bot service):
+-- - ixo_profiles: IXO blockchain profiles (now managed by Claims Bot)
+-- - ixo_accounts: IXO blockchain accounts (now managed by Claims Bot)
+-- - matrix_vaults: Matrix secure storage (no longer used)
+--
 -- Schema Organization:
--- 1. Core Tables (Phones, Households, Customers, Wallets)
--- 2. Customer Activation & Eligibility
--- 3. Bean Distribution & Delivery
--- 4. Household Survey & Claims (with JSON storage)
+-- 1. Core Tables (Phones, Households, Customers)
+-- 2. Bean Distribution & Delivery (with blockchain claim tracking)
+-- 3. Household Survey & Claims (with JSON storage)
+-- 4. Failed Claims Retry Queue
 -- 5. Audit & Logging
 --
 -- Note: This script includes the survey JSON storage refactor, consolidating
--- survey responses directly into the household_claims table as JSONB.
+-- survey responses directly into the household_claims table as TEXT (encrypted).
+-- Note: households table is kept for future shared household wallet feature.
 -- ============================================================================
 
 -- ============================================================================
@@ -38,6 +49,7 @@ DROP INDEX IF EXISTS idx_household_claims_status;
 DROP INDEX IF EXISTS idx_household_claims_lg_customer;
 DROP INDEX IF EXISTS idx_household_claims_lg;
 DROP INDEX IF EXISTS idx_household_claims_customer;
+DROP INDEX IF EXISTS idx_bean_confirmations_claim_id;
 DROP INDEX IF EXISTS idx_bean_confirmations_deadline;
 DROP INDEX IF EXISTS idx_bean_confirmations_lg;
 DROP INDEX IF EXISTS idx_bean_confirmations_customer;
@@ -45,20 +57,27 @@ DROP INDEX IF EXISTS idx_bean_otps_valid;
 DROP INDEX IF EXISTS idx_bean_otps_intent;
 DROP INDEX IF EXISTS idx_bean_otps_lg;
 DROP INDEX IF EXISTS idx_bean_otps_customer;
+DROP INDEX IF EXISTS idx_lg_intents_claim_collection;
+DROP INDEX IF EXISTS idx_lg_intents_claim_intent_id;
 DROP INDEX IF EXISTS idx_lg_intents_status;
 DROP INDEX IF EXISTS idx_lg_intents_lg;
 DROP INDEX IF EXISTS idx_lg_intents_customer;
+DROP INDEX IF EXISTS idx_failed_claims_customer;
+DROP INDEX IF EXISTS idx_failed_claims_next_retry;
+DROP INDEX IF EXISTS idx_failed_claims_status;
+DROP INDEX IF EXISTS idx_customers_national_id;
+DROP INDEX IF EXISTS idx_customer_phones_phone_id;
+DROP INDEX IF EXISTS idx_customer_phones_customer_id;
+DROP INDEX IF EXISTS idx_customers_role;
+DROP INDEX IF EXISTS idx_customers_customer_id;
+DROP INDEX IF EXISTS idx_phones_phone_number;
+-- Obsolete indexes (tables removed - delegated to Claims Bot)
 DROP INDEX IF EXISTS idx_matrix_vaults_profile_id;
 DROP INDEX IF EXISTS idx_ixo_accounts_address;
 DROP INDEX IF EXISTS idx_ixo_accounts_profile_id;
 DROP INDEX IF EXISTS idx_ixo_profiles_did;
 DROP INDEX IF EXISTS idx_ixo_profiles_household_id;
 DROP INDEX IF EXISTS idx_ixo_profiles_customer_id;
-DROP INDEX IF EXISTS idx_customer_phones_phone_id;
-DROP INDEX IF EXISTS idx_customer_phones_customer_id;
-DROP INDEX IF EXISTS idx_customers_role;
-DROP INDEX IF EXISTS idx_customers_customer_id;
-DROP INDEX IF EXISTS idx_phones_phone_number;
 
 -- Drop tables in reverse dependency order
 DROP TABLE IF EXISTS audit_log;
@@ -68,6 +87,7 @@ DROP TABLE IF EXISTS household_survey_responses;  -- Legacy table from before JS
 DROP TABLE IF EXISTS bean_delivery_confirmations;
 DROP TABLE IF EXISTS bean_distribution_otps;
 DROP TABLE IF EXISTS lg_delivery_intents;
+-- Obsolete tables (removed - delegated to Claims Bot)
 DROP TABLE IF EXISTS matrix_vaults;
 DROP TABLE IF EXISTS ixo_accounts;
 DROP TABLE IF EXISTS ixo_profiles;
@@ -79,7 +99,9 @@ DROP TABLE IF EXISTS phones;
 -- ============================================================================
 -- SECTION 1: CORE TABLES
 -- ============================================================================
--- Data Storage: Phone → Customer → Wallet (IXO Profile + Account) → Matrix Vault
+-- Data Storage: Phone → Customer (with optional household reference)
+-- Note: IXO blockchain integration (ixo_profiles, ixo_accounts, matrix_vaults)
+--       has been removed. IXO account creation is now delegated to the Claims Bot service.
 
 -- 1.1 Phone details (independent - can exist without any other data)
 CREATE TABLE phones (
@@ -92,7 +114,7 @@ CREATE TABLE phones (
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- 1.2 Households (created only when needed for IXO Profile/Wallet)
+-- 1.2 Households (kept for future shared household wallet feature)
 CREATE TABLE households (
   id SERIAL PRIMARY KEY,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -126,44 +148,8 @@ CREATE TABLE customer_phones (
   UNIQUE(customer_id, phone_id)
 );
 
--- 1.5 IXO Profiles (Wallet part 1 - can be individual or household-based)
-CREATE TABLE ixo_profiles (
-  id SERIAL PRIMARY KEY,
-  customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
-  household_id INTEGER REFERENCES households(id) ON DELETE CASCADE,
-  did TEXT NOT NULL UNIQUE,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  CONSTRAINT ixo_profiles_owner_check CHECK (
-    (customer_id IS NOT NULL AND household_id IS NULL) OR
-    (customer_id IS NULL AND household_id IS NOT NULL)
-  )
-);
-
--- 1.6 IXO Accounts (Wallet part 2 - many per IXO profile)
-CREATE TABLE ixo_accounts (
-  id SERIAL PRIMARY KEY,
-  ixo_profile_id INTEGER NOT NULL REFERENCES ixo_profiles(id) ON DELETE CASCADE,
-  address TEXT NOT NULL UNIQUE,
-  encrypted_mnemonic TEXT NOT NULL,
-  is_primary BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
--- 1.7 Matrix Vaults (secure storage - one per IXO profile)
-CREATE TABLE matrix_vaults (
-  id SERIAL PRIMARY KEY,
-  ixo_profile_id INTEGER NOT NULL REFERENCES ixo_profiles(id) ON DELETE CASCADE,
-  username TEXT NOT NULL,
-  encrypted_password TEXT NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  UNIQUE(ixo_profile_id)
-);
-
 -- ============================================================================
--- SECTION 2: CUSTOMER ACTIVATION & ELIGIBILITY
+-- SECTION 2: BEAN DISTRIBUTION & DELIVERY (with blockchain claim tracking)
 -- ============================================================================
 -- Note: eligibility_verifications table not included - replaced by
 --       household_claims + survey_form JSONB system
@@ -172,11 +158,7 @@ CREATE TABLE matrix_vaults (
 -- Note: household_survey_responses table not included - replaced by survey_form
 --       JSONB column in household_claims table for flexible schema
 
--- ============================================================================
--- SECTION 3: BEAN DISTRIBUTION & DELIVERY
--- ============================================================================
-
--- 3.1 LG Intent Registration Table
+-- 2.1 LG Intent Registration Table (with blockchain claim tracking)
 CREATE TABLE lg_delivery_intents (
   id SERIAL PRIMARY KEY,
   customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
@@ -185,10 +167,13 @@ CREATE TABLE lg_delivery_intents (
   has_bean_voucher BOOLEAN NOT NULL,
   voucher_status VARCHAR(50),
   voucher_check_response JSONB,
+  -- Blockchain claim tracking columns (added in migration 001)
+  claim_intent_id VARCHAR(255),
+  claim_collection_id VARCHAR(255),
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- 3.2 OTP tracking table for bean distribution
+-- 2.2 OTP tracking table for bean distribution
 CREATE TABLE bean_distribution_otps (
   id SERIAL PRIMARY KEY,
   customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
@@ -202,7 +187,7 @@ CREATE TABLE bean_distribution_otps (
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- 3.3 Delivery confirmations table
+-- 2.3 Delivery confirmations table (with blockchain claim tracking)
 CREATE TABLE bean_delivery_confirmations (
   id SERIAL PRIMARY KEY,
   customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
@@ -213,16 +198,18 @@ CREATE TABLE bean_delivery_confirmations (
   customer_confirmed_receipt BOOLEAN NULL,
   token_transferred_at TIMESTAMP NULL,
   confirmation_deadline TIMESTAMP NOT NULL,
+  -- Blockchain claim tracking column (added in migration 001)
+  claim_id VARCHAR(255),
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 -- ============================================================================
--- SECTION 4: HOUSEHOLD SURVEY & CLAIMS (with JSON Storage)
+-- SECTION 3: HOUSEHOLD SURVEY & CLAIMS (with JSON Storage)
 -- ============================================================================
 
--- 4.1 Household Claims (submitted by LG on behalf of customer)
--- Includes embedded survey responses in survey_form JSONB field
+-- 3.1 Household Claims (submitted by LG on behalf of customer)
+-- Includes embedded survey responses in survey_form TEXT field (encrypted)
 CREATE TABLE household_claims (
   id SERIAL PRIMARY KEY,
   lg_customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
@@ -240,10 +227,10 @@ CREATE TABLE household_claims (
 );
 
 -- ============================================================================
--- SECTION 5: FAILED CLAIMS RETRY QUEUE
+-- SECTION 4: FAILED CLAIMS RETRY QUEUE
 -- ============================================================================
 
--- 5.1 Failed Claims Queue (for automatic retry of failed claims submissions)
+-- 4.1 Failed Claims Queue (for automatic retry of failed claims submissions)
 CREATE TABLE failed_claims_queue (
   id SERIAL PRIMARY KEY,
   claim_type VARCHAR(50) NOT NULL CHECK (claim_type IN ('lead_creation', '1000_day_household')),
@@ -261,10 +248,10 @@ CREATE TABLE failed_claims_queue (
 );
 
 -- ============================================================================
--- SECTION 6: AUDIT & LOGGING
+-- SECTION 5: AUDIT & LOGGING
 -- ============================================================================
 
--- 6.1 Audit log table
+-- 5.1 Audit log table
 CREATE TABLE audit_log (
   id SERIAL PRIMARY KEY,
   event_type VARCHAR(50) NOT NULL,
@@ -275,7 +262,7 @@ CREATE TABLE audit_log (
 );
 
 -- ============================================================================
--- SECTION 7: INDEXES FOR PERFORMANCE
+-- SECTION 6: INDEXES FOR PERFORMANCE
 -- ============================================================================
 
 -- Core table indexes
@@ -285,27 +272,20 @@ CREATE INDEX idx_customers_role ON customers(role);
 CREATE INDEX idx_customers_national_id ON customers(national_id) WHERE national_id IS NOT NULL;
 CREATE INDEX idx_customer_phones_customer_id ON customer_phones(customer_id);
 CREATE INDEX idx_customer_phones_phone_id ON customer_phones(phone_id);
-CREATE INDEX idx_ixo_profiles_customer_id ON ixo_profiles(customer_id);
-CREATE INDEX idx_ixo_profiles_household_id ON ixo_profiles(household_id);
-CREATE INDEX idx_ixo_profiles_did ON ixo_profiles(did);
-CREATE INDEX idx_ixo_accounts_profile_id ON ixo_accounts(ixo_profile_id);
-CREATE INDEX idx_ixo_accounts_address ON ixo_accounts(address);
-CREATE INDEX idx_matrix_vaults_profile_id ON matrix_vaults(ixo_profile_id);
+
+-- Note: Obsolete indexes removed (ixo_profiles, ixo_accounts, matrix_vaults tables removed)
 
 -- Failed claims queue indexes
 CREATE INDEX idx_failed_claims_status ON failed_claims_queue(status);
 CREATE INDEX idx_failed_claims_next_retry ON failed_claims_queue(next_retry_at) WHERE status = 'pending';
 CREATE INDEX idx_failed_claims_customer ON failed_claims_queue(customer_id);
 
--- Activation & eligibility indexes
--- Note: eligibility_verifications indexes not included - table not in schema
--- Note: distribution_otps indexes not included - table superseded by bean_distribution_otps
--- Note: household_survey_responses indexes not included - table replaced by survey_form JSONB
-
--- Bean distribution indexes
+-- Bean distribution indexes (with blockchain claim tracking)
 CREATE INDEX idx_lg_intents_customer ON lg_delivery_intents(customer_id);
 CREATE INDEX idx_lg_intents_lg ON lg_delivery_intents(lg_customer_id);
 CREATE INDEX idx_lg_intents_status ON lg_delivery_intents(voucher_status);
+CREATE INDEX idx_lg_intents_claim_intent_id ON lg_delivery_intents(claim_intent_id);
+CREATE INDEX idx_lg_intents_claim_collection ON lg_delivery_intents(claim_collection_id);
 CREATE INDEX idx_bean_otps_customer ON bean_distribution_otps(customer_id);
 CREATE INDEX idx_bean_otps_lg ON bean_distribution_otps(lg_customer_id);
 CREATE INDEX idx_bean_otps_intent ON bean_distribution_otps(intent_id);
@@ -313,19 +293,13 @@ CREATE INDEX idx_bean_otps_valid ON bean_distribution_otps(is_valid);
 CREATE INDEX idx_bean_confirmations_customer ON bean_delivery_confirmations(customer_id);
 CREATE INDEX idx_bean_confirmations_lg ON bean_delivery_confirmations(lg_customer_id);
 CREATE INDEX idx_bean_confirmations_deadline ON bean_delivery_confirmations(confirmation_deadline);
+CREATE INDEX idx_bean_confirmations_claim_id ON bean_delivery_confirmations(claim_id);
 
--- Household claims indexes (with JSON support)
+-- Household claims indexes (with TEXT storage for encrypted survey data)
 CREATE INDEX idx_household_claims_customer ON household_claims(customer_id);
 CREATE INDEX idx_household_claims_lg ON household_claims(lg_customer_id);
 CREATE INDEX idx_household_claims_lg_customer_composite ON household_claims(lg_customer_id, customer_id);
 CREATE INDEX idx_household_claims_status ON household_claims(claim_status);
-
--- GIN index on survey_form JSONB column for efficient JSON querying
--- Note: DISABLED - We store encrypted TEXT which cannot be cast to JSONB
--- If you need to query survey data, decrypt it first in application layer
--- CREATE INDEX idx_household_claims_survey_form ON household_claims USING GIN ((survey_form::jsonb));
-
--- Index on survey_form_updated_at for tracking recent updates
 CREATE INDEX idx_household_claims_survey_updated ON household_claims(survey_form_updated_at) WHERE survey_form IS NOT NULL;
 
 -- Audit log indexes
@@ -335,26 +309,31 @@ CREATE INDEX idx_audit_log_created ON audit_log(created_at);
 CREATE INDEX idx_audit_log_pin_reset ON audit_log(event_type) WHERE event_type = 'PIN_RESET';
 
 -- ============================================================================
--- SECTION 8: TABLE & COLUMN COMMENTS
+-- SECTION 7: TABLE & COLUMN COMMENTS
 -- ============================================================================
 
 COMMENT ON TABLE customers IS 'Customer records with role-based access control';
 COMMENT ON COLUMN customers.role IS 'User role: customer (default), lead_generator (can use Agent Tools), call_center (can use Agent Tools + support functions), admin (full access)';
 COMMENT ON COLUMN customers.national_id IS 'Optional Zambian National Registration Card number (format: XXXXXX/XX/X)';
 
-COMMENT ON TABLE lg_delivery_intents IS 'Stores LG intent to deliver beans before sending to subscriptions-service-supamoto';
+COMMENT ON TABLE households IS 'Household grouping table. Kept for future shared household wallet feature. Currently minimal usage.';
+
+COMMENT ON TABLE lg_delivery_intents IS 'Stores LG intent to deliver beans with blockchain claim tracking (claim_intent_id, claim_collection_id)';
 COMMENT ON COLUMN lg_delivery_intents.voucher_status IS 'Status: HAS_VOUCHER, NO_VOUCHER, ERROR';
 COMMENT ON COLUMN lg_delivery_intents.voucher_check_response IS 'Full JSON response from subscriptions-service-supamoto';
+COMMENT ON COLUMN lg_delivery_intents.claim_intent_id IS 'Blockchain claim intent ID from Claims Bot (added in migration 001)';
+COMMENT ON COLUMN lg_delivery_intents.claim_collection_id IS 'Blockchain claim collection ID from Claims Bot (added in migration 001)';
 
 COMMENT ON TABLE bean_distribution_otps IS 'Primary OTP tracking table for bean distribution. Replaced the simpler distribution_otps table which lacked foreign key relationships and LG tracking. Valid 10 minutes by default (configurable via OTP_VALIDITY_MINUTES). Tracks the complete OTP lifecycle from generation through validation and usage.';
-COMMENT ON TABLE bean_delivery_confirmations IS 'Tracks dual confirmations (LG + Customer) for bean delivery within 7-day window';
+COMMENT ON TABLE bean_delivery_confirmations IS 'Tracks dual confirmations (LG + Customer) for bean delivery within 7-day window with blockchain claim tracking';
 COMMENT ON COLUMN bean_delivery_confirmations.customer_confirmed_receipt IS 'TRUE = received beans, FALSE = did not receive, NULL = not yet confirmed';
+COMMENT ON COLUMN bean_delivery_confirmations.claim_id IS 'Blockchain claim ID from Claims Bot (added in migration 001)';
 
-COMMENT ON TABLE household_claims IS '1,000 Day Household claims submitted by Lead Generators on behalf of customers. Includes embedded survey responses in survey_form JSONB field.';
+COMMENT ON TABLE household_claims IS '1,000 Day Household claims submitted by Lead Generators on behalf of customers. Includes embedded survey responses in survey_form TEXT field (encrypted).';
 COMMENT ON COLUMN household_claims.lg_customer_id IS 'Lead Generator customer ID - who submitted the claim on behalf of the customer';
 COMMENT ON COLUMN household_claims.claim_status IS 'Status: PENDING, PROCESSED, FAILED, VOUCHER_ALLOCATED';
 COMMENT ON COLUMN household_claims.claims_bot_response IS 'Full JSON response from ixo-matrix-supamoto-claims-bot';
-COMMENT ON COLUMN household_claims.survey_form IS 'Encrypted JSONB field storing complete survey form definition and responses. Structure: {formDefinition: {...}, answers: {...}, metadata: {startedAt, lastUpdatedAt, completedAt, allFieldsCompleted, version}}';
+COMMENT ON COLUMN household_claims.survey_form IS 'Encrypted TEXT field storing complete survey form definition and responses. Structure: {formDefinition: {...}, answers: {...}, metadata: {startedAt, lastUpdatedAt, completedAt, allFieldsCompleted, version}}';
 COMMENT ON COLUMN household_claims.survey_form_updated_at IS 'Timestamp of last survey form update. Used for tracking survey progress and session recovery.';
 
 COMMENT ON TABLE failed_claims_queue IS 'Retry queue for failed claims bot API submissions. Stores failed lead creation and 1000-day household claims for automatic retry with exponential backoff.';
@@ -366,6 +345,16 @@ COMMENT ON COLUMN failed_claims_queue.next_retry_at IS 'Timestamp for next retry
 COMMENT ON TABLE audit_log IS 'Audit trail for security events. Event types include: PIN_RESET, CUSTOMER_ACTIVATED, SMS_FAILED, BEAN_RECEIPT_DENIED, ACCOUNT_LOCKED, CLAIMS_SUBMISSION_FAILED, etc.';
 
 -- ============================================================================
--- INITIALIZATION COMPLETE
+-- CONSOLIDATED INITIALIZATION COMPLETE
+-- ============================================================================
+-- This script consolidates:
+-- - migrations/postgres/000-init-all.sql (base schema)
+-- - migrations/postgres/001-add-bean-distribution-claim-tracking.sql
+-- - migrations/postgres/002-remove-obsolete-ixo-tables.sql
+--
+-- Obsolete tables removed (delegated to Claims Bot):
+-- - ixo_profiles, ixo_accounts, matrix_vaults
+--
+-- Result: Clean, idempotent initialization script for fresh database deployments.
 -- ============================================================================
 
