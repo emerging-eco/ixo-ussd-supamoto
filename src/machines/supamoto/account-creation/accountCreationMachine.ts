@@ -4,7 +4,7 @@ import { navigationGuards } from "../guards/navigation.guards.js";
 import { validationGuards } from "../guards/validation.guards.js";
 import { NavigationPatterns } from "../utils/navigation-patterns.js";
 import { dataService } from "../../../services/database-storage.js";
-import { createIxoAccountBackground } from "../../../services/ixo/background-ixo-creation.js";
+import { submitLeadCreationClaim } from "../../../services/ixo/lead-claim-submission.js";
 import { messages } from "../../../constants/branding.js";
 import { validateUserInput } from "../../../utils/input-validation.js";
 
@@ -125,14 +125,12 @@ export const accountCreationMachine = setup({
 
         // Step 3: Fire-and-forget IXO account creation (non-blocking)
         // This is a safety net for background process - errors should not crash the server
-        createIxoAccountBackground({
+        submitLeadCreationClaim({
           customerId: customerRecord.customerId,
-          customerRecordId: customerRecord.id,
           phoneNumber: input.phoneNumber,
           fullName: input.fullName,
           nationalId: input.nationalId || undefined,
-          pin: input.pin,
-        }).catch(error => {
+        }).catch((error: any) => {
           // Robust error handling - ensure this catch handler never throws
           try {
             // Error is already logged in the background service

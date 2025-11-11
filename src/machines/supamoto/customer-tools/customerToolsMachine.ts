@@ -10,7 +10,10 @@ import { evaluateClaim } from "../../../services/ixo/ixo-claims.js";
 import { sendSMS } from "../../../services/sms.js";
 import { lgTokenTransferredSMS } from "../../../templates/sms/delivery.js";
 import { generateOpenIDTokenFromCustomerId } from "../../../services/ixo/matrix-openid.js";
-import { fetchSubscriptionBalances, formatBalancesForUSSD } from "../../../services/subscriptions.js";
+import {
+  fetchSubscriptionBalances,
+  formatBalancesForUSSD,
+} from "../../../services/subscriptions.js";
 
 const logger = createModuleLogger("customerTools");
 
@@ -38,7 +41,8 @@ export type CustomerToolsEvent =
   | { type: "INPUT"; input: string }
   | { type: "ERROR"; error: string };
 
-const MENU_MESSAGE = "Customer Tools\n1. Check Balances\n2. Confirm Receival of Beans\n0. Back";
+const MENU_MESSAGE =
+  "Customer Tools\n1. Check Balances\n2. Confirm Receival of Beans\n0. Back";
 
 const RECEIPT_QUESTION =
   "Did you receive a bag of beans from your Lead Generator?\n1. Yes\n2. No\n0. Back";
@@ -428,7 +432,7 @@ export const customerToolsMachine = setup({
                 { error: errorMessage },
                 "Error in fetchSubscriptionBalancesService"
               );
-              
+
               // User-friendly error messages
               if (errorMessage.includes("Matrix vault")) {
                 return "Account setup incomplete. Please contact support.\n\n1. Back";

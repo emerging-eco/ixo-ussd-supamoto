@@ -27,14 +27,16 @@ sequenceDiagram
     actor LG as Lead Generator
 
     Note over USSD,claims-bot: Account Creation Phase (Lead Creation Claim)
-    Note over USSD: Customer creates account via USSD
+    Note over USSD: Customer creates account via USSD (fire-and-forget claim submission)
     USSD->>claims-bot: submitLeadCreationClaim(customerID, phoneNumber, nationalId)
+    Note over claims-bot: Claims Bot handles IXO account creation asynchronously
     claims-bot-->>matrix-bot: CronJob picks up new claim
     matrix-bot->>matrix-bot: createIxoProfile(customerID, phoneNumber)
     matrix-bot->>subs-svc: createSubscription(IXO account)
     subs-svc-->>subs-svc: createSubscriptionWorkflow()
     subs-svc-->>matrix-bot: (Subscription completed)
-    matrix-bot-->>USSD: (IXO DID, IXO account, Matrix Credentials, Subscription ID)
+    Note over USSD: USSD does NOT wait for IXO account creation
+    Note over USSD: IXO data retrieved from Claims Bot DB when needed (lazy loading)
 
     Note over Customer,LG: Customer Activation Phase (Lead Generator Flow)
     Customer->>LG: Visit distribution point
@@ -71,9 +73,9 @@ sequenceDiagram
 
 ### Key Steps
 
-1. **Account Creation**: Customer creates account via USSD, triggering background IXO profile creation
-2. **Lead Creation Claim**: USSD submits lead creation claim via `@ixo/supamoto-bot-sdk` during account creation
-3. **IXO Profile Creation**: Matrix bot creates IXO profile and subscription
+1. **Account Creation**: Customer creates account via USSD
+2. **Lead Creation Claim**: USSD submits lead creation claim via `@ixo/supamoto-bot-sdk` (fire-and-forget, non-blocking)
+3. **IXO Profile Creation**: Claims Bot creates IXO profile and subscription asynchronously (USSD does not wait)
 4. **LG Initiates Activation**: Lead Generator selects "Activate a Customer" from Agent Tools
 5. **Temp PIN Generation**: System generates 5-digit temporary PIN (range: 00000-99999)
 6. **SMS Sent**: Activation SMS sent to customer with temporary PIN and Customer ID
@@ -111,7 +113,9 @@ sequenceDiagram
 
 ### Implementation Notes
 
-- **Lead Creation Claims**: Submitted during account creation via `background-ixo-creation.ts`, not via external jambo-supamoto system
+- **Lead Creation Claims**: Submitted during account creation via `lead-claim-submission.ts` (fire-and-forget, non-blocking)
+- **IXO Account Creation**: Delegated to Claims Bot service - USSD no longer creates blockchain accounts directly
+- **Lazy Loading**: IXO account data retrieved from Claims Bot database when needed (not during account creation)
 - **Activation Flow Claim Submission**: The `submitClaimService` in `customerActivationMachine.ts` is currently **stubbed** (lines 264-295)
 - **Actual Claim Submission**: 1,000 Day Household claims are submitted via the separate survey flow in `thousandDaySurveyMachine.ts` (lines 289-355)
 - **SMS Template Discrepancy**: The actual SMS sent uses a simpler message than the template in `activation.ts` (see `sms.ts` line 343)

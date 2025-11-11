@@ -4,7 +4,7 @@ import { navigationGuards } from "../../../../src/machines/supamoto/guards/navig
 import { validationGuards } from "../../../../src/machines/supamoto/guards/validation.guards.js";
 import { NavigationPatterns } from "../../../../src/machines/supamoto/utils/navigation-patterns.js";
 import { dataService } from "../../../../src/services/database-storage.js";
-import { createIxoAccountBackground } from "../../../../src/services/ixo/background-ixo-creation.js";
+import { submitLeadCreationClaim } from "../../../../src/services/ixo/lead-claim-submission.js";
 import { messages } from "../../../../src/constants/branding.js";
 import { validateUserInput } from "../../../../src/utils/input-validation.js";
 
@@ -124,14 +124,12 @@ export const accountCreationMachine = setup({
         );
 
         // Step 3: Fire-and-forget IXO account creation (non-blocking)
-        createIxoAccountBackground({
+        submitLeadCreationClaim({
           customerId: customerRecord.customerId,
-          customerRecordId: customerRecord.id,
           phoneNumber: input.phoneNumber,
           fullName: input.fullName,
           nationalId: input.nationalId || undefined,
-          pin: input.pin,
-        }).catch(error => {
+        }).catch((error: any) => {
           // Error is already logged in the background service
 
           console.error(
