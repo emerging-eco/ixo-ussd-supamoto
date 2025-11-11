@@ -201,8 +201,8 @@ class SessionLogger {
 
 const SERVER_URL = 
 //   "http://127.0.0.1:3002/api/ussd"; //localhost
-//  "https://ixo-ussd-supamoto-development.up.railway.app/api/ussd"; //development
- "https://ixo-ussd-supamoto-stage.up.railway.app/api/ussd";       //stage
+ "https://ixo-ussd-supamoto-development.up.railway.app/api/ussd"; //development
+//  "https://ixo-ussd-supamoto-stage.up.railway.app/api/ussd";       //stage
 const sessionId = `interactive-test-${Date.now()}`;
 const phoneNumber = "+260971230001"; // Zambian number
 const serviceCode = "*2233#"; //*384*46361#	// Zambia
@@ -363,6 +363,7 @@ async function main() {
     console.log(`🔢 Service Code: ${serviceCode}`);
     console.log(`🆔 Session ID: ${sessionId}`);
     console.log(`📝 Session log: ${sessionLogger.getLogFilePath()}`);
+    console.log(`📱 Server URL: ${SERVER_URL}`);
     console.log("");
     console.log("Commands:");
     console.log("  - Type numbers to navigate menus");
