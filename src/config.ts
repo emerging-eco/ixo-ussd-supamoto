@@ -192,9 +192,6 @@ export const config = {
   METRICS: {
     ENABLED: process.env.METRICS_ENABLED === "true",
   },
-  FEATURES: {
-    MATRIX_READ_ENABLED: process.env.MATRIX_READ_ENABLED === "true",
-  },
   SMS: {
     ENABLED: process.env.SMS_ENABLED === "true",
     API_KEY: process.env.AFRICASTALKING_API_KEY,

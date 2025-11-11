@@ -2,15 +2,6 @@ import { setup, assign, fromPromise, sendTo } from "xstate";
 import { withNavigation } from "../utils/navigation-mixin.js";
 import { navigationGuards } from "../guards/navigation.guards.js";
 import { dataService } from "../../../../src/services/database-storage.js";
-import { config } from "../../../../src/config.js";
-import {
-  loginWithVault,
-  findUserRoom,
-  getProfileAccountFromRoom,
-  getContractDetailsFromRoom,
-  getOrdersFromRoom,
-  getVouchersFromRoom,
-} from "../../../../src/services/ixo/matrix-reader.js";
 import {
   customerActivationMachine,
   CustomerActivationOutput,
@@ -62,153 +53,28 @@ export const userServicesMachine = setup({
     ),
     fetchAccountDetailsService: fromPromise(
       async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
-        if (config.FEATURES.MATRIX_READ_ENABLED && input.pin) {
-          try {
-            const login = await loginWithVault({
-              phoneNumber: input.phoneNumber,
-              pin: input.pin,
-            });
-            const room = await findUserRoom({
-              mxClient: login.mxClient,
-              userAddress: undefined,
-              did: undefined,
-            });
-            if (room.roomId) {
-              const profile = await getProfileAccountFromRoom({
-                mxClient: login.mxClient,
-                roomId: room.roomId,
-              });
-              if (profile) {
-                return { source: "matrix" as const, profile };
-              }
-            }
-          } catch {
-            // Ignore Matrix errors, fall back to database
-          }
-        }
         const record = await dataService.getCustomerByPhone(input.phoneNumber);
         return { source: "db" as const, profile: record };
       }
     ),
     fetchContractDetailsService: fromPromise(
       async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
-        if (config.FEATURES.MATRIX_READ_ENABLED && input.pin) {
-          try {
-            const login = await loginWithVault({
-              phoneNumber: input.phoneNumber,
-              pin: input.pin,
-            });
-            const room = await findUserRoom({
-              mxClient: login.mxClient,
-              userAddress: login.address,
-              did: login.did,
-            });
-            if (room.roomId) {
-              return await getContractDetailsFromRoom({
-                mxClient: login.mxClient,
-                roomId: room.roomId,
-              });
-            }
-          } catch {
-            // Ignore Matrix errors, return null
-          }
-        }
         return null;
       }
     ),
     fetchOrdersService: fromPromise(
       async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
-        if (config.FEATURES.MATRIX_READ_ENABLED && input.pin) {
-          try {
-            const login = await loginWithVault({
-              phoneNumber: input.phoneNumber,
-              pin: input.pin,
-            });
-            const room = await findUserRoom({
-              mxClient: login.mxClient,
-              userAddress: login.address,
-              did: login.did,
-            });
-            if (room.roomId) {
-              return await getOrdersFromRoom({
-                mxClient: login.mxClient,
-                roomId: room.roomId,
-              });
-            }
-          } catch {
-            // Ignore Matrix errors, return empty array
-          }
-        }
         return [] as any[];
       }
     ),
     fetchVouchersService: fromPromise(
       async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
-        if (config.FEATURES.MATRIX_READ_ENABLED && input.pin) {
-          try {
-            const login = await loginWithVault({
-              phoneNumber: input.phoneNumber,
-              pin: input.pin,
-            });
-            const room = await findUserRoom({
-              mxClient: login.mxClient,
-              userAddress: login.address,
-              did: login.did,
-            });
-            if (room.roomId) {
-              return await getVouchersFromRoom({
-                mxClient: login.mxClient,
-                roomId: room.roomId,
-              });
-            }
-          } catch {
-            // Ignore Matrix errors, return empty array
-          }
-        }
         return [] as any[];
       }
     ),
     customerActivationMachine,
     customerToolsMachine,
   },
-  /*
-    fetchContractDetailsService: fromPromise(async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
-      if (config.FEATURES.MATRIX_READ_ENABLED && input.pin) {
-        try {
-          const login = await loginWithVault({ phoneNumber: input.phoneNumber, pin: input.pin });
-          const room = await findUserRoom({ mxClient: login.mxClient, userAddress: login.address, did: login.did });
-          if (room.roomId) {
-            return await getContractDetailsFromRoom({ mxClient: login.mxClient, roomId: room.roomId });
-          }
-        } catch {}
-      }
-      return null;
-    }),
-    fetchOrdersService: fromPromise(async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
-      if (config.FEATURES.MATRIX_READ_ENABLED && input.pin) {
-        try {
-          const login = await loginWithVault({ phoneNumber: input.phoneNumber, pin: input.pin });
-          const room = await findUserRoom({ mxClient: login.mxClient, userAddress: login.address, did: login.did });
-          if (room.roomId) {
-            return await getOrdersFromRoom({ mxClient: login.mxClient, roomId: room.roomId });
-          }
-        } catch {}
-      }
-      return [] as any[];
-    }),
-    fetchVouchersService: fromPromise(async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
-      if (config.FEATURES.MATRIX_READ_ENABLED && input.pin) {
-        try {
-          const login = await loginWithVault({ phoneNumber: input.phoneNumber, pin: input.pin });
-          const room = await findUserRoom({ mxClient: login.mxClient, userAddress: login.address, did: login.did });
-          if (room.roomId) {
-            return await getVouchersFromRoom({ mxClient: login.mxClient, roomId: room.roomId });
-          }
-        } catch {}
-      }
-      return [] as any[];
-    }),
-*/
   actions: {
     setError: assign({
       error: ({ event }) =>

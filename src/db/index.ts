@@ -116,33 +116,9 @@ export interface Database {
     is_primary: boolean | null;
     created_at: Date;
   };
-  ixo_profiles: {
-    id?: number;
-    customer_id: number | null;
-    household_id: number | null;
-    did: string;
-    created_at: Date;
-    updated_at: Date;
-  };
-  ixo_accounts: {
-    id?: number;
-    ixo_profile_id: number;
-    address: string;
-    encrypted_mnemonic: string;
-    is_primary: boolean | null;
-    created_at: Date;
-    updated_at: Date;
-  };
-  matrix_vaults: {
-    id?: number;
-    ixo_profile_id: number;
-    username: string;
-    encrypted_password: string;
-    created_at: Date;
-    updated_at: Date;
-  };
   // temp_pins table removed - temporary PINs now stored encrypted in customers.encrypted_pin
   // eligibility_verifications table removed - replaced by household_claims + household_survey_responses
+  // ixo_profiles, ixo_accounts, matrix_vaults tables removed - IXO account creation delegated to Claims Bot
   lg_delivery_intents: {
     id?: number;
     customer_id: string;

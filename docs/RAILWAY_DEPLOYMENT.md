@@ -816,7 +816,6 @@ MATRIX_BOT_URL=https://rooms.bot.mx.ixo.earth
 MATRIX_STATE_BOT_URL=https://state.bot.mx.ixo.earth
 
 # Matrix features
-MATRIX_READ_ENABLED=true
 SKIP_MATRIX_ONBOARDING=false
 ```
 
@@ -1344,7 +1343,6 @@ railway variables set FEEGRANT_AUTH_MAINNET=<your_token>
 railway variables set MATRIX_HOME_SERVER=https://mx.ixo.earth
 railway variables set MATRIX_BOT_URL=https://rooms.bot.mx.ixo.earth
 railway variables set MATRIX_STATE_BOT_URL=https://state.bot.mx.ixo.earth
-railway variables set MATRIX_READ_ENABLED=true
 
 # Claims Bot configuration
 railway variables set CLAIMS_BOT_URL=https://your-claims-bot-url.com

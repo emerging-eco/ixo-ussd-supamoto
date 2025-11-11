@@ -41,7 +41,6 @@ data:
   MATRIX_HOME_SERVER: "https://mx.ixo.earth"
   MATRIX_BOT_URL: "https://rooms.bot.mx.ixo.earth"
   MATRIX_STATE_BOT_URL: "https://state.bot.mx.ixo.earth"
-  MATRIX_READ_ENABLED: "true"
   SMS_ENABLED: "true"
   AFRICASTALKING_USERNAME: "supamoto"
   BEAN_DISTRIBUTION_COLLECTION_ID: "120"

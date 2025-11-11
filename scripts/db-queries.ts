@@ -2,9 +2,6 @@
  * Script to query phone and customer data from the database.
  * Usage:
  *   ts-node db-queries.ts <phoneNumber>
- *   ts-node db-queries.ts --customer <customer_id>
- *   ts-node db-queries.ts --profile <ixo_profile_id>
- *   ts-node db-queries.ts --matrix <customer_id>
  *   ts-node db-queries.ts         # (to list all phones)
  */
 
@@ -127,109 +124,7 @@ async function queryPhones(phoneNumber?: string) {
   }
 }
 
-async function queryIxoProfiles(customerId: string) {
-  const client = await pool.connect();
-  try {
-    const query = `
-      SELECT 
-        ip.id,
-        ip.customer_id,
-        ip.household_id,
-        ip.did,
-        ip.created_at,
-        ip.updated_at,
-        c.customer_id as customer_code,
-        c.full_name
-      FROM ixo_profiles ip
-      LEFT JOIN customers c ON ip.customer_id = c.id
-      WHERE c.customer_id = $1
-      ORDER BY ip.created_at DESC
-    `;
 
-    const res = await client.query(query, [customerId]);
-
-    if (res.rows.length === 0) {
-      console.log(`\nNo IXO profiles found for customer: ${customerId}`);
-    } else {
-      console.log(`\nIXO Profiles for customer: ${customerId}`);
-      console.table(res.rows);
-    }
-  } catch (err) {
-    console.error("\nError executing IXO profiles query:", err);
-  } finally {
-    client.release();
-  }
-}
-
-async function queryIxoAccounts(ixoProfileId: string) {
-  const client = await pool.connect();
-  try {
-    const query = `
-      SELECT 
-        ia.id,
-        ia.ixo_profile_id,
-        ia.address,
-        ia.is_primary,
-        ia.created_at,
-        ia.updated_at,
-        ip.did,
-        c.customer_id as customer_code
-      FROM ixo_accounts ia
-      JOIN ixo_profiles ip ON ia.ixo_profile_id = ip.id
-      LEFT JOIN customers c ON ip.customer_id = c.id
-      WHERE ia.ixo_profile_id = $1
-      ORDER BY ia.is_primary DESC, ia.created_at ASC
-    `;
-
-    const res = await client.query(query, [ixoProfileId]);
-
-    if (res.rows.length === 0) {
-      console.log(`\nNo IXO accounts found for profile ID: ${ixoProfileId}`);
-    } else {
-      console.log(`\nIXO Accounts for profile ID: ${ixoProfileId}`);
-      console.table(res.rows);
-    }
-  } catch (err) {
-    console.error("\nError executing IXO accounts query:", err);
-  } finally {
-    client.release();
-  }
-}
-
-async function queryMatrixVaults(customerId: string) {
-  const client = await pool.connect();
-  try {
-    const query = `
-      SELECT 
-        mv.id,
-        mv.ixo_profile_id,
-        mv.username,
-        mv.created_at,
-        mv.updated_at,
-        ip.did,
-        c.customer_id as customer_code,
-        c.full_name
-      FROM matrix_vaults mv
-      JOIN ixo_profiles ip ON mv.ixo_profile_id = ip.id
-      JOIN customers c ON ip.customer_id = c.id
-      WHERE c.customer_id = $1
-      ORDER BY mv.created_at DESC
-    `;
-
-    const res = await client.query(query, [customerId]);
-
-    if (res.rows.length === 0) {
-      console.log(`\nNo Matrix vaults found for customer: ${customerId}`);
-    } else {
-      console.log(`\nMatrix Vaults for customer: ${customerId}`);
-      console.table(res.rows);
-    }
-  } catch (err) {
-    console.error("\nError executing Matrix vaults query:", err);
-  } finally {
-    client.release();
-  }
-}
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -239,12 +134,6 @@ async function main() {
     if (args.length === 0) {
       // Default: list all phones
       await queryPhones();
-    } else if (args[0] === "--customer" && args[1]) {
-      await queryIxoProfiles(args[1]);
-    } else if (args[0] === "--profile" && args[1]) {
-      await queryIxoAccounts(args[1]);
-    } else if (args[0] === "--matrix" && args[1]) {
-      await queryMatrixVaults(args[1]);
     } else if (!args[0].startsWith("--")) {
       // Phone number query
       await queryPhones(args[0]);
@@ -252,9 +141,6 @@ async function main() {
       console.log(`
 Usage:
   ts-node db-queries.ts <phoneNumber>     # Query by phone number
-  ts-node db-queries.ts --customer <id>   # Query IXO profiles by customer_id
-  ts-node db-queries.ts --profile <id>    # Query IXO accounts by ixo_profile_id  
-  ts-node db-queries.ts --matrix <id>     # Query Matrix vaults by customer_id
   ts-node db-queries.ts                   # List all phones
       `);
     }
