@@ -239,7 +239,6 @@ export class EnvironmentSetup {
         }
       }
 
-
       if (this.currentConfig.useRealMatrix) {
         if (!config.MATRIX?.homeServerUrl) {
           errors.push("Real Matrix requires homeserver URL configuration");

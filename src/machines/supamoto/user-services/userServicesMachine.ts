@@ -63,17 +63,17 @@ export const userServicesMachine = setup({
       }
     ),
     fetchContractDetailsService: fromPromise(
-      async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
+      async () => {
         return null;
       }
     ),
     fetchOrdersService: fromPromise(
-      async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
+      async () => {
         return [] as any[];
       }
     ),
     fetchVouchersService: fromPromise(
-      async ({ input }: { input: { phoneNumber: string; pin?: string } }) => {
+      async () => {
         return [] as any[];
       }
     ),

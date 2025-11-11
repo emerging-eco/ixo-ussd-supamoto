@@ -36,8 +36,7 @@ export type CustomerToolsEvent =
   | { type: "INPUT"; input: string }
   | { type: "ERROR"; error: string };
 
-const MENU_MESSAGE =
-  "Customer Tools\n1. Confirm Receival of Beans\n0. Back";
+const MENU_MESSAGE = "Customer Tools\n1. Confirm Receival of Beans\n0. Back";
 
 const RECEIPT_QUESTION =
   "Did you receive a bag of beans from your Lead Generator?\n1. Yes\n2. No\n0. Back";
@@ -331,9 +330,7 @@ export const customerToolsMachine = setup({
       })),
       on: {
         INPUT: withNavigation(
-          [
-            { target: "fetchingDeliveryConfirmation", guard: "isInput1" },
-          ],
+          [{ target: "fetchingDeliveryConfirmation", guard: "isInput1" }],
           {
             backTarget: "routeToMain",
             exitTarget: "routeToMain",

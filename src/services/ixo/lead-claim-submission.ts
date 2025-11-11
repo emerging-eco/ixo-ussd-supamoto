@@ -68,7 +68,8 @@ export async function submitLeadCreationClaim(
           submitClaimToBot(params),
           new Promise<never>((_, reject) =>
             setTimeout(
-              () => reject(new Error("Claim submission timeout after 15 seconds")),
+              () =>
+                reject(new Error("Claim submission timeout after 15 seconds")),
               15000
             )
           ),
@@ -291,5 +292,3 @@ async function logClaimSubmissionFailure(params: {
     );
   }
 }
-
-
