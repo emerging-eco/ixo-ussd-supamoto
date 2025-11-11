@@ -62,21 +62,15 @@ export const userServicesMachine = setup({
         return { source: "db" as const, profile: record };
       }
     ),
-    fetchContractDetailsService: fromPromise(
-      async () => {
-        return null;
-      }
-    ),
-    fetchOrdersService: fromPromise(
-      async () => {
-        return [] as any[];
-      }
-    ),
-    fetchVouchersService: fromPromise(
-      async () => {
-        return [] as any[];
-      }
-    ),
+    fetchContractDetailsService: fromPromise(async () => {
+      return null;
+    }),
+    fetchOrdersService: fromPromise(async () => {
+      return [] as any[];
+    }),
+    fetchVouchersService: fromPromise(async () => {
+      return [] as any[];
+    }),
     customerActivationMachine,
     thousandDaySurveyMachine,
     customerToolsMachine,
