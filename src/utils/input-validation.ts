@@ -62,7 +62,7 @@ export const VALIDATION_RULES = {
       PATTERN: /^(\d{6})\/(\d{2})\/(\d)$/,
       PATTERN_WITHOUT_SLASHES: /^(\d{6})(\d{2})(\d)$/,
       MIN_PROVINCE_CODE: 1,
-      MAX_PROVINCE_CODE: 10,
+      MAX_PROVINCE_CODE: 99,
       TOTAL_LENGTH_WITH_SLASHES: 12,
       TOTAL_LENGTH_WITHOUT_SLASHES: 9,
       PROVINCE_NAMES: {
