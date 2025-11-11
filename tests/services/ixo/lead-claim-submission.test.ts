@@ -84,7 +84,7 @@ describe("Lead Claim Submission", () => {
   it("handles claim submission timeout", async () => {
     // Mock timeout
     mockSubmitLeadCreationClaim.mockImplementationOnce(
-      () => new Promise((_resolve, _reject) => setTimeout(() => {}, 20000))
+      () => new Promise(() => setTimeout(() => {}, 20000))
     );
 
     const res = await submitLeadCreationClaim({
