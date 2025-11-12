@@ -835,7 +835,13 @@ export const thousandDaySurveyMachine = setup({
           [
             {
               target: "askChildAge",
-              guard: ({ event, context }: { event: ThousandDaySurveyEvent; context: ThousandDaySurveyContext }) => {
+              guard: ({
+                event,
+                context,
+              }: {
+                event: ThousandDaySurveyEvent;
+                context: ThousandDaySurveyContext;
+              }) => {
                 if (event.type !== "INPUT") return false;
                 if (!validateBeneficiaryCategory(event.input).valid)
                   return false;
@@ -850,7 +856,13 @@ export const thousandDaySurveyMachine = setup({
                       ? mapBeneficiaryCategory(event.input)
                       : [],
                 }),
-                ({ context, event }: { context: ThousandDaySurveyContext; event: ThousandDaySurveyEvent }) => {
+                ({
+                  context,
+                  event,
+                }: {
+                  context: ThousandDaySurveyContext;
+                  event: ThousandDaySurveyEvent;
+                }) => {
                   // Fire-and-forget save - use event value directly
                   if (event.type === "INPUT") {
                     const answer = mapBeneficiaryCategory(event.input);
@@ -881,7 +893,13 @@ export const thousandDaySurveyMachine = setup({
                       ? mapBeneficiaryCategory(event.input)
                       : [],
                 }),
-                ({ context, event }: { context: ThousandDaySurveyContext; event: ThousandDaySurveyEvent }) => {
+                ({
+                  context,
+                  event,
+                }: {
+                  context: ThousandDaySurveyContext;
+                  event: ThousandDaySurveyEvent;
+                }) => {
                   // Fire-and-forget save - use event value directly
                   if (event.type === "INPUT") {
                     const answer = mapBeneficiaryCategory(event.input);
@@ -937,7 +955,13 @@ export const thousandDaySurveyMachine = setup({
                       ? mapChildAge(event.input)
                       : undefined,
                 }),
-                ({ context, event }: { context: ThousandDaySurveyContext; event: ThousandDaySurveyEvent }) => {
+                ({
+                  context,
+                  event,
+                }: {
+                  context: ThousandDaySurveyContext;
+                  event: ThousandDaySurveyEvent;
+                }) => {
                   // Fire-and-forget save - use event value directly
                   if (event.type === "INPUT") {
                     const answer = mapChildAge(event.input);
@@ -994,7 +1018,13 @@ export const thousandDaySurveyMachine = setup({
                       ? mapBeanIntakeFrequency(event.input)
                       : "",
                 }),
-                ({ context, event }: { context: ThousandDaySurveyContext; event: ThousandDaySurveyEvent }) => {
+                ({
+                  context,
+                  event,
+                }: {
+                  context: ThousandDaySurveyContext;
+                  event: ThousandDaySurveyEvent;
+                }) => {
                   // Fire-and-forget save - use event value directly
                   if (event.type === "INPUT") {
                     const answer = mapBeanIntakeFrequency(event.input);
@@ -1042,14 +1072,38 @@ export const thousandDaySurveyMachine = setup({
         INPUT: withNavigation(
           [
             {
-              target: "savingPriceSpecification",
+              target: "askAwarenessIronBeans",
               guard: "isValidPriceSpecification",
-              actions: assign({
-                priceSpecification: ({ event }) =>
-                  event.type === "INPUT"
-                    ? mapPriceSpecification(event.input)
-                    : "",
-              }),
+              actions: [
+                assign({
+                  priceSpecification: ({ event }) =>
+                    event.type === "INPUT"
+                      ? mapPriceSpecification(event.input)
+                      : "",
+                }),
+                ({
+                  context,
+                  event,
+                }: {
+                  context: ThousandDaySurveyContext;
+                  event: ThousandDaySurveyEvent;
+                }) => {
+                  // Fire-and-forget save - use event value directly
+                  if (event.type === "INPUT") {
+                    const answer = mapPriceSpecification(event.input);
+                    surveyResponseStorageService
+                      .saveSurveyAnswer(
+                        context.lgCustomerId,
+                        context.customerId,
+                        "schema:priceSpecification",
+                        answer
+                      )
+                      .catch(() => {
+                        /* ignore errors */
+                      });
+                  }
+                },
+              ],
             },
             {
               target: "askPriceSpecification",
@@ -1072,34 +1126,6 @@ export const thousandDaySurveyMachine = setup({
       },
     },
 
-    savingPriceSpecification: {
-      entry: assign(() => ({
-        message: "Saving answer...\n\n1. Continue",
-      })),
-      invoke: {
-        id: "savePriceSpecification",
-        src: "saveAnswerService",
-        input: ({ context }) => ({
-          lgCustomerId: context.lgCustomerId,
-          customerId: context.customerId,
-          questionName: "schema:priceSpecification",
-          answer: context.priceSpecification,
-        }),
-        onDone: {
-          // No target - just complete the save
-        },
-        onError: {
-          target: "error",
-          actions: "setError",
-        },
-      },
-      on: {
-        INPUT: {
-          target: "askAwarenessIronBeans",
-        },
-      },
-    },
-
     askAwarenessIronBeans: {
       entry: assign(() => ({
         message:
@@ -1109,12 +1135,36 @@ export const thousandDaySurveyMachine = setup({
         INPUT: withNavigation(
           [
             {
-              target: "savingAwarenessIronBeans",
+              target: "askKnowsNutritionalBenefits",
               guard: "isValidYesNo",
-              actions: assign({
-                awarenessIronBeans: ({ event }) =>
-                  event.type === "INPUT" ? mapYesNo(event.input) : "",
-              }),
+              actions: [
+                assign({
+                  awarenessIronBeans: ({ event }) =>
+                    event.type === "INPUT" ? mapYesNo(event.input) : "",
+                }),
+                ({
+                  context,
+                  event,
+                }: {
+                  context: ThousandDaySurveyContext;
+                  event: ThousandDaySurveyEvent;
+                }) => {
+                  // Fire-and-forget save - use event value directly
+                  if (event.type === "INPUT") {
+                    const answer = mapYesNo(event.input);
+                    surveyResponseStorageService
+                      .saveSurveyAnswer(
+                        context.lgCustomerId,
+                        context.customerId,
+                        "ecs:awarenessIronBeans",
+                        answer
+                      )
+                      .catch(() => {
+                        /* ignore errors */
+                      });
+                  }
+                },
+              ],
             },
             {
               target: "askAwarenessIronBeans",
@@ -1137,34 +1187,6 @@ export const thousandDaySurveyMachine = setup({
       },
     },
 
-    savingAwarenessIronBeans: {
-      entry: assign(() => ({
-        message: "Saving answer...\n\n1. Continue",
-      })),
-      invoke: {
-        id: "saveAwarenessIronBeans",
-        src: "saveAnswerService",
-        input: ({ context }) => ({
-          lgCustomerId: context.lgCustomerId,
-          customerId: context.customerId,
-          questionName: "ecs:awarenessIronBeans",
-          answer: context.awarenessIronBeans,
-        }),
-        onDone: {
-          // No target - just complete the save
-        },
-        onError: {
-          target: "error",
-          actions: "setError",
-        },
-      },
-      on: {
-        INPUT: {
-          target: "askKnowsNutritionalBenefits",
-        },
-      },
-    },
-
     askKnowsNutritionalBenefits: {
       entry: assign(() => ({
         message:
@@ -1174,12 +1196,36 @@ export const thousandDaySurveyMachine = setup({
         INPUT: withNavigation(
           [
             {
-              target: "savingKnowsNutritionalBenefits",
+              target: "askNutritionalBenefit1",
               guard: "isValidYesNo",
-              actions: assign({
-                knowsNutritionalBenefits: ({ event }) =>
-                  event.type === "INPUT" ? mapYesNo(event.input) : "",
-              }),
+              actions: [
+                assign({
+                  knowsNutritionalBenefits: ({ event }) =>
+                    event.type === "INPUT" ? mapYesNo(event.input) : "",
+                }),
+                ({
+                  context,
+                  event,
+                }: {
+                  context: ThousandDaySurveyContext;
+                  event: ThousandDaySurveyEvent;
+                }) => {
+                  // Fire-and-forget save - use event value directly
+                  if (event.type === "INPUT") {
+                    const answer = mapYesNo(event.input);
+                    surveyResponseStorageService
+                      .saveSurveyAnswer(
+                        context.lgCustomerId,
+                        context.customerId,
+                        "ecs:knowsNutritionalBenefits",
+                        answer
+                      )
+                      .catch(() => {
+                        /* ignore errors */
+                      });
+                  }
+                },
+              ],
             },
             {
               target: "askKnowsNutritionalBenefits",
@@ -1199,34 +1245,6 @@ export const thousandDaySurveyMachine = setup({
             enableExit: true,
           }
         ),
-      },
-    },
-
-    savingKnowsNutritionalBenefits: {
-      entry: assign(() => ({
-        message: "Saving answer...\n\n1. Continue",
-      })),
-      invoke: {
-        id: "saveKnowsNutritionalBenefits",
-        src: "saveAnswerService",
-        input: ({ context }) => ({
-          lgCustomerId: context.lgCustomerId,
-          customerId: context.customerId,
-          questionName: "ecs:knowsNutritionalBenefits",
-          answer: context.knowsNutritionalBenefits,
-        }),
-        onDone: {
-          // No target - just complete the save
-        },
-        onError: {
-          target: "error",
-          actions: "setError",
-        },
-      },
-      on: {
-        INPUT: {
-          target: "askNutritionalBenefit1",
-        },
       },
     },
 
@@ -1387,24 +1405,55 @@ export const thousandDaySurveyMachine = setup({
         INPUT: withNavigation(
           [
             {
-              target: "savingNutritionalBenefits",
+              target: "askAntenatalCardVerified",
               guard: "isValidYesNo",
-              actions: assign({
-                nutritionalBenefit5: ({ event }) =>
-                  event.type === "INPUT" ? event.input : "",
-                nutritionalBenefitDetails: ({ context, event }) => {
-                  if (event.type !== "INPUT") return [];
-                  // Collect all 5 answers and map to array
-                  const answers = [
-                    context.nutritionalBenefit1 || "",
-                    context.nutritionalBenefit2 || "",
-                    context.nutritionalBenefit3 || "",
-                    context.nutritionalBenefit4 || "",
-                    event.input,
-                  ];
-                  return mapNutritionalBenefits(answers);
+              actions: [
+                assign({
+                  nutritionalBenefit5: ({ event }) =>
+                    event.type === "INPUT" ? event.input : "",
+                  nutritionalBenefitDetails: ({ context, event }) => {
+                    if (event.type !== "INPUT") return [];
+                    // Collect all 5 answers and map to array
+                    const answers = [
+                      context.nutritionalBenefit1 || "",
+                      context.nutritionalBenefit2 || "",
+                      context.nutritionalBenefit3 || "",
+                      context.nutritionalBenefit4 || "",
+                      event.input,
+                    ];
+                    return mapNutritionalBenefits(answers);
+                  },
+                }),
+                ({
+                  context,
+                  event,
+                }: {
+                  context: ThousandDaySurveyContext;
+                  event: ThousandDaySurveyEvent;
+                }) => {
+                  // Fire-and-forget save - use computed value directly
+                  if (event.type === "INPUT") {
+                    const answers = [
+                      context.nutritionalBenefit1 || "",
+                      context.nutritionalBenefit2 || "",
+                      context.nutritionalBenefit3 || "",
+                      context.nutritionalBenefit4 || "",
+                      event.input,
+                    ];
+                    const answer = mapNutritionalBenefits(answers);
+                    surveyResponseStorageService
+                      .saveSurveyAnswer(
+                        context.lgCustomerId,
+                        context.customerId,
+                        "ecs:nutritionalBenefitDetails",
+                        answer
+                      )
+                      .catch(() => {
+                        /* ignore errors */
+                      });
+                  }
                 },
-              }),
+              ],
             },
             {
               target: "askNutritionalBenefit5",
@@ -1427,34 +1476,6 @@ export const thousandDaySurveyMachine = setup({
       },
     },
 
-    savingNutritionalBenefits: {
-      entry: assign(() => ({
-        message: "Saving answers...\n\n1. Continue",
-      })),
-      invoke: {
-        id: "saveNutritionalBenefits",
-        src: "saveAnswerService",
-        input: ({ context }) => ({
-          lgCustomerId: context.lgCustomerId,
-          customerId: context.customerId,
-          questionName: "ecs:nutritionalBenefitDetails",
-          answer: context.nutritionalBenefitDetails,
-        }),
-        onDone: {
-          // No target - just complete the save
-        },
-        onError: {
-          target: "error",
-          actions: "setError",
-        },
-      },
-      on: {
-        INPUT: {
-          target: "askAntenatalCardVerified",
-        },
-      },
-    },
-
     askAntenatalCardVerified: {
       entry: assign(() => ({
         message:
@@ -1464,14 +1485,48 @@ export const thousandDaySurveyMachine = setup({
         INPUT: withNavigation(
           [
             {
-              target: "savingAntenatalCardVerified",
+              target: "submittingClaim",
               guard: "isValidYesNo",
-              actions: assign({
-                antenatalCardVerified: ({ event }) =>
-                  event.type === "INPUT"
-                    ? mapAntenatalCardVerified(event.input)
-                    : false,
-              }),
+              actions: [
+                assign({
+                  antenatalCardVerified: ({ event }) =>
+                    event.type === "INPUT"
+                      ? mapAntenatalCardVerified(event.input)
+                      : false,
+                }),
+                ({
+                  context,
+                  event,
+                }: {
+                  context: ThousandDaySurveyContext;
+                  event: ThousandDaySurveyEvent;
+                }) => {
+                  // Fire-and-forget save - use event value directly
+                  if (event.type === "INPUT") {
+                    const answer = mapAntenatalCardVerified(event.input);
+                    surveyResponseStorageService
+                      .saveSurveyAnswer(
+                        context.lgCustomerId,
+                        context.customerId,
+                        "ecs:confirmAction_antenatal_card_verified",
+                        answer
+                      )
+                      .catch(() => {
+                        /* ignore errors */
+                      });
+
+                    // Also mark survey as complete (fire-and-forget)
+                    surveyResponseStorageService
+                      .markSurveyComplete(
+                        context.lgCustomerId,
+                        context.customerId
+                      )
+                      .catch(() => {
+                        /* ignore errors */
+                      });
+                  }
+                },
+              ],
             },
             {
               target: "askAntenatalCardVerified",
@@ -1491,60 +1546,6 @@ export const thousandDaySurveyMachine = setup({
             enableExit: true,
           }
         ),
-      },
-    },
-
-    savingAntenatalCardVerified: {
-      entry: assign(() => ({
-        message: "Saving answer...\n\n1. Continue",
-      })),
-      invoke: {
-        id: "saveAntenatalCardVerified",
-        src: "saveAnswerService",
-        input: ({ context }) => ({
-          lgCustomerId: context.lgCustomerId,
-          customerId: context.customerId,
-          questionName: "ecs:confirmAction_antenatal_card_verified",
-          answer: context.antenatalCardVerified,
-        }),
-        onDone: {
-          // No target - just complete the save
-        },
-        onError: {
-          target: "error",
-          actions: "setError",
-        },
-      },
-      on: {
-        INPUT: {
-          target: "markingComplete",
-        },
-      },
-    },
-
-    markingComplete: {
-      entry: assign(() => ({
-        message: "Completing survey...\n\n1. Continue",
-      })),
-      invoke: {
-        id: "markComplete",
-        src: "markCompleteService",
-        input: ({ context }) => ({
-          lgCustomerId: context.lgCustomerId,
-          customerId: context.customerId,
-        }),
-        onDone: {
-          // No target - just complete the operation
-        },
-        onError: {
-          target: "error",
-          actions: "setError",
-        },
-      },
-      on: {
-        INPUT: {
-          target: "submittingClaim",
-        },
       },
     },
 
