@@ -8,6 +8,9 @@
 import AfricasTalking from "africastalking";
 import { createModuleLogger } from "./logger.js";
 import { config } from "../config.js";
+import { activationSMS } from "../templates/sms/activation.js";
+import { beanVoucherAllocatedSMS } from "../templates/sms/household.js";
+import { customerOTPSMS } from "../templates/sms/otp.js";
 
 const logger = createModuleLogger("sms");
 
@@ -340,7 +343,7 @@ export async function sendActivationSMS(
     "🔐 Sending activation SMS with temporary PIN"
   );
 
-  const message = `Welcome to SupaMoto! Your activation PIN is: ${tempPin}. This PIN expires in 30 minutes.`;
+  const message = activationSMS(customerId, tempPin);
 
   const result = await sendSMS({
     to: phoneNumber,
@@ -367,15 +370,15 @@ export async function sendActivationSMS(
  * Send eligibility confirmation SMS
  */
 export async function sendEligibilityConfirmationSMS(
-  phoneNumber: string
+  phoneNumber: string,
+  customerId: string
 ): Promise<SendSMSResult> {
   logger.info(
-    { phoneNumber: phoneNumber.slice(-4) },
+    { phoneNumber: phoneNumber.slice(-4), customerId: customerId.slice(-4) },
     "🎉 Sending eligibility confirmation SMS"
   );
 
-  const message =
-    "Congratulations! You are eligible for the 1,000-Day Household program. You can now collect your first free bag of beans! :)";
+  const message = beanVoucherAllocatedSMS(customerId);
 
   const result = await sendSMS({
     to: phoneNumber,
@@ -385,6 +388,7 @@ export async function sendEligibilityConfirmationSMS(
   logger.info(
     {
       phoneNumber: phoneNumber.slice(-4),
+      customerId: customerId.slice(-4),
       success: result.success,
       messageId: result.messageId,
       error: result.error,
@@ -402,7 +406,8 @@ export async function sendEligibilityConfirmationSMS(
  */
 export async function sendDistributionOTP(
   phoneNumber: string,
-  otp: string
+  otp: string,
+  lgName?: string
 ): Promise<SendSMSResult> {
   logger.info(
     {
@@ -412,7 +417,7 @@ export async function sendDistributionOTP(
     "🔑 Sending distribution OTP SMS"
   );
 
-  const message = `Your bean collection OTP is: ${otp}. Show this code to the Lead Generator. Valid for 10 minutes.`;
+  const message = customerOTPSMS(otp, lgName);
 
   const result = await sendSMS({
     to: phoneNumber,

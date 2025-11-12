@@ -296,14 +296,14 @@ const submitClaimService = fromPromise(
 );
 
 const sendConfirmationService = fromPromise(
-  async ({ input }: { input: { phoneNumber: string } }) => {
+  async ({ input }: { input: { phoneNumber: string; customerId: string } }) => {
     logger.info(
-      { phoneNumber: input.phoneNumber.slice(-4) },
+      { phoneNumber: input.phoneNumber.slice(-4), customerId: input.customerId.slice(-4) },
       "🎉 Sending eligibility confirmation SMS"
     );
 
     try {
-      const smsResult = await sendEligibilityConfirmationSMS(input.phoneNumber);
+      const smsResult = await sendEligibilityConfirmationSMS(input.phoneNumber, input.customerId);
 
       // Check if SMS was actually sent successfully
       if (!smsResult.success) {
@@ -322,6 +322,7 @@ const sendConfirmationService = fromPromise(
       logger.info(
         {
           phoneNumber: input.phoneNumber.slice(-4),
+          customerId: input.customerId.slice(-4),
           messageId: smsResult.messageId,
         },
         "✅ Eligibility confirmation SMS sent successfully"
@@ -745,6 +746,7 @@ export const customerActivationMachine = setup({
         src: "sendConfirmationService",
         input: ({ context }) => ({
           phoneNumber: context.customerPhone!,
+          customerId: context.customerId!,
         }),
         onDone: {
           target: "complete",
