@@ -82,10 +82,16 @@ tests/machines/supamoto/account-login/loginMachine.ts       | 364 +++++++++++++-
 
 ## Commits
 
+**Phase 1: Login Flow Optimization**
 1. `ce0023b` - feat(IXO-452): Add database infrastructure and combined credential verification
 2. `e5c7fc3` - refactor(IXO-452): Remove duplicate clearEncryptedPin method
 3. `84ff0dd` - feat(IXO-452): Update test machine copy with new login flow
 4. `d419bdf` - test(IXO-452): Update login machine tests for new flow
+
+**Phase 2: Survey Flow Optimization (Partial)**
+5. `e01a51c` - feat(IXO-452): Implement fire-and-forget pattern for survey saves (partial)
+
+**Total**: 5 commits on branch `feature/ixo-452-improve-menu-flow`
 
 ---
 
@@ -99,33 +105,52 @@ tests/machines/supamoto/account-login/loginMachine.ts       | 364 +++++++++++++-
 
 ---
 
-## Remaining Work (Not Implemented)
+## Phase 2: Survey Flow Optimization (Partial Implementation)
 
-### ⚠️ Steps 5-6: Optimize Survey Flow
+### ✅ Step 6: Update Survey Save Service - COMPLETE
 
-**Scope**: Remove 10 "Continue" states from `thousandDaySurveyMachine.ts`
+**Completed**:
+- ✅ Updated `saveSurveyAnswer()` to catch errors and log to audit_log
+- ✅ Updated `saveSurveyAnswers()` with fire-and-forget error handling
+- ✅ Errors no longer throw - survey flow continues even if saves fail
+- ✅ Added comprehensive audit logging for failed saves
 
-**States to Remove**:
-1. `savingBeneficiaryCategory`
-2. `savingChildAge`
-3. `savingBeanIntakeFrequency`
-4. `savingPriceSpecification`
-5. `savingAwarenessIronBeans`
-6. `savingKnowsNutritionalBenefits`
-7. `savingNutritionalBenefits`
-8. `savingAntenatalCardVerified`
-9. `markingComplete`
-10. `submittingClaim` (convert to fire-and-forget)
+### ⚠️ Step 5: Update Survey Machine - PARTIAL (Proof of Concept)
 
-**Implementation Approach**:
-- Remove each "saving" state
-- Move save logic to fire-and-forget action in question state
-- Update question state transitions to go directly to next question
-- Add `saveAnswerFireAndForget` action
-- Update error handling to log to audit_log instead of showing user errors
-- Update `survey-response-storage.ts` to catch errors and log instead of throwing
+**Completed (3 of 10 states)**:
+1. ✅ `savingBeneficiaryCategory` - REMOVED
+2. ✅ `savingChildAge` - REMOVED
+3. ✅ `savingBeanIntakeFrequency` - REMOVED
 
-**Estimated Impact**: 10 fewer interactions per survey (survey has ~8 questions)
+**Implementation Details**:
+- ✅ Implemented fire-and-forget save actions in question states
+- ✅ Questions now transition directly to next question
+- ✅ Saves happen in background without blocking user flow
+- ✅ Added proper TypeScript type annotations
+- ✅ Pattern established and validated
+
+**Remaining (7 of 10 states)**:
+4. ⚠️ `savingPriceSpecification` - TODO
+5. ⚠️ `savingAwarenessIronBeans` - TODO
+6. ⚠️ `savingKnowsNutritionalBenefits` - TODO
+7. ⚠️ `savingNutritionalBenefits` - TODO
+8. ⚠️ `savingAntenatalCardVerified` - TODO
+9. ⚠️ `markingComplete` - TODO
+10. ⚠️ `submittingClaim` - TODO (convert to fire-and-forget)
+
+**Impact So Far**:
+- **3 fewer interactions** in survey flow (proof of concept complete)
+- **Pattern established** for remaining 7 states
+- **Estimated total impact**: 10 fewer interactions per survey when complete
+
+**Implementation Approach for Remaining States**:
+- Follow the same pattern as the 3 completed states
+- For each "saving" state:
+  1. Remove the state entirely
+  2. Add fire-and-forget save action to the question state
+  3. Update transitions to go directly to next question
+  4. Add proper TypeScript type annotations
+- For `submittingClaim`: Keep as blocking operation (requires all survey data)
 
 ### ⚠️ Steps 7-8: Optimize Activation Flow
 
