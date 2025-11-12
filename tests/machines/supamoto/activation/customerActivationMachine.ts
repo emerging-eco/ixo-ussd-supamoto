@@ -455,12 +455,102 @@ export const customerActivationMachine = setup({
       on: {
         INPUT: [
           {
-            target: "sendingActivationSMS",
+            target: "waitingForCustomer",
             guard: "isValidPhoneNumber",
-            actions: assign({
-              customerPhone: ({ event }) =>
-                event.type === "INPUT" ? event.input.trim() : undefined,
-            }),
+            actions: [
+              assign({
+                customerPhone: ({ event }) =>
+                  event.type === "INPUT" ? event.input.trim() : undefined,
+              }),
+              ({ context, event }: { context: CustomerActivationContext; event: CustomerActivationEvent }) => {
+                // Fire-and-forget: Generate PIN and send activation SMS in background
+                if (event.type === "INPUT" && context.customerId) {
+                  const phoneNumber = event.input.trim();
+
+                  // Execute PIN generation and SMS sending asynchronously
+                  (async () => {
+                    try {
+                      logger.info(
+                        {
+                          customerId: context.customerId!.slice(-4),
+                          phoneNumber: phoneNumber.slice(-4),
+                        },
+                        "🔐 Generating and sending activation PIN (fire-and-forget)"
+                      );
+
+                      // Generate temporary PIN
+                      const tempPin = generatePin();
+
+                      // Reset customer PIN with temporary PIN
+                      await dataService.resetCustomerPin(
+                        context.customerId!,
+                        tempPin,
+                        undefined // lgCustomerId not available in this context
+                      );
+
+                      logger.info(
+                        { customerId: context.customerId!.slice(-4) },
+                        "✅ Temporary PIN set successfully"
+                      );
+
+                      // Send activation SMS
+                      const smsResult = await sendActivationSMS(
+                        phoneNumber,
+                        context.customerId!,
+                        tempPin
+                      );
+
+                      if (!smsResult.success) {
+                        throw new Error(
+                          `SMS delivery failed: ${smsResult.error || "Unknown error"}`
+                        );
+                      }
+
+                      logger.info(
+                        {
+                          customerId: context.customerId!.slice(-4),
+                          phoneNumber: phoneNumber.slice(-4),
+                          messageId: smsResult.messageId,
+                        },
+                        "✅ Activation SMS sent successfully (fire-and-forget)"
+                      );
+                    } catch (error) {
+                      logger.error(
+                        {
+                          customerId: context.customerId!.slice(-4),
+                          phoneNumber: phoneNumber.slice(-4),
+                          error: error instanceof Error ? error.message : String(error),
+                        },
+                        "❌ Failed to send activation SMS (non-fatal, fire-and-forget)"
+                      );
+
+                      // Log to audit for monitoring (fire-and-forget)
+                      dataService
+                        .logAuditEvent({
+                          eventType: "ACTIVATION_SMS_FAILED",
+                          customerId: context.customerId!,
+                          details: {
+                            phoneNumber: phoneNumber.slice(-4),
+                            error: error instanceof Error ? error.message : String(error),
+                            timestamp: new Date().toISOString(),
+                          },
+                        })
+                        .catch(auditError => {
+                          logger.error(
+                            {
+                              error:
+                                auditError instanceof Error
+                                  ? auditError.message
+                                  : String(auditError),
+                            },
+                            "Failed to log activation SMS failure to audit (non-fatal)"
+                          );
+                        });
+                    }
+                  })();
+                }
+              },
+            ],
           },
           {
             target: "enterPhone",
@@ -479,35 +569,6 @@ export const customerActivationMachine = setup({
               event.type === "ERROR"
                 ? `Error: ${event.error}\n0. Back`
                 : "An error occurred\n0. Back",
-          }),
-        },
-      },
-    },
-
-    // System generates and sends activation PIN
-    sendingActivationSMS: {
-      entry: assign({
-        message: SENDING_ACTIVATION_SMS_MSG,
-      }),
-      invoke: {
-        id: "generateAndSendPin",
-        src: "generateAndSendPinService",
-        input: ({ context }) => ({
-          customerId: context.customerId!,
-          phoneNumber: context.customerPhone!,
-        }),
-        onDone: {
-          target: "waitingForCustomer",
-          actions: assign(({ event }) => ({
-            tempPin: event.output.tempPin,
-          })),
-        },
-        onError: {
-          target: "error",
-          actions: assign({
-            message:
-              "Failed to send activation SMS. Please try again.\n0. Back",
-            error: "SMS_SEND_FAILED",
           }),
         },
       },
