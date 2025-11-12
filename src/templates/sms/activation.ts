@@ -3,38 +3,20 @@ import { config } from "../../config.js";
 /**
  * SMS template for customer activation
  * Sent after LG activates customer (Line 29 in sequence diagram)
+ * Character count: ~130 chars (with max values: ID=9, PIN=5, code=6)
  */
 export function activationSMS(customerId: string, tempPin: string): string {
   const serviceCode = config.ZM.SERVICE_CODES[0] || "*2233#";
 
-  return `Welcome to SupaMoto! Your Customer ID is ${customerId}.
-
-Here's your temporary PIN: ${tempPin}
-
-To log in:
-1. Dial ${serviceCode}
-2. Select 'Account Menu'
-3. Select 'Yes, log me in'
-4. Enter your Customer ID and this PIN
-5. You'll be asked to create a new PIN for security
-
-This PIN is temporary and must be changed on first login.`;
+  return `Welcome to SupaMoto! ID: ${customerId}, Temp PIN: ${tempPin}. Dial ${serviceCode} > Account Menu > Login. Change PIN on first login.`;
 }
 
 /**
  * SMS template for account lockout after 3 failed PIN attempts
+ * Character count: ~120 chars (with max values: ID=9, code=6)
  */
 export function accountLockedSMS(customerId: string): string {
   const serviceCode = config.ZM.SERVICE_CODES[0] || "*2233#";
 
-  return `Your USSD account (${customerId}) has been locked due to 3 failed PIN attempts.
-
-Contact your Lead Generator or the SupaMoto call centre to reset your PIN.
-
-They can reset your PIN by:
-1. Dialing ${serviceCode}
-2. Logging in to their account
-3. Selecting 'Agent Tools'
-4. Selecting 'Activate a Customer'
-5. Entering your Customer ID`;
+  return `Account ${customerId} locked after 3 failed PIN attempts. Contact your LG or call centre to reset. They dial ${serviceCode} > Agent > Activate Customer.`;
 }
