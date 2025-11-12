@@ -1675,44 +1675,6 @@ class DataService {
   }
 
   /**
-   * Clear encrypted PIN for a customer (used for account locking)
-   * Sets encrypted_pin to NULL to prevent login until PIN is reset
-   */
-  async clearEncryptedPin(customerId: string): Promise<void> {
-    const db = databaseManager.getKysely();
-
-    logger.info(
-      { customerId: customerId.slice(-4) },
-      "Clearing encrypted PIN for customer"
-    );
-
-    try {
-      await db
-        .updateTable("customers")
-        .set({
-          encrypted_pin: null,
-          updated_at: new Date(),
-        })
-        .where("customer_id", "=", customerId)
-        .execute();
-
-      logger.info(
-        { customerId: customerId.slice(-4) },
-        "Successfully cleared encrypted PIN"
-      );
-    } catch (error) {
-      logger.error(
-        {
-          error: error instanceof Error ? error.message : String(error),
-          customerId: customerId.slice(-4),
-        },
-        "Failed to clear encrypted PIN"
-      );
-      throw error;
-    }
-  }
-
-  /**
    * Log audit event (convenience wrapper for createAuditLog)
    * Used for security events, failed operations, and compliance tracking
    */
