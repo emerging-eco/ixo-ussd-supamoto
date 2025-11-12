@@ -296,6 +296,179 @@ const loadCustomerDataService = fromPromise(
   }
 );
 
+/**
+ * Combined credential verification service
+ * Performs all login verification steps in a single operation:
+ * 1. Customer lookup
+ * 2. PIN verification with attempt tracking
+ * 3. Customer data loading (optional)
+ * 4. Audit logging
+ *
+ * This eliminates multiple "Continue" states and provides better UX
+ */
+const verifyCredentialsService = fromPromise(
+  async ({
+    input,
+  }: {
+    input: {
+      customerId: string;
+      pin: string;
+      phoneNumber: string;
+      attempts: number;
+    };
+  }) => {
+    logger.info(
+      {
+        customerId: input.customerId.slice(-4),
+        attempts: input.attempts,
+      },
+      "Starting combined credential verification"
+    );
+
+    // Step 1: Lookup customer by ID
+    const customer = await dataService.getCustomerByCustomerId(
+      input.customerId
+    );
+
+    if (!customer) {
+      logger.warn(
+        { customerId: input.customerId.slice(-4) },
+        "Customer not found"
+      );
+      throw new Error("CUSTOMER_NOT_FOUND");
+    }
+
+    // Step 2: Check if encrypted PIN exists
+    if (!customer.encryptedPin) {
+      logger.warn(
+        { customerId: input.customerId.slice(-4) },
+        "Encrypted PIN field is empty - account needs activation"
+      );
+      throw new Error("ENCRYPTED_PIN_FIELD_EMPTY");
+    }
+
+    // Step 3: Verify PIN
+    let isValid = false;
+    try {
+      const encryptedPin = encryptPin(input.pin);
+      isValid = encryptedPin === customer.encryptedPin;
+      logger.info(
+        {
+          customerId: input.customerId.slice(-4),
+          pinMatch: isValid,
+        },
+        "PIN verification completed"
+      );
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: input.customerId.slice(-4),
+        },
+        "PIN encryption failed"
+      );
+      isValid = false;
+    }
+
+    if (!isValid) {
+      // If this is the 3rd attempt, lock the account
+      if (input.attempts >= 3) {
+        logger.warn(
+          { customerId: input.customerId.slice(-4) },
+          "Max PIN attempts exceeded, locking account"
+        );
+
+        // Clear the PIN (set to NULL)
+        await dataService.clearCustomerPin(input.customerId);
+
+        // Create audit log entry
+        await dataService.createAuditLog({
+          eventType: "ACCOUNT_LOCKED",
+          customerId: input.customerId,
+          details: {
+            reason: "FAILED_PIN_ATTEMPTS",
+            attempts: 3,
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        // Send SMS notification with retry logic (fire-and-forget)
+        sendSMSWithRetry(
+          {
+            to: input.phoneNumber,
+            message: accountLockedSMS(input.customerId),
+          },
+          {
+            eventType: "ACCOUNT_LOCKED",
+            customerId: input.customerId,
+          }
+        ).catch(smsError => {
+          logger.error(
+            {
+              error:
+                smsError instanceof Error ? smsError.message : String(smsError),
+              customerId: input.customerId.slice(-4),
+            },
+            "Failed to send account locked SMS (non-fatal)"
+          );
+        });
+
+        throw new Error("MAX_ATTEMPTS_EXCEEDED");
+      }
+
+      // Incorrect PIN but not max attempts yet
+      logger.info(
+        {
+          customerId: input.customerId.slice(-4),
+          attempts: input.attempts,
+        },
+        "Incorrect PIN - attempts remaining"
+      );
+      throw new Error(`INCORRECT_PIN:${input.attempts}`);
+    }
+
+    // Step 4: Load customer data from SDK (optional - don't fail if this fails)
+    let customerData: ICustomerDecrypted | null = null;
+    try {
+      customerData = await getDecryptedCustomerData(input.customerId);
+      if (customerData) {
+        logger.info(
+          {
+            customerId: customerData.customer_id,
+            hasFullName: !!customerData.full_name,
+          },
+          "Customer data loaded successfully from SDK"
+        );
+      }
+    } catch (error) {
+      logger.warn(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: input.customerId.slice(-4),
+        },
+        "Failed to load customer data from SDK (non-fatal)"
+      );
+    }
+
+    // Step 5: Log successful login
+    await dataService.logAuditEvent({
+      eventType: "LOGIN_SUCCESS",
+      customerId: input.customerId,
+      phoneNumber: input.phoneNumber,
+      details: {
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    logger.info(
+      { customerId: input.customerId.slice(-4) },
+      "Combined credential verification successful"
+    );
+
+    return { customer, customerData };
+  }
+);
+
 const isCustomerFound = ({ context }: { context: LoginContext }) => {
   return LoginOutput.CUSTOMER_FOUND === context.nextParentState;
 };
@@ -343,6 +516,7 @@ export const loginMachine = setup({
     customerLookupService,
     pinVerificationService,
     loadCustomerDataService,
+    verifyCredentialsService,
   },
 }).createMachine({
   id: "login",
@@ -373,7 +547,7 @@ export const loginMachine = setup({
         INPUT: withNavigation(
           [
             {
-              target: "verifyingCustomerId",
+              target: "pinEntry",
               guard: "isValidCustomerId",
               actions: [
                 assign(({ event }) => {
@@ -400,18 +574,68 @@ export const loginMachine = setup({
       },
     },
 
-    verifyingCustomerId: {
-      entry: assign({ message: VERIFYING_MSG }),
-      invoke: {
-        src: "customerLookupService",
-        input: ({ context }) => ({ customerId: context.customerId! }),
-        onDone: {
-          // No target state is set in this step. The next state is determined by the guards in the on: block
+    pinEntry: {
+      entry: assign(({ context }) => {
+        // If the message already contains the warning (from onError handler), preserve it
+        if (context.message && context.message.includes("of 3 attempts")) {
+          return {};
+        }
+        // If there are previous failed attempts, show the warning message
+        if (context.pinAttempts > 0) {
+          return {
+            message: `${INCORRECT_PIN_MSG(context.pinAttempts)}\n\n${PIN_PROMPT}`,
+          };
+        }
+        return { message: PIN_PROMPT };
+      }),
+      on: {
+        INPUT: withNavigation(
+          [
+            {
+              target: "verifyingCredentials",
+              guard: "isValidPin",
+              actions: assign(({ event }) => ({
+                sessionPin: event.type === "INPUT" ? event.input.trim() : "",
+              })),
+            },
+            {
+              actions: assign(({ context }) => ({
+                message: `${INCORRECT_PIN_MSG(context.pinAttempts)}\n\n${PIN_PROMPT}`,
+              })),
+            },
+          ],
+          NavigationPatterns.loginChild
+        ),
+        ERROR: {
+          target: "error",
           actions: [
-            assign(({ event }) => ({ customer: event.output })),
-            assign({
-              nextParentState: LoginOutput.CUSTOMER_FOUND,
-            }),
+            assign(({ event }) => ({
+              error: event.error || "An error occurred",
+              message: "System error. Please try again.",
+            })),
+          ],
+        },
+      },
+    },
+
+    verifyingCredentials: {
+      entry: assign({ message: "Verifying credentials...\n1. Continue" }),
+      invoke: {
+        src: "verifyCredentialsService",
+        input: ({ context }) => ({
+          customerId: context.customerId!,
+          pin: context.sessionPin!,
+          phoneNumber: context.phoneNumber,
+          attempts: context.pinAttempts + 1,
+        }),
+        onDone: {
+          target: "loginSuccess",
+          actions: [
+            assign(({ event }) => ({
+              customer: event.output.customer,
+              customerData: event.output.customerData || undefined,
+              nextParentState: LoginOutput.LOGIN_SUCCESS,
+            })),
           ],
         },
         onError: [
@@ -438,128 +662,27 @@ export const loginMachine = setup({
             ],
           },
           {
-            target: "error",
-            actions: [
-              assign(({ event }) => ({
-                error: (event.error as Error)?.message || "An error occurred",
-                message: "System error. Please try again.",
-              })),
-            ],
-          },
-        ],
-      },
-      on: {
-        INPUT: withNavigation(
-          [
-            {
-              target: "pinEntry",
-              guard: "isCustomerFound",
-            },
-            {
-              target: "routeToMain",
-              guard: "isCustomerNotFound",
-            },
-            {
-              target: "routeToMain",
-              guard: "isEncryptedPinEmpty",
-            },
-            {
-              target: "verifyingCustomerId",
-            },
-          ],
-          NavigationPatterns.loginChild
-        ),
-      },
-    },
-
-    pinEntry: {
-      entry: assign(({ context }) => {
-        // If the message already contains the warning (from onError handler), preserve it
-        if (context.message && context.message.includes("of 3 attempts")) {
-          return {};
-        }
-        // If there are previous failed attempts, show the warning message
-        if (context.pinAttempts > 0) {
-          return {
-            message: `${INCORRECT_PIN_MSG(context.pinAttempts)}\n\n${PIN_PROMPT}`,
-          };
-        }
-        return { message: PIN_PROMPT };
-      }),
-      on: {
-        INPUT: withNavigation(
-          [
-            {
-              target: "verifyingPin",
-              guard: "isValidPin",
-              actions: assign(({ event }) => ({
-                sessionPin: event.type === "INPUT" ? event.input.trim() : "",
-              })),
-            },
-            {
-              actions: assign(({ context }) => ({
-                message: `${INCORRECT_PIN_MSG(context.pinAttempts)}\n\n${PIN_PROMPT}`,
-              })),
-            },
-          ],
-          NavigationPatterns.loginChild
-        ),
-        ERROR: {
-          target: "error",
-          actions: [
-            assign(({ event }) => ({
-              error: event.error || "An error occurred",
-              message: "System error. Please try again.",
-            })),
-          ],
-        },
-      },
-    },
-
-    verifyingPin: {
-      entry: assign({ message: VERIFYING_PIN_MSG }),
-      invoke: {
-        src: "pinVerificationService",
-        input: ({
-          context,
-          event,
-        }: {
-          context: LoginContext;
-          event: LoginEvent;
-        }) => ({
-          pin: event.type === "INPUT" ? event.input.trim() : "",
-          customer: context.customer!,
-          attempts: context.pinAttempts + 1,
-          customerId: context.customerId!,
-          phoneNumber: context.phoneNumber,
-        }),
-        onDone: {
-          target: "loadingCustomerData",
-        },
-        onError: [
-          {
+            target: "routeToMain",
             guard: ({ event }) =>
               (event.error as Error)?.message === "MAX_ATTEMPTS_EXCEEDED",
             actions: [
-              assign(({ context }) => {
-                logger.info(
-                  { customerId: context.customerId?.slice(-4) },
-                  "Setting MAX_ATTEMPTS_MSG in context"
-                );
-                return {
-                  nextParentState: LoginOutput.MAX_ATTEMPTS_EXCEEDED,
-                  message: MAX_ATTEMPTS_MSG,
-                };
+              assign({
+                nextParentState: LoginOutput.MAX_ATTEMPTS_EXCEEDED,
+                message: MAX_ATTEMPTS_MSG,
               }),
             ],
           },
           {
             target: "pinEntry",
             guard: ({ event }) =>
-              (event.error as Error)?.message === "INCORRECT_PIN",
+              (event.error as Error)?.message?.startsWith("INCORRECT_PIN:"),
             actions: [
-              assign(({ context }) => {
-                const newAttempts = context.pinAttempts + 1;
+              assign(({ event }) => {
+                const errorMsg = (event.error as Error)?.message || "";
+                const attemptMatch = errorMsg.match(/INCORRECT_PIN:(\d+)/);
+                const newAttempts = attemptMatch
+                  ? parseInt(attemptMatch[1], 10)
+                  : 1;
                 return {
                   pinAttempts: newAttempts,
                   message: `${INCORRECT_PIN_MSG(newAttempts)}\n\n${PIN_PROMPT}`,
@@ -577,45 +700,6 @@ export const loginMachine = setup({
             ],
           },
         ],
-      },
-      on: {
-        INPUT: withNavigation(
-          [
-            {
-              target: "loginSuccess",
-              guard: "isLoginSuccess",
-            },
-            {
-              target: "routeToMain",
-            },
-          ],
-          NavigationPatterns.loginChild
-        ),
-      },
-    },
-
-    loadingCustomerData: {
-      entry: assign({ message: "Loading customer data...\n1. Continue" }),
-      invoke: {
-        src: "loadCustomerDataService",
-        input: ({ context }) => ({ customerId: context.customerId! }),
-        onDone: {
-          actions: [
-            assign(({ event }) => ({
-              customerData: event.output || undefined,
-              nextParentState: LoginOutput.LOGIN_SUCCESS,
-            })),
-          ],
-        },
-        onError: {
-          // Even if loading customer data fails, we can still proceed with login
-          actions: [
-            assign({
-              customerData: undefined,
-              nextParentState: LoginOutput.LOGIN_SUCCESS,
-            }),
-          ],
-        },
       },
       on: {
         INPUT: withNavigation(

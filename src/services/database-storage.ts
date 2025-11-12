@@ -1673,6 +1673,78 @@ class DataService {
       throw error;
     }
   }
+
+  /**
+   * Clear encrypted PIN for a customer (used for account locking)
+   * Sets encrypted_pin to NULL to prevent login until PIN is reset
+   */
+  async clearEncryptedPin(customerId: string): Promise<void> {
+    const db = databaseManager.getKysely();
+
+    logger.info(
+      { customerId: customerId.slice(-4) },
+      "Clearing encrypted PIN for customer"
+    );
+
+    try {
+      await db
+        .updateTable("customers")
+        .set({
+          encrypted_pin: null,
+          updated_at: new Date(),
+        })
+        .where("customer_id", "=", customerId)
+        .execute();
+
+      logger.info(
+        { customerId: customerId.slice(-4) },
+        "Successfully cleared encrypted PIN"
+      );
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          customerId: customerId.slice(-4),
+        },
+        "Failed to clear encrypted PIN"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Log audit event (convenience wrapper for createAuditLog)
+   * Used for security events, failed operations, and compliance tracking
+   */
+  async logAuditEvent(params: {
+    eventType: string;
+    customerId?: string;
+    lgCustomerId?: string;
+    phoneNumber?: string;
+    details: any;
+  }): Promise<void> {
+    try {
+      await this.createAuditLog({
+        eventType: params.eventType,
+        customerId: params.customerId,
+        lgCustomerId: params.lgCustomerId,
+        details: {
+          ...params.details,
+          phoneNumber: params.phoneNumber,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      // Log error but don't throw - audit logging should not break application flow
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          eventType: params.eventType,
+        },
+        "Failed to log audit event (non-fatal)"
+      );
+    }
+  }
 }
 
 // Export singleton instance
