@@ -311,38 +311,40 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_pin_reset ON audit_log(event_type) WHER
 -- ============================================================================
 -- SECTION 7: TABLE & COLUMN COMMENTS
 -- ============================================================================
+-- Note: Comments temporarily removed to avoid Railway deployment issues
+-- They can be re-added after successful deployment via separate migration
 
-COMMENT ON TABLE IF NOT EXISTS customers IS 'Customer records with role-based access control';
-COMMENT ON COULMN IF NOT EXISTS customers.role IS 'User role: customer (default), lead_generator (can use Agent Tools), call_center (can use Agent Tools + support functions), admin (full access)';
-COMMENT ON COULMN IF NOT EXISTS customers.national_id IS 'Optional Zambian National Registration Card number (format: XXXXXX/XX/X)';
+-- COMMENT ON TABLE customers IS 'Customer records with role-based access control';
+-- COMMENT ON COLUMN customers.role IS 'User role: customer (default), lead_generator (can use Agent Tools), call_center (can use Agent Tools + support functions), admin (full access)';
+-- COMMENT ON COLUMN customers.national_id IS 'Optional Zambian National Registration Card number (format: XXXXXX/XX/X)';
 
-COMMENT ON TABLE IF NOT EXISTS households IS 'Household grouping table. Kept for future shared household wallet feature. Currently minimal usage.';
+-- COMMENT ON TABLE households IS 'Household grouping table. Kept for future shared household wallet feature. Currently minimal usage.';
 
-COMMENT ON TABLE IF NOT EXISTS lg_delivery_intents IS 'Stores LG intent to deliver beans with blockchain claim tracking (claim_intent_id, claim_collection_id)';
-COMMENT ON COULMN IF NOT EXISTS lg_delivery_intents.voucher_status IS 'Status: HAS_VOUCHER, NO_VOUCHER, ERROR';
-COMMENT ON COULMN IF NOT EXISTS lg_delivery_intents.voucher_check_response IS 'Full JSON response from subscriptions-service-supamoto';
-COMMENT ON COULMN IF NOT EXISTS lg_delivery_intents.claim_intent_id IS 'Blockchain claim intent ID from Claims Bot (added in migration 001)';
-COMMENT ON COULMN IF NOT EXISTS lg_delivery_intents.claim_collection_id IS 'Blockchain claim collection ID from Claims Bot (added in migration 001)';
+-- COMMENT ON TABLE lg_delivery_intents IS 'Stores LG intent to deliver beans with blockchain claim tracking (claim_intent_id, claim_collection_id)';
+-- COMMENT ON COLUMN lg_delivery_intents.voucher_status IS 'Status: HAS_VOUCHER, NO_VOUCHER, ERROR';
+-- COMMENT ON COLUMN lg_delivery_intents.voucher_check_response IS 'Full JSON response from subscriptions-service-supamoto';
+-- COMMENT ON COLUMN lg_delivery_intents.claim_intent_id IS 'Blockchain claim intent ID from Claims Bot (added in migration 001)';
+-- COMMENT ON COLUMN lg_delivery_intents.claim_collection_id IS 'Blockchain claim collection ID from Claims Bot (added in migration 001)';
 
-COMMENT ON TABLE IF NOT EXISTS bean_distribution_otps IS 'Primary OTP tracking table for bean distribution. Replaced the simpler distribution_otps table which lacked foreign key relationships and LG tracking. Valid 10 minutes by default (configurable via OTP_VALIDITY_MINUTES). Tracks the complete OTP lifecycle from generation through validation and usage.';
-COMMENT ON TABLE IF NOT EXISTS bean_delivery_confirmations IS 'Tracks dual confirmations (LG + Customer) for bean delivery within 7-day window with blockchain claim tracking';
-COMMENT ON COULMN IF NOT EXISTS bean_delivery_confirmations.customer_confirmed_receipt IS 'TRUE = received beans, FALSE = did not receive, NULL = not yet confirmed';
-COMMENT ON COULMN IF NOT EXISTS bean_delivery_confirmations.claim_id IS 'Blockchain claim ID from Claims Bot (added in migration 001)';
+-- COMMENT ON TABLE bean_distribution_otps IS 'Primary OTP tracking table for bean distribution. Replaced the simpler distribution_otps table which lacked foreign key relationships and LG tracking. Valid 10 minutes by default (configurable via OTP_VALIDITY_MINUTES). Tracks the complete OTP lifecycle from generation through validation and usage.';
+-- COMMENT ON TABLE bean_delivery_confirmations IS 'Tracks dual confirmations (LG + Customer) for bean delivery within 7-day window with blockchain claim tracking';
+-- COMMENT ON COLUMN bean_delivery_confirmations.customer_confirmed_receipt IS 'TRUE = received beans, FALSE = did not receive, NULL = not yet confirmed';
+-- COMMENT ON COLUMN bean_delivery_confirmations.claim_id IS 'Blockchain claim ID from Claims Bot (added in migration 001)';
 
-COMMENT ON TABLE IF NOT EXISTS household_claims IS '1,000 Day Household claims submitted by Lead Generators on behalf of customers. Includes embedded survey responses in survey_form TEXT field (encrypted).';
-COMMENT ON COULMN IF NOT EXISTS household_claims.lg_customer_id IS 'Lead Generator customer ID - who submitted the claim on behalf of the customer';
-COMMENT ON COULMN IF NOT EXISTS household_claims.claim_status IS 'Status: PENDING, PROCESSED, FAILED, VOUCHER_ALLOCATED';
-COMMENT ON COULMN IF NOT EXISTS household_claims.claims_bot_response IS 'Full JSON response from ixo-matrix-supamoto-claims-bot';
-COMMENT ON COULMN IF NOT EXISTS household_claims.survey_form IS 'Encrypted TEXT field storing complete survey form definition and responses. Structure: {formDefinition: {...}, answers: {...}, metadata: {startedAt, lastUpdatedAt, completedAt, allFieldsCompleted, version}}';
-COMMENT ON COULMN IF NOT EXISTS household_claims.survey_form_updated_at IS 'Timestamp of last survey form update. Used for tracking survey progress and session recovery.';
+-- COMMENT ON TABLE household_claims IS '1,000 Day Household claims submitted by Lead Generators on behalf of customers. Includes embedded survey responses in survey_form TEXT field (encrypted).';
+-- COMMENT ON COLUMN household_claims.lg_customer_id IS 'Lead Generator customer ID - who submitted the claim on behalf of the customer';
+-- COMMENT ON COLUMN household_claims.claim_status IS 'Status: PENDING, PROCESSED, FAILED, VOUCHER_ALLOCATED';
+-- COMMENT ON COLUMN household_claims.claims_bot_response IS 'Full JSON response from ixo-matrix-supamoto-claims-bot';
+-- COMMENT ON COLUMN household_claims.survey_form IS 'Encrypted TEXT field storing complete survey form definition and responses. Structure: {formDefinition: {...}, answers: {...}, metadata: {startedAt, lastUpdatedAt, completedAt, allFieldsCompleted, version}}';
+-- COMMENT ON COLUMN household_claims.survey_form_updated_at IS 'Timestamp of last survey form update. Used for tracking survey progress and session recovery.';
 
-COMMENT ON TABLE IF NOT EXISTS failed_claims_queue IS 'Retry queue for failed claims bot API submissions. Stores failed lead creation and 1000-day household claims for automatic retry with exponential backoff.';
-COMMENT ON COULMN IF NOT EXISTS failed_claims_queue.claim_type IS 'Type of claim: lead_creation or 1000_day_household';
-COMMENT ON COULMN IF NOT EXISTS failed_claims_queue.claim_data IS 'Full claim payload as JSONB for retry submission';
-COMMENT ON COULMN IF NOT EXISTS failed_claims_queue.status IS 'Status: pending (awaiting retry), retrying (currently being retried), failed (max retries exceeded), resolved (successfully submitted)';
-COMMENT ON COULMN IF NOT EXISTS failed_claims_queue.next_retry_at IS 'Timestamp for next retry attempt. Uses exponential backoff: 5min, 30min, 2hr';
+-- COMMENT ON TABLE failed_claims_queue IS 'Retry queue for failed claims bot API submissions. Stores failed lead creation and 1000-day household claims for automatic retry with exponential backoff.';
+-- COMMENT ON COLUMN failed_claims_queue.claim_type IS 'Type of claim: lead_creation or 1000_day_household';
+-- COMMENT ON COLUMN failed_claims_queue.claim_data IS 'Full claim payload as JSONB for retry submission';
+-- COMMENT ON COLUMN failed_claims_queue.status IS 'Status: pending (awaiting retry), retrying (currently being retried), failed (max retries exceeded), resolved (successfully submitted)';
+-- COMMENT ON COLUMN failed_claims_queue.next_retry_at IS 'Timestamp for next retry attempt. Uses exponential backoff: 5min, 30min, 2hr';
 
-COMMENT ON TABLE IF NOT EXISTS audit_log IS 'Audit trail for security events. Event types include: PIN_RESET, CUSTOMER_ACTIVATED, SMS_FAILED, BEAN_RECEIPT_DENIED, ACCOUNT_LOCKED, CLAIMS_SUBMISSION_FAILED, etc.';
+-- COMMENT ON TABLE audit_log IS 'Audit trail for security events. Event types include: PIN_RESET, CUSTOMER_ACTIVATED, SMS_FAILED, BEAN_RECEIPT_DENIED, ACCOUNT_LOCKED, CLAIMS_SUBMISSION_FAILED, etc.';
 
 -- ============================================================================
 -- CONSOLIDATED INITIALIZATION COMPLETE
