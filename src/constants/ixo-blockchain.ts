@@ -31,19 +31,3 @@ export const CHAIN_IDS: { [network in CHAIN_NETWORK_TYPE]: string } = {
   [CHAIN_NETWORK_TYPE.LOCAL]: "devnet-1",
 };
 export const CHAIN_ID = CHAIN_IDS[DefaultChainNetwork];
-
-export const FEEGRANT_URLS: { [network in CHAIN_NETWORK_TYPE]: string } = {
-  [CHAIN_NETWORK_TYPE.MAINNET]: "https://feegrant.ixo.world",
-  [CHAIN_NETWORK_TYPE.TESTNET]: "https://feegrant.testnet.ixo.earth",
-  [CHAIN_NETWORK_TYPE.DEVNET]: "https://feegrant.devnet.ixo.earth",
-  [CHAIN_NETWORK_TYPE.LOCAL]: "http://localhost:3000",
-};
-export const FEEGRANT_URL = FEEGRANT_URLS[DefaultChainNetwork];
-
-export const FEEGRANT_AUTHS: { [network in CHAIN_NETWORK_TYPE]: string } = {
-  [CHAIN_NETWORK_TYPE.MAINNET]: process.env.FEEGRANT_AUTH_MAINNET ?? "",
-  [CHAIN_NETWORK_TYPE.TESTNET]: process.env.FEEGRANT_AUTH_TESTNET ?? "",
-  [CHAIN_NETWORK_TYPE.DEVNET]: process.env.FEEGRANT_AUTH_DEVNET ?? "",
-  [CHAIN_NETWORK_TYPE.LOCAL]: process.env.FEEGRANT_AUTH_LOCAL ?? "",
-};
-export const FEEGRANT_AUTH = FEEGRANT_AUTHS[DefaultChainNetwork];

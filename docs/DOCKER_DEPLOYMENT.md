@@ -184,7 +184,7 @@ docker-compose -f docker-compose.production.yml logs ixo-ussd | grep "migrations
 
 ### Blockchain Configuration
 
-Network type controls all blockchain URLs (RPC, Feegrant, Blocksync) - URLs are auto-selected based on CHAIN_NETWORK value.
+Network type controls all blockchain URLs (RPC, Blocksync) - URLs are auto-selected based on CHAIN_NETWORK value.
 
 ```bash
 # Mainnet
@@ -199,13 +199,15 @@ CHAIN_NETWORK=devnet
 
 **Network Selection**:
 
-The `CHAIN_NETWORK` variable automatically selects the appropriate RPC and Feegrant URLs:
+The `CHAIN_NETWORK` variable automatically selects the appropriate RPC URLs:
 
-- **Mainnet**: Uses `https://rpc.ixo.earth` and `https://feegrant.ixo.earth`
-- **Testnet**: Uses `https://rpc.testnet.ixo.earth` and `https://feegrant.testnet.ixo.earth`
-- **Devnet**: Uses `https://devnet.ixo.earth/rpc/` and `https://feegrant.devnet.ixo.earth`
+- **Mainnet**: Uses `https://rpc.ixo.earth`
+- **Testnet**: Uses `https://rpc.testnet.ixo.earth`
+- **Devnet**: Uses `https://devnet.ixo.earth/rpc/`
 
 URLs are defined in `src/constants/ixo-blockchain.ts` and selected automatically.
+
+**Gas Fees**: Blockchain transactions use self-funded wallets (LG_WALLET_MNEMONIC, EVALUATOR_WALLET_MNEMONIC). Ensure these wallets have sufficient IXO tokens for gas fees.
 
 ---
 

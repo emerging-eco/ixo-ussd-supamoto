@@ -771,24 +771,21 @@ railway variables set ENCRYPTION_KEY=$(openssl rand -hex 32)
 
 ```bash
 # Network selection (devnet, testnet, or mainnet)
-# Network type controls all blockchain URLs (RPC, Feegrant, Blocksync) - URLs are auto-selected based on CHAIN_NETWORK value
+# Network type controls all blockchain URLs (RPC, Blocksync) - URLs are auto-selected based on CHAIN_NETWORK value
 CHAIN_NETWORK=mainnet
-
-# Feegrant authentication tokens (network-specific)
-FEEGRANT_AUTH_MAINNET=<your_mainnet_feegrant_token>
-FEEGRANT_AUTH_TESTNET=<your_testnet_feegrant_token>
-FEEGRANT_AUTH_DEVNET=<your_devnet_feegrant_token>
 ```
 
 **Network Selection**:
 
-The `CHAIN_NETWORK` variable automatically selects the appropriate RPC and Feegrant URLs:
+The `CHAIN_NETWORK` variable automatically selects the appropriate RPC URLs:
 
-- **Mainnet**: `CHAIN_NETWORK=mainnet` → Uses `https://rpc.ixo.earth` and `https://feegrant.ixo.earth`
-- **Testnet**: `CHAIN_NETWORK=testnet` → Uses `https://rpc.testnet.ixo.earth` and `https://feegrant.testnet.ixo.earth`
-- **Devnet**: `CHAIN_NETWORK=devnet` → Uses `https://devnet.ixo.earth/rpc/` and `https://feegrant.devnet.ixo.earth`
+- **Mainnet**: `CHAIN_NETWORK=mainnet` → Uses `https://rpc.ixo.earth`
+- **Testnet**: `CHAIN_NETWORK=testnet` → Uses `https://rpc.testnet.ixo.earth`
+- **Devnet**: `CHAIN_NETWORK=devnet` → Uses `https://devnet.ixo.earth/rpc/`
 
 URLs are defined in `src/constants/ixo-blockchain.ts` and selected automatically based on the network type.
+
+**Gas Fees**: Blockchain transactions use self-funded wallets (LG_WALLET_MNEMONIC, EVALUATOR_WALLET_MNEMONIC). Ensure these wallets have sufficient IXO tokens for gas fees.
 
 #### 4. Matrix Configuration
 
@@ -1315,9 +1312,8 @@ railway variables set PIN_ENCRYPTION_KEY=$PIN_ENCRYPTION_KEY
 railway variables set ENCRYPTION_KEY=$ENCRYPTION_KEY
 
 # Blockchain configuration
-# Network type controls all blockchain URLs (RPC, Feegrant, Blocksync) - URLs are auto-selected based on CHAIN_NETWORK value
+# Network type controls all blockchain URLs (RPC, Blocksync) - URLs are auto-selected based on CHAIN_NETWORK value
 railway variables set CHAIN_NETWORK=mainnet
-railway variables set FEEGRANT_AUTH_MAINNET=<your_token>
 
 # Matrix configuration
 railway variables set MATRIX_HOME_SERVER=https://mx.ixo.earth
@@ -2771,7 +2767,8 @@ Before deploying to Railway, verify:
   - [ ] All required environment variables identified
   - [ ] Secrets generated (SYSTEM_SECRET, PIN_ENCRYPTION_KEY)
   - [ ] Wallet mnemonics prepared (stored in password manager)
-  - [ ] API keys obtained (Africa's Talking, Claims Bot, Feegrant)
+  - [ ] API keys obtained (Africa's Talking, Claims Bot)
+  - [ ] Wallets funded with sufficient IXO tokens for gas fees
 
 - [ ] **Database**
   - [ ] Migration files exist in `migrations/postgres/`

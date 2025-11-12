@@ -178,8 +178,7 @@ migrations/             # Database migrations
 
 - Copy example: `cp env.example .env`
 - Generate PIN key: `openssl rand -hex 16`
-- Update IXO Feegrant Configuration to avoid errors related to IXO blockchain gas and fee payments:
-  - `"error":"Failed to create IXO account: Account 'ixo1234...4321' does not exist on chain. Send some tokens there before trying to query sequence."`
+- Ensure wallet mnemonics have sufficient IXO tokens for gas fees
 
 **Migration failed:**
 
@@ -193,7 +192,7 @@ Yes! Remove IXO services and use as a generic USSD framework.
 
 **What do these errors mean?**
 
-- `"error":"Failed to create IXO account: Account 'ixo1234...4321' does not exist on chain. Send some tokens there before trying to query sequence."` Update the IXO Feegrant Configuration to avoid errors related to IXO blockchain gas and fee payments.
+- `"error":"Failed to create IXO account: Account 'ixo1234...4321' does not exist on chain. Send some tokens there before trying to query sequence."` - Ensure wallet mnemonics (LG_WALLET_MNEMONIC, EVALUATOR_WALLET_MNEMONIC) have sufficient IXO tokens for gas fees.
 
 **How do I customize USSD menus?**
 Edit state machines in `src/machines/example/` and branding in `src/constants/branding.ts`.
