@@ -7,18 +7,15 @@ import { config } from "../../config.js";
 export function activationSMS(customerId: string, tempPin: string): string {
   const serviceCode = config.ZM.SERVICE_CODES[0] || "*2233#";
 
-  return `Welcome to SupaMoto! Your Customer ID is ${customerId}.
+  return `Welcome to SupaMoto!
 
-Here's your temporary PIN: ${tempPin}
+Here's your new PIN: ${tempPin}.
 
 To log in:
 1. Dial ${serviceCode}
 2. Select 'Account Menu'
 3. Select 'Yes, log me in'
-4. Enter your Customer ID and this PIN
-5. You'll be asked to create a new PIN for security
-
-This PIN is temporary and must be changed on first login.`;
+4. Enter your Customer ID and this PIN`;
 }
 
 /**
@@ -28,7 +25,7 @@ export function accountLockedSMS(customerId: string): string {
   const serviceCode = config.ZM.SERVICE_CODES[0] || "*2233#";
 
   return `Your USSD account (${customerId}) has been locked due to 3 failed PIN attempts.
-
+  
 Contact your Lead Generator or the SupaMoto call centre to reset your PIN.
 
 They can reset your PIN by:
