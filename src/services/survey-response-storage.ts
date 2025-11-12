@@ -137,6 +137,9 @@ class SurveyResponseStorageService {
    * Save a single survey answer
    * Supports primitive types (string, boolean, number) and array types (string[], number[])
    * Arrays are used for multi-select questions like beneficiaryCategory
+   *
+   * Fire-and-forget pattern: Errors are logged to audit_log instead of throwing
+   * This allows the survey flow to continue even if save operations fail
    */
   async saveSurveyAnswer(
     lgCustomerId: string,
@@ -154,7 +157,7 @@ class SurveyResponseStorageService {
           ? `array[${answer.length}]`
           : typeof answer,
       },
-      "Saving survey answer"
+      "Saving survey answer (fire-and-forget)"
     );
 
     try {
@@ -190,6 +193,15 @@ class SurveyResponseStorageService {
         customerId,
         surveyJson
       );
+
+      logger.info(
+        {
+          lgCustomerId: lgCustomerId.slice(-4),
+          customerId: customerId.slice(-4),
+          questionName,
+        },
+        "Survey answer saved successfully"
+      );
     } catch (error) {
       logger.error(
         {
@@ -197,14 +209,41 @@ class SurveyResponseStorageService {
           customerId: customerId.slice(-4),
           questionName,
         },
-        "Failed to save survey answer"
+        "Failed to save survey answer (non-fatal)"
       );
-      throw error;
+
+      // Log to audit_log for monitoring (fire-and-forget)
+      dataService
+        .logAuditEvent({
+          eventType: "SURVEY_SAVE_FAILED",
+          customerId,
+          lgCustomerId,
+          details: {
+            questionName,
+            error: error instanceof Error ? error.message : String(error),
+            timestamp: new Date().toISOString(),
+          },
+        })
+        .catch(auditError => {
+          logger.error(
+            {
+              error:
+                auditError instanceof Error
+                  ? auditError.message
+                  : String(auditError),
+            },
+            "Failed to log survey save failure to audit (non-fatal)"
+          );
+        });
+
+      // Don't throw - allow survey flow to continue
+      // The answer will be lost but user can continue
     }
   }
 
   /**
    * Save multiple survey answers at once
+   * Fire-and-forget pattern: Errors are logged to audit_log instead of throwing
    */
   async saveSurveyAnswers(
     lgCustomerId: string,
@@ -218,7 +257,7 @@ class SurveyResponseStorageService {
         customerId: customerId.slice(-4),
         answerCount: Object.keys(answers).length,
       },
-      "Saving multiple survey answers"
+      "Saving multiple survey answers (fire-and-forget)"
     );
 
     try {
@@ -252,15 +291,49 @@ class SurveyResponseStorageService {
         customerId,
         surveyJson
       );
+
+      logger.info(
+        {
+          lgCustomerId: lgCustomerId.slice(-4),
+          customerId: customerId.slice(-4),
+          answerCount: Object.keys(answers).length,
+        },
+        "Multiple survey answers saved successfully"
+      );
     } catch (error) {
       logger.error(
         {
           error: error instanceof Error ? error.message : String(error),
           customerId: customerId.slice(-4),
         },
-        "Failed to save survey answers"
+        "Failed to save survey answers (non-fatal)"
       );
-      throw error;
+
+      // Log to audit_log for monitoring (fire-and-forget)
+      dataService
+        .logAuditEvent({
+          eventType: "SURVEY_SAVE_FAILED",
+          customerId,
+          lgCustomerId,
+          details: {
+            answerCount: Object.keys(answers).length,
+            error: error instanceof Error ? error.message : String(error),
+            timestamp: new Date().toISOString(),
+          },
+        })
+        .catch(auditError => {
+          logger.error(
+            {
+              error:
+                auditError instanceof Error
+                  ? auditError.message
+                  : String(auditError),
+            },
+            "Failed to log survey save failure to audit (non-fatal)"
+          );
+        });
+
+      // Don't throw - allow survey flow to continue
     }
   }
 

@@ -501,6 +501,52 @@ export const thousandDaySurveyMachine = setup({
       error: ({ event }) =>
         event.type === "ERROR" ? event.error : "An unexpected error occurred",
     }),
+    // Fire-and-forget save actions - save in background without blocking user flow
+    saveAnswerFireAndForget: (
+      { context },
+      params: { questionName: string; answer: any }
+    ) => {
+      // Fire-and-forget: Don't await, let it run in background
+      surveyResponseStorageService
+        .saveSurveyAnswer(
+          context.lgCustomerId,
+          context.customerId,
+          params.questionName,
+          params.answer
+        )
+        .catch(error => {
+          logger.error(
+            {
+              error: error instanceof Error ? error.message : String(error),
+              questionName: params.questionName,
+            },
+            "Fire-and-forget save failed (non-fatal)"
+          );
+        });
+    },
+    saveMultipleAnswersFireAndForget: (
+      { context },
+      params: { answers: Record<string, any> }
+    ) => {
+      // Fire-and-forget: Don't await, let it run in background
+      surveyResponseStorageService
+        .saveSurveyAnswers(
+          context.lgCustomerId,
+          context.customerId,
+          params.answers
+        )
+        .catch(error => {
+          logger.error(
+            {
+              error: error instanceof Error ? error.message : String(error),
+              answerCount: Object.keys(params.answers).length,
+            },
+            "Fire-and-forget save multiple failed (non-fatal)"
+          );
+        });
+    },
+    // Note: submitClaimFireAndForget removed - claim submission requires all survey data
+    // and should remain as a blocking operation to ensure data integrity
   },
 }).createMachine({
   id: "thousandDaySurvey",
@@ -788,14 +834,70 @@ export const thousandDaySurveyMachine = setup({
         INPUT: withNavigation(
           [
             {
-              target: "savingBeneficiaryCategory",
-              guard: "isValidBeneficiaryCategory",
-              actions: assign({
-                beneficiaryCategory: ({ event }) =>
-                  event.type === "INPUT"
-                    ? mapBeneficiaryCategory(event.input)
-                    : [],
-              }),
+              target: "askChildAge",
+              guard: ({ event, context }: { event: ThousandDaySurveyEvent; context: ThousandDaySurveyContext }) => {
+                if (event.type !== "INPUT") return false;
+                if (!validateBeneficiaryCategory(event.input).valid)
+                  return false;
+                // Check if child age should be shown after assigning the answer
+                const category = mapBeneficiaryCategory(event.input);
+                return shouldShowChildAgeQuestion(category);
+              },
+              actions: [
+                assign({
+                  beneficiaryCategory: ({ event }) =>
+                    event.type === "INPUT"
+                      ? mapBeneficiaryCategory(event.input)
+                      : [],
+                }),
+                ({ context, event }: { context: ThousandDaySurveyContext; event: ThousandDaySurveyEvent }) => {
+                  // Fire-and-forget save - use event value directly
+                  if (event.type === "INPUT") {
+                    const answer = mapBeneficiaryCategory(event.input);
+                    surveyResponseStorageService
+                      .saveSurveyAnswer(
+                        context.lgCustomerId,
+                        context.customerId,
+                        "ecs:beneficiaryCategory",
+                        answer
+                      )
+                      .catch(() => {
+                        /* ignore errors */
+                      });
+                  }
+                },
+              ],
+            },
+            {
+              target: "askBeanIntakeFrequency",
+              guard: ({ event }: { event: ThousandDaySurveyEvent }) => {
+                if (event.type !== "INPUT") return false;
+                return validateBeneficiaryCategory(event.input).valid;
+              },
+              actions: [
+                assign({
+                  beneficiaryCategory: ({ event }) =>
+                    event.type === "INPUT"
+                      ? mapBeneficiaryCategory(event.input)
+                      : [],
+                }),
+                ({ context, event }: { context: ThousandDaySurveyContext; event: ThousandDaySurveyEvent }) => {
+                  // Fire-and-forget save - use event value directly
+                  if (event.type === "INPUT") {
+                    const answer = mapBeneficiaryCategory(event.input);
+                    surveyResponseStorageService
+                      .saveSurveyAnswer(
+                        context.lgCustomerId,
+                        context.customerId,
+                        "ecs:beneficiaryCategory",
+                        answer
+                      )
+                      .catch(() => {
+                        /* ignore errors */
+                      });
+                  }
+                },
+              ],
             },
             {
               target: "askBeneficiaryCategory",
@@ -818,44 +920,6 @@ export const thousandDaySurveyMachine = setup({
       },
     },
 
-    savingBeneficiaryCategory: {
-      entry: assign(() => ({
-        message: "Saving answer...\n\n1. Continue",
-      })),
-      invoke: {
-        id: "saveBeneficiaryCategory",
-        src: "saveAnswerService",
-        input: ({ context }) => ({
-          lgCustomerId: context.lgCustomerId,
-          customerId: context.customerId,
-          questionName: "ecs:beneficiaryCategory",
-          answer: context.beneficiaryCategory,
-        }),
-        onDone: {
-          // No target - just complete the save
-        },
-        onError: {
-          target: "error",
-          actions: "setError",
-        },
-      },
-      on: {
-        INPUT: [
-          {
-            target: "askChildAge",
-            guard: "shouldShowChildAge",
-          },
-          {
-            target: "askBeanIntakeFrequency",
-            guard: "shouldShowBeanFrequency",
-          },
-          {
-            target: "askPriceSpecification",
-          },
-        ],
-      },
-    },
-
     askChildAge: {
       entry: assign(() => ({
         message: "What is the child's age in months?\n\n0. Back",
@@ -864,12 +928,32 @@ export const thousandDaySurveyMachine = setup({
         INPUT: withNavigation(
           [
             {
-              target: "savingChildAge",
+              target: "askBeanIntakeFrequency",
               guard: "isValidChildAge",
-              actions: assign({
-                childAge: ({ event }) =>
-                  event.type === "INPUT" ? mapChildAge(event.input) : undefined,
-              }),
+              actions: [
+                assign({
+                  childAge: ({ event }) =>
+                    event.type === "INPUT"
+                      ? mapChildAge(event.input)
+                      : undefined,
+                }),
+                ({ context, event }: { context: ThousandDaySurveyContext; event: ThousandDaySurveyEvent }) => {
+                  // Fire-and-forget save - use event value directly
+                  if (event.type === "INPUT") {
+                    const answer = mapChildAge(event.input);
+                    surveyResponseStorageService
+                      .saveSurveyAnswer(
+                        context.lgCustomerId,
+                        context.customerId,
+                        "schema:childMaxAge",
+                        answer
+                      )
+                      .catch(() => {
+                        /* ignore errors */
+                      });
+                  }
+                },
+              ],
             },
             {
               target: "askChildAge",
@@ -892,34 +976,6 @@ export const thousandDaySurveyMachine = setup({
       },
     },
 
-    savingChildAge: {
-      entry: assign(() => ({
-        message: "Saving answer...\n\n1. Continue",
-      })),
-      invoke: {
-        id: "saveChildAge",
-        src: "saveAnswerService",
-        input: ({ context }) => ({
-          lgCustomerId: context.lgCustomerId,
-          customerId: context.customerId,
-          questionName: "schema:childMaxAge",
-          answer: context.childAge,
-        }),
-        onDone: {
-          // No target - just complete the save
-        },
-        onError: {
-          target: "error",
-          actions: "setError",
-        },
-      },
-      on: {
-        INPUT: {
-          target: "askBeanIntakeFrequency",
-        },
-      },
-    },
-
     askBeanIntakeFrequency: {
       entry: assign(() => ({
         message:
@@ -929,14 +985,32 @@ export const thousandDaySurveyMachine = setup({
         INPUT: withNavigation(
           [
             {
-              target: "savingBeanIntakeFrequency",
+              target: "askPriceSpecification",
               guard: "isValidBeanIntakeFrequency",
-              actions: assign({
-                beanIntakeFrequency: ({ event }) =>
-                  event.type === "INPUT"
-                    ? mapBeanIntakeFrequency(event.input)
-                    : "",
-              }),
+              actions: [
+                assign({
+                  beanIntakeFrequency: ({ event }) =>
+                    event.type === "INPUT"
+                      ? mapBeanIntakeFrequency(event.input)
+                      : "",
+                }),
+                ({ context, event }: { context: ThousandDaySurveyContext; event: ThousandDaySurveyEvent }) => {
+                  // Fire-and-forget save - use event value directly
+                  if (event.type === "INPUT") {
+                    const answer = mapBeanIntakeFrequency(event.input);
+                    surveyResponseStorageService
+                      .saveSurveyAnswer(
+                        context.lgCustomerId,
+                        context.customerId,
+                        "ecs:beanIntakeFrequency",
+                        answer
+                      )
+                      .catch(() => {
+                        /* ignore errors */
+                      });
+                  }
+                },
+              ],
             },
             {
               target: "askBeanIntakeFrequency",
@@ -956,34 +1030,6 @@ export const thousandDaySurveyMachine = setup({
             enableExit: true,
           }
         ),
-      },
-    },
-
-    savingBeanIntakeFrequency: {
-      entry: assign(() => ({
-        message: "Saving answer...\n\n1. Continue",
-      })),
-      invoke: {
-        id: "saveBeanIntakeFrequency",
-        src: "saveAnswerService",
-        input: ({ context }) => ({
-          lgCustomerId: context.lgCustomerId,
-          customerId: context.customerId,
-          questionName: "ecs:beanIntakeFrequency",
-          answer: context.beanIntakeFrequency,
-        }),
-        onDone: {
-          // No target - just complete the save
-        },
-        onError: {
-          target: "error",
-          actions: "setError",
-        },
-      },
-      on: {
-        INPUT: {
-          target: "askPriceSpecification",
-        },
       },
     },
 
