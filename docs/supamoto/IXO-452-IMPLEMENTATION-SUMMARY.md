@@ -1,8 +1,8 @@
 # IXO-452: Improve Menu Flow - Implementation Summary
 
-**Linear Issue**: IXO-452  
-**Branch**: `feature/ixo-452-improve-menu-flow`  
-**Status**: Login Flow Complete ✅ | Survey Flow Pending ⚠️  
+**Linear Issue**: IXO-452
+**Branch**: `feature/ixo-452-improve-menu-flow`
+**Status**: Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Pending ⚠️
 **Date**: 2025-11-12
 
 ## Problem Statement
@@ -88,10 +88,12 @@ tests/machines/supamoto/account-login/loginMachine.ts       | 364 +++++++++++++-
 3. `84ff0dd` - feat(IXO-452): Update test machine copy with new login flow
 4. `d419bdf` - test(IXO-452): Update login machine tests for new flow
 
-**Phase 2: Survey Flow Optimization (Partial)**
+**Phase 2: Survey Flow Optimization**
 5. `e01a51c` - feat(IXO-452): Implement fire-and-forget pattern for survey saves (partial)
+6. `6d82968` - docs(IXO-452): Update implementation summary with Phase 2 progress
+7. `7ea84e2` - feat(IXO-452): Complete Phase 2 - Survey flow optimization
 
-**Total**: 5 commits on branch `feature/ixo-452-improve-menu-flow`
+**Total**: 7 commits on branch `feature/ixo-452-improve-menu-flow`
 
 ---
 
@@ -105,7 +107,7 @@ tests/machines/supamoto/account-login/loginMachine.ts       | 364 +++++++++++++-
 
 ---
 
-## Phase 2: Survey Flow Optimization (Partial Implementation)
+## ✅ Phase 2: Survey Flow Optimization - COMPLETE
 
 ### ✅ Step 6: Update Survey Save Service - COMPLETE
 
@@ -115,48 +117,41 @@ tests/machines/supamoto/account-login/loginMachine.ts       | 364 +++++++++++++-
 - ✅ Errors no longer throw - survey flow continues even if saves fail
 - ✅ Added comprehensive audit logging for failed saves
 
-### ⚠️ Step 5: Update Survey Machine - PARTIAL (Proof of Concept)
+### ✅ Step 5: Update Survey Machine - COMPLETE
 
-**Completed (3 of 10 states)**:
+**All 9 States Refactored**:
 1. ✅ `savingBeneficiaryCategory` - REMOVED
 2. ✅ `savingChildAge` - REMOVED
 3. ✅ `savingBeanIntakeFrequency` - REMOVED
+4. ✅ `savingPriceSpecification` - REMOVED
+5. ✅ `savingAwarenessIronBeans` - REMOVED
+6. ✅ `savingKnowsNutritionalBenefits` - REMOVED
+7. ✅ `savingNutritionalBenefits` - REMOVED (multi-answer save)
+8. ✅ `savingAntenatalCardVerified` - REMOVED
+9. ✅ `markingComplete` - REMOVED
 
 **Implementation Details**:
-- ✅ Implemented fire-and-forget save actions in question states
-- ✅ Questions now transition directly to next question
-- ✅ Saves happen in background without blocking user flow
-- ✅ Added proper TypeScript type annotations
-- ✅ Pattern established and validated
+- ✅ All question states transition directly to next question
+- ✅ Fire-and-forget saves happen in background without blocking
+- ✅ Proper TypeScript type annotations throughout
+- ✅ Special handling for nutritionalBenefits (collects 5 answers)
+- ✅ `markSurveyComplete()` called fire-and-forget after last question
+- ✅ `submittingClaim` kept as blocking operation (data integrity)
 
-**Remaining (7 of 10 states)**:
-4. ⚠️ `savingPriceSpecification` - TODO
-5. ⚠️ `savingAwarenessIronBeans` - TODO
-6. ⚠️ `savingKnowsNutritionalBenefits` - TODO
-7. ⚠️ `savingNutritionalBenefits` - TODO
-8. ⚠️ `savingAntenatalCardVerified` - TODO
-9. ⚠️ `markingComplete` - TODO
-10. ⚠️ `submittingClaim` - TODO (convert to fire-and-forget)
+**Impact**:
+- **9 fewer interactions** per survey (50% reduction)
+- Survey reduced from **~18 interactions to ~9 interactions**
+- Faster survey completion
+- Better user experience
+- Reduced risk of USSD session timeout
 
-**Impact So Far**:
-- **3 fewer interactions** in survey flow (proof of concept complete)
-- **Pattern established** for remaining 7 states
-- **Estimated total impact**: 10 fewer interactions per survey when complete
+## Remaining Work (Not Implemented)
 
-**Implementation Approach for Remaining States**:
-- Follow the same pattern as the 3 completed states
-- For each "saving" state:
-  1. Remove the state entirely
-  2. Add fire-and-forget save action to the question state
-  3. Update transitions to go directly to next question
-  4. Add proper TypeScript type annotations
-- For `submittingClaim`: Keep as blocking operation (requires all survey data)
-
-### ⚠️ Steps 7-8: Optimize Activation Flow
+### ⚠️ Phase 3: Optimize Activation Flow (Steps 7-8)
 
 **Scope**: Remove "Continue" state from SMS sending in `customerActivationMachine.ts`
 
-**State to Optimize**: `sendingActivationSMS` (around line 483-510)
+**State to Optimize**: `sendingActivationSMS`
 
 **Implementation Approach**:
 - Convert SMS sending to fire-and-forget action
@@ -165,10 +160,12 @@ tests/machines/supamoto/account-login/loginMachine.ts       | 364 +++++++++++++-
 
 **Estimated Impact**: 1 fewer interaction per activation
 
-### ⚠️ Steps 9-13: Integration Testing
+**Complexity**: Low - similar pattern to login and survey flows
 
-- Create flow tests for optimized login
-- Create flow tests for optimized survey (if implemented)
+### ⚠️ Phase 4: Integration Testing (Steps 9-13)
+
+- Create flow tests for optimized login ✅ (already done)
+- Create flow tests for optimized survey
 - Run full validation suite
 - Update documentation
 - Performance testing
