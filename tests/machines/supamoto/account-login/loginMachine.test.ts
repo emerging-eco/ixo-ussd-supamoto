@@ -20,6 +20,7 @@ import {
 } from "./loginMachine.js";
 import { dataService } from "../../../../src/services/database-storage.js";
 import { encryptPin } from "../../../../src/utils/encryption.js";
+import { sendSMSWithRetry } from "../../../../src/services/sms.js";
 
 // Mock dependencies
 vi.mock("../../../../src/services/database-storage.js", () => ({
@@ -27,6 +28,7 @@ vi.mock("../../../../src/services/database-storage.js", () => ({
     getCustomerByCustomerId: vi.fn(),
     clearCustomerPin: vi.fn(),
     createAuditLog: vi.fn(),
+    logAuditEvent: vi.fn(),
   },
 }));
 vi.mock("../../../../src/utils/encryption.js", () => ({
@@ -41,11 +43,15 @@ vi.mock("../../../../src/services/logger.js", () => ({
   }),
 }));
 vi.mock("../../../../src/services/sms.js", () => ({
-  sendSMSWithRetry: vi.fn(),
+  sendSMSWithRetry: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("../../../../src/services/supamoto-db-client.js", () => ({
+  getDecryptedCustomerData: vi.fn(),
 }));
 
 const mockDataService = vi.mocked(dataService);
 const mockEncryptPin = vi.mocked(encryptPin);
+const mockSendSMS = vi.mocked(sendSMSWithRetry);
 
 describe("loginMachine", () => {
   const mockInput = {
@@ -94,10 +100,9 @@ describe("loginMachine", () => {
         "Invalid Customer ID format. Please try again."
       );
 
-      // Valid format
-      mockDataService.getCustomerByCustomerId.mockResolvedValue(mockCustomer);
+      // Valid format - now goes directly to PIN entry
       actor.send({ type: "INPUT", input: "C12345678" });
-      expect(actor.getSnapshot().value).toBe("verifyingCustomerId");
+      expect(actor.getSnapshot().value).toBe("pinEntry");
     });
 
     it("should handle exit navigation", () => {
@@ -112,18 +117,21 @@ describe("loginMachine", () => {
 
   describe("Customer Verification", () => {
     it("should handle customer not found", async () => {
-      mockDataService.getCustomerByCustomerId.mockRejectedValue(
-        new Error("CUSTOMER_NOT_FOUND")
-      );
+      // Customer verification now happens after PIN entry in verifyingCredentials state
+      mockDataService.getCustomerByCustomerId.mockResolvedValue(null);
 
       const actor = createActor(loginMachine, { input: mockInput });
       actor.start();
 
-      actor.send({ type: "INPUT", input: "C12345678" });
+      // Enter customer ID
+      actor.send({ type: "INPUT", input: "C99999999" });
+      expect(actor.getSnapshot().value).toBe("pinEntry");
 
-      // Wait for async operation
-      await new Promise(resolve => setTimeout(resolve, 10));
+      // Enter PIN
+      actor.send({ type: "INPUT", input: "12345" });
+      await new Promise(resolve => setTimeout(resolve, 50));
 
+      // Should route to main with customer not found error
       expect(actor.getSnapshot().value).toBe("routeToMain");
       expect((actor.getSnapshot().output as any)?.result).toBe(
         LoginOutput.CUSTOMER_NOT_FOUND
@@ -131,17 +139,24 @@ describe("loginMachine", () => {
     });
 
     it("should handle customer with empty PIN", async () => {
-      mockDataService.getCustomerByCustomerId.mockRejectedValue(
-        new Error("ENCRYPTED_PIN_FIELD_EMPTY")
+      // Mock customer with null encrypted PIN
+      const customerWithoutPin = { ...mockCustomer, encryptedPin: null };
+      mockDataService.getCustomerByCustomerId.mockResolvedValue(
+        customerWithoutPin
       );
 
       const actor = createActor(loginMachine, { input: mockInput });
       actor.start();
 
+      // Enter customer ID
       actor.send({ type: "INPUT", input: "C12345678" });
+      expect(actor.getSnapshot().value).toBe("pinEntry");
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      // Enter PIN
+      actor.send({ type: "INPUT", input: "12345" });
+      await new Promise(resolve => setTimeout(resolve, 50));
 
+      // Should route to main with empty PIN error
       expect(actor.getSnapshot().value).toBe("routeToMain");
       expect((actor.getSnapshot().output as any)?.result).toBe(
         LoginOutput.ENCRYPTED_PIN_FIELD_EMPTY
@@ -149,18 +164,13 @@ describe("loginMachine", () => {
     });
 
     it("should proceed to PIN entry for valid customer", async () => {
-      mockDataService.getCustomerByCustomerId.mockResolvedValue(mockCustomer);
-
       const actor = createActor(loginMachine, { input: mockInput });
       actor.start();
 
+      // Enter customer ID - should go directly to PIN entry
       actor.send({ type: "INPUT", input: "C12345678" });
-
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      expect(actor.getSnapshot().value).toBe("verifyingCustomerId");
-      expect(actor.getSnapshot().context.message).toBe(VERIFYING_MSG);
-      expect(actor.getSnapshot().context.customer).toEqual(mockCustomer);
+      expect(actor.getSnapshot().value).toBe("pinEntry");
+      expect(actor.getSnapshot().context.customerId).toBe("C12345678");
     });
   });
 
@@ -174,132 +184,101 @@ describe("loginMachine", () => {
       actor.start();
 
       actor.send({ type: "INPUT", input: "C12345678" });
-      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(actor.getSnapshot().value).toBe("pinEntry");
 
       // Invalid PIN format
       actor.send({ type: "INPUT", input: "abc" });
       expect(actor.getSnapshot().value).toBe("pinEntry");
       expect(actor.getSnapshot().context.message).toContain(PIN_PROMPT);
 
-      // Valid PIN format - mock encryptPin to return the stored encrypted PIN
-      mockEncryptPin.mockReturnValue("encrypted-pin-hash");
-      actor.send({ type: "INPUT", input: "1234" });
-      expect(actor.getSnapshot().value).toBe("verifyingPin");
+      // Valid PIN format - should go to verifyingCredentials
+      actor.send({ type: "INPUT", input: "12345" });
+      expect(actor.getSnapshot().value).toBe("verifyingCredentials");
     });
 
     it("should handle successful PIN verification", async () => {
       // Mock encryptPin to return the same value as stored encrypted PIN
       mockEncryptPin.mockReturnValue("9YMhFg0zu5IKq9aFG5a/PA==");
+      mockDataService.getCustomerByCustomerId.mockResolvedValue(mockCustomer);
 
       const actor = createActor(loginMachine, { input: mockInput });
       actor.start();
 
+      // Enter customer ID
       actor.send({ type: "INPUT", input: "C12345678" });
-      await new Promise(resolve => setTimeout(resolve, 10));
-      expect(actor.getSnapshot().value).toBe("verifyingCustomerId");
-
-      actor.send({ type: "INPUT", input: "C12345678" });
-      await new Promise(resolve => setTimeout(resolve, 10));
       expect(actor.getSnapshot().value).toBe("pinEntry");
 
+      // Enter correct PIN
       actor.send({ type: "INPUT", input: "10101" });
-      await new Promise(resolve => setTimeout(resolve, 10));
-      expect(actor.getSnapshot().value).toBe("verifyingCredentials");
-      expect(actor.getSnapshot().context.message).toContain("Verifying credentials");
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      actor.send({ type: "INPUT", input: "1" });
-      await new Promise(resolve => setTimeout(resolve, 10));
+      // Should go to loginSuccess after verification
       expect(actor.getSnapshot().value).toBe("loginSuccess");
     });
 
     it("should handle incorrect PIN with retry", async () => {
       // Mock encryptPin to return a different value than stored (wrong PIN)
       mockEncryptPin.mockReturnValue("different-encrypted-value");
+      mockDataService.getCustomerByCustomerId.mockResolvedValue(mockCustomer);
 
       const actor = createActor(loginMachine, { input: mockInput });
       actor.start();
 
+      // Enter customer ID
       actor.send({ type: "INPUT", input: "C12345678" });
-      await new Promise(resolve => setTimeout(resolve, 10));
-      expect(actor.getSnapshot().value).toBe("verifyingCustomerId");
-
-      actor.send({ type: "INPUT", input: "1" });
-      await new Promise(resolve => setTimeout(resolve, 10));
       expect(actor.getSnapshot().value).toBe("pinEntry");
 
-      actor.send({ type: "INPUT", input: "1234" });
-      await new Promise(resolve => setTimeout(resolve, 10));
+      // Enter wrong PIN
+      actor.send({ type: "INPUT", input: "99999" });
+      await new Promise(resolve => setTimeout(resolve, 50));
 
+      // Should return to pinEntry with attempt count incremented
       expect(actor.getSnapshot().value).toBe("pinEntry");
       expect(actor.getSnapshot().context.pinAttempts).toBe(1);
+      expect(actor.getSnapshot().context.message).toContain("attempts");
     });
 
     it("should handle max attempts exceeded", async () => {
       // Mock encryptPin to return wrong encrypted value for all attempts
       mockEncryptPin.mockReturnValue("wrong-encrypted-value");
+      mockDataService.getCustomerByCustomerId.mockResolvedValue(mockCustomer);
       mockDataService.clearCustomerPin.mockResolvedValue();
+      mockDataService.createAuditLog.mockResolvedValue({
+        id: 1,
+        eventType: "ACCOUNT_LOCKED",
+        customerId: "C12345678",
+        lgCustomerId: null,
+        details: {},
+        createdAt: new Date(),
+      });
+      mockDataService.logAuditEvent.mockResolvedValue();
 
       const actor = createActor(loginMachine, { input: mockInput });
       actor.start();
 
+      // Enter customer ID
       actor.send({ type: "INPUT", input: "C12345678" });
-      await new Promise(resolve => setTimeout(resolve, 10));
-      expect(actor.getSnapshot().value).toBe("verifyingCustomerId");
-
-      actor.send({ type: "INPUT", input: "1" });
-      await new Promise(resolve => setTimeout(resolve, 10));
       expect(actor.getSnapshot().value).toBe("pinEntry");
 
-      // First attempt - INCORRECT_PIN transitions immediately to pinEntry
-      actor.send({ type: "INPUT", input: "1234" });
-      await new Promise(resolve => setTimeout(resolve, 10));
+      // First attempt - wrong PIN
+      actor.send({ type: "INPUT", input: "99999" });
+      await new Promise(resolve => setTimeout(resolve, 50));
       expect(actor.getSnapshot().value).toBe("pinEntry");
-      console.log(
-        "After 1st attempt - State:",
-        actor.getSnapshot().value,
-        "Message:",
-        actor.getSnapshot().context.message
-      );
+      expect(actor.getSnapshot().context.pinAttempts).toBe(1);
 
-      // Second attempt - INCORRECT_PIN transitions immediately to pinEntry
-      actor.send({ type: "INPUT", input: "1234" });
-      await new Promise(resolve => setTimeout(resolve, 10));
+      // Second attempt - wrong PIN
+      actor.send({ type: "INPUT", input: "99999" });
+      await new Promise(resolve => setTimeout(resolve, 50));
       expect(actor.getSnapshot().value).toBe("pinEntry");
-      console.log(
-        "After 2nd attempt - State:",
-        actor.getSnapshot().value,
-        "Message:",
-        actor.getSnapshot().context.message
-      );
+      expect(actor.getSnapshot().context.pinAttempts).toBe(2);
 
-      // Third attempt - MAX_ATTEMPTS_EXCEEDED waits for user input
-      actor.send({ type: "INPUT", input: "1234" });
-      await new Promise(resolve => setTimeout(resolve, 10));
-      expect(actor.getSnapshot().value).toBe("verifyingPin");
-      console.log(
-        "After 3rd attempt (before pressing 1) - State:",
-        actor.getSnapshot().value,
-        "Message:",
-        actor.getSnapshot().context.message
-      );
-
-      actor.send({ type: "INPUT", input: "1" });
-      await new Promise(resolve => setTimeout(resolve, 10));
-      console.log(
-        "After 3rd attempt (after pressing 1) - State:",
-        actor.getSnapshot().value,
-        "Message:",
-        actor.getSnapshot().context.message
-      );
+      // Third attempt - MAX_ATTEMPTS_EXCEEDED
+      actor.send({ type: "INPUT", input: "99999" });
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(actor.getSnapshot().value).toBe("routeToMain");
       const context = actor.getSnapshot().context;
       const output = actor.getSnapshot().output as any;
-
-      console.log("Context message:", context.message);
-      console.log("Output keys:", Object.keys(output || {}));
-      console.log("Output.message:", output?.message);
-      console.log("Full output:", output);
 
       expect(output?.result).toBe(LoginOutput.MAX_ATTEMPTS_EXCEEDED);
       expect(context.message).toBeDefined();
@@ -312,6 +291,7 @@ describe("loginMachine", () => {
 
   describe("Error Handling", () => {
     it("should handle database errors gracefully", async () => {
+      // Database errors now happen in verifyingCredentials state
       mockDataService.getCustomerByCustomerId.mockRejectedValue(
         new Error("Database connection failed")
       );
@@ -319,8 +299,13 @@ describe("loginMachine", () => {
       const actor = createActor(loginMachine, { input: mockInput });
       actor.start();
 
+      // Enter customer ID
       actor.send({ type: "INPUT", input: "C12345678" });
-      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(actor.getSnapshot().value).toBe("pinEntry");
+
+      // Enter PIN - this triggers the database call
+      actor.send({ type: "INPUT", input: "12345" });
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       expect(actor.getSnapshot().value).toBe("error");
       expect(actor.getSnapshot().context.message).toBe(
