@@ -771,14 +771,8 @@ railway variables set ENCRYPTION_KEY=$(openssl rand -hex 32)
 
 ```bash
 # Network selection (devnet, testnet, or mainnet)
+# Network type controls all blockchain URLs (RPC, Feegrant, Blocksync) - URLs are auto-selected based on CHAIN_NETWORK value
 CHAIN_NETWORK=mainnet
-
-# Blockchain RPC endpoint
-CHAIN_RPC_URL=https://rpc.ixo.earth
-
-# Feegrant configuration
-FEEGRANT_URL=https://feegrant.ixo.earth
-FEEGRANT_GRANTER=ixo1xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # Feegrant authentication tokens (network-specific)
 FEEGRANT_AUTH_MAINNET=<your_mainnet_feegrant_token>
@@ -786,24 +780,15 @@ FEEGRANT_AUTH_TESTNET=<your_testnet_feegrant_token>
 FEEGRANT_AUTH_DEVNET=<your_devnet_feegrant_token>
 ```
 
-**For different networks**:
+**Network Selection**:
 
-```bash
-# Mainnet (Production)
-CHAIN_NETWORK=mainnet
-CHAIN_RPC_URL=https://rpc.ixo.earth
-FEEGRANT_URL=https://feegrant.ixo.earth
+The `CHAIN_NETWORK` variable automatically selects the appropriate RPC and Feegrant URLs:
 
-# Testnet (Staging)
-CHAIN_NETWORK=testnet
-CHAIN_RPC_URL=https://rpc.testnet.ixo.earth
-FEEGRANT_URL=https://feegrant.testnet.ixo.earth
+- **Mainnet**: `CHAIN_NETWORK=mainnet` → Uses `https://rpc.ixo.earth` and `https://feegrant.ixo.earth`
+- **Testnet**: `CHAIN_NETWORK=testnet` → Uses `https://rpc.testnet.ixo.earth` and `https://feegrant.testnet.ixo.earth`
+- **Devnet**: `CHAIN_NETWORK=devnet` → Uses `https://devnet.ixo.earth/rpc/` and `https://feegrant.devnet.ixo.earth`
 
-# Devnet (Development)
-CHAIN_NETWORK=devnet
-CHAIN_RPC_URL=https://devnet.ixo.earth/rpc/
-FEEGRANT_URL=https://feegrant.devnet.ixo.earth
-```
+URLs are defined in `src/constants/ixo-blockchain.ts` and selected automatically based on the network type.
 
 #### 4. Matrix Configuration
 
@@ -814,9 +799,6 @@ MATRIX_HOME_SERVER=https://mx.ixo.earth
 # Matrix bot URLs
 MATRIX_BOT_URL=https://rooms.bot.mx.ixo.earth
 MATRIX_STATE_BOT_URL=https://state.bot.mx.ixo.earth
-
-# Matrix features
-SKIP_MATRIX_ONBOARDING=false
 ```
 
 #### 5. Claims Bot Configuration
@@ -1333,10 +1315,8 @@ railway variables set PIN_ENCRYPTION_KEY=$PIN_ENCRYPTION_KEY
 railway variables set ENCRYPTION_KEY=$ENCRYPTION_KEY
 
 # Blockchain configuration
+# Network type controls all blockchain URLs (RPC, Feegrant, Blocksync) - URLs are auto-selected based on CHAIN_NETWORK value
 railway variables set CHAIN_NETWORK=mainnet
-railway variables set CHAIN_RPC_URL=https://rpc.ixo.earth
-railway variables set FEEGRANT_URL=https://feegrant.ixo.earth
-railway variables set FEEGRANT_GRANTER=ixo1xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 railway variables set FEEGRANT_AUTH_MAINNET=<your_token>
 
 # Matrix configuration
@@ -3038,7 +3018,7 @@ process.on("SIGTERM", () => {
 ```typescript
 // Your config.ts already does this
 export const config = {
-  CHAIN_RPC_URL: process.env.CHAIN_RPC_URL,
+  CHAIN_NETWORK: process.env.CHAIN_NETWORK,
   MATRIX_HOME_SERVER: process.env.MATRIX_HOME_SERVER,
   SMS_ENABLED: process.env.SMS_ENABLED === "true",
 };
@@ -3049,7 +3029,7 @@ export const config = {
 ```typescript
 // Don't hardcode configuration
 const config = {
-  CHAIN_RPC_URL: "https://rpc.ixo.earth",
+  CHAIN_NETWORK: "mainnet",
   MATRIX_HOME_SERVER: "https://mx.ixo.earth",
 };
 ```

@@ -184,22 +184,28 @@ docker-compose -f docker-compose.production.yml logs ixo-ussd | grep "migrations
 
 ### Blockchain Configuration
 
+Network type controls all blockchain URLs (RPC, Feegrant, Blocksync) - URLs are auto-selected based on CHAIN_NETWORK value.
+
 ```bash
 # Mainnet
 CHAIN_NETWORK=mainnet
-CHAIN_RPC_URL=https://rpc.ixo.earth
-FEEGRANT_URL=https://feegrant.ixo.earth
 
 # Testnet
 CHAIN_NETWORK=testnet
-CHAIN_RPC_URL=https://rpc.testnet.ixo.earth
-FEEGRANT_URL=https://feegrant.testnet.ixo.earth
 
 # Devnet (Development)
 CHAIN_NETWORK=devnet
-CHAIN_RPC_URL=https://devnet.ixo.earth/rpc/
-FEEGRANT_URL=https://feegrant.devnet.ixo.earth
 ```
+
+**Network Selection**:
+
+The `CHAIN_NETWORK` variable automatically selects the appropriate RPC and Feegrant URLs:
+
+- **Mainnet**: Uses `https://rpc.ixo.earth` and `https://feegrant.ixo.earth`
+- **Testnet**: Uses `https://rpc.testnet.ixo.earth` and `https://feegrant.testnet.ixo.earth`
+- **Devnet**: Uses `https://devnet.ixo.earth/rpc/` and `https://feegrant.devnet.ixo.earth`
+
+URLs are defined in `src/constants/ixo-blockchain.ts` and selected automatically.
 
 ---
 

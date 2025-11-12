@@ -178,8 +178,7 @@ docker-compose -f docker-compose.production.yml exec postgres \
 
 **Blockchain**:
 
-- `CHAIN_NETWORK` - devnet, testnet, or mainnet
-- `CHAIN_RPC_URL` - IXO blockchain RPC endpoint
+- `CHAIN_NETWORK` - devnet, testnet, or mainnet (auto-selects RPC and Feegrant URLs)
 - `LG_WALLET_MNEMONIC` - Lead generator wallet (24 words)
 - `EVALUATOR_WALLET_MNEMONIC` - Evaluator wallet (24 words)
 
