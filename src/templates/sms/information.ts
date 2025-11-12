@@ -54,28 +54,33 @@ Contact us on 2233 for support.`;
 /**
  * SMS template for option 5: What is Performance?
  * Explains the performance requirements for Utility customers
- * Character count: ~150 chars
  */
 export function performanceInfoSMS(): string {
-  return `${GREETING} Utility customers must buy 1+ bag pellets/month per contract. Failure may lead to stove repossession. Track your performance!`;
+  return `${GREETING}
+Your performance is based on your contract. As a Utility customer, you must buy at least 1 bag of pellets per month. Failure to do so may lead to stove repossession.
+Track your performance to stay on track!`;
 }
 
 /**
  * SMS template for option 6: What is a digital voucher?
  * Explains the digital voucher redemption system
- * Character count: ~130 chars
  */
 export function digitalVoucherInfoSMS(): string {
-  return `${GREETING} Redeem pellets or 5kg beans at discounted price based on performance. Keep up the good work!`;
+  return `${GREETING}
+You're eligible to redeem a bag of pellets or a 5kg packet of beans at a discounted price, based on your performance.
+Keep up the good work!`;
 }
 
 /**
  * SMS template for option 7: What is a contract?
  * Explains the contract requirements for stove ownership
- * Character count: ~140 chars
  */
 export function contractInfoSMS(): string {
-  return `${GREETING} All customers must sign a contract to own a SupaMoto stove. It outlines terms, conditions, and usage rules.`;
+  return `${GREETING}
+
+To own a SupaMoto stove, all customers must understand and sign a contract. This agreement outlines the terms and conditions of use and rules for using the stove.
+
+It's a key part of your stove usage.`;
 }
 
 /**
