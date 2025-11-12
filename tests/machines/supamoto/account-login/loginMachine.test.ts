@@ -198,14 +198,14 @@ describe("loginMachine", () => {
       await new Promise(resolve => setTimeout(resolve, 10));
       expect(actor.getSnapshot().value).toBe("verifyingCustomerId");
 
-      actor.send({ type: "INPUT", input: "1" });
+      actor.send({ type: "INPUT", input: "C12345678" });
       await new Promise(resolve => setTimeout(resolve, 10));
       expect(actor.getSnapshot().value).toBe("pinEntry");
 
       actor.send({ type: "INPUT", input: "10101" });
       await new Promise(resolve => setTimeout(resolve, 10));
-      expect(actor.getSnapshot().value).toBe("verifyingPin");
-      expect(actor.getSnapshot().context.message).toContain(VERIFYING_PIN_MSG);
+      expect(actor.getSnapshot().value).toBe("verifyingCredentials");
+      expect(actor.getSnapshot().context.message).toContain("Verifying credentials");
 
       actor.send({ type: "INPUT", input: "1" });
       await new Promise(resolve => setTimeout(resolve, 10));
