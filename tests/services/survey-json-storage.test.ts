@@ -2,13 +2,14 @@
  * Unit tests for JSON-based survey storage
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   surveyResponseStorageService,
   ParsedSurveyForm,
   SurveyFormJson,
   SurveyQuestion,
 } from "../../src/services/survey-response-storage.js";
+import { dataService } from "../../src/services/database-storage.js";
 
 describe("Survey JSON Storage", () => {
   describe("encryptSurveyJson and decryptSurveyJson", () => {
@@ -319,6 +320,86 @@ describe("Survey JSON Storage", () => {
 
       expect(updatedJson.answers.q1).toBe("updated_answer1");
       expect(updatedJson.answers.q2).toBe("answer2");
+    });
+  });
+
+  describe("Error handling and strict mode", () => {
+    const testLgCustomerId = "LG_TEST_1234";
+    const testCustomerId = "C_TEST_1234";
+    let originalStrictMode: string | undefined;
+
+    beforeEach(() => {
+      originalStrictMode = process.env.USSD_SURVEY_STRICT_MODE;
+      vi.restoreAllMocks();
+    });
+
+    afterEach(() => {
+      if (originalStrictMode === undefined) {
+        delete process.env.USSD_SURVEY_STRICT_MODE;
+      } else {
+        process.env.USSD_SURVEY_STRICT_MODE = originalStrictMode;
+      }
+      vi.restoreAllMocks();
+    });
+
+    it("logs audit event and does not throw when saveSurveyAnswer fails in non-strict mode", async () => {
+      delete process.env.USSD_SURVEY_STRICT_MODE;
+
+      const error = new Error("Simulated persistence failure");
+      vi
+        .spyOn(dataService, "getClaimByLgAndCustomer")
+        .mockResolvedValue(null as any);
+      const updateSpy = vi
+        .spyOn(dataService, "updateClaimSurveyForm")
+        .mockRejectedValue(error);
+      const auditSpy = vi
+        .spyOn(dataService, "logAuditEvent")
+        .mockResolvedValue(undefined as any);
+
+      await expect(
+        surveyResponseStorageService.saveSurveyAnswer(
+          testLgCustomerId,
+          testCustomerId,
+          "ecs:beneficiaryCategory",
+          ["pregnant_woman"]
+        )
+      ).resolves.toBeUndefined();
+
+      expect(updateSpy).toHaveBeenCalled();
+      expect(auditSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "SURVEY_SAVE_FAILED",
+          customerId: testCustomerId,
+          lgCustomerId: testLgCustomerId,
+        })
+      );
+    });
+
+    it("rethrows persistence errors in strict mode", async () => {
+      process.env.USSD_SURVEY_STRICT_MODE = "true";
+
+      const error = new Error("Simulated strict mode persistence failure");
+      vi
+        .spyOn(dataService, "getClaimByLgAndCustomer")
+        .mockResolvedValue(null as any);
+      const updateSpy = vi
+        .spyOn(dataService, "updateClaimSurveyForm")
+        .mockRejectedValue(error);
+      const auditSpy = vi
+        .spyOn(dataService, "logAuditEvent")
+        .mockResolvedValue(undefined as any);
+
+      await expect(
+        surveyResponseStorageService.saveSurveyAnswer(
+          testLgCustomerId,
+          testCustomerId,
+          "ecs:beneficiaryCategory",
+          ["pregnant_woman"]
+        )
+      ).rejects.toBe(error);
+
+      expect(updateSpy).toHaveBeenCalled();
+      expect(auditSpy).toHaveBeenCalled();
     });
   });
 });

@@ -4,6 +4,7 @@
  * Refactored to use JSON storage in household_claims table
  */
 
+import * as process from "process";
 import { createModuleLogger } from "./logger.js";
 import { dataService } from "./database-storage.js";
 import { encrypt, decrypt } from "../utils/encryption.js";
@@ -54,6 +55,14 @@ export interface SurveyFormJson {
  * Manages saving and retrieving survey responses with JSON encryption
  */
 class SurveyResponseStorageService {
+  /**
+   * Determine if survey persistence should operate in strict mode.
+   * In strict mode, persistence errors are re-thrown after logging/audit.
+   */
+  private isStrictMode(): boolean {
+    return process.env.USSD_SURVEY_STRICT_MODE === "true";
+  }
+
   /**
    * Encrypt survey JSON
    */
@@ -236,8 +245,11 @@ class SurveyResponseStorageService {
           );
         });
 
-      // Don't throw - allow survey flow to continue
+      // Don't throw in non-strict mode - allow survey flow to continue
       // The answer will be lost but user can continue
+      if (this.isStrictMode()) {
+        throw error;
+      }
     }
   }
 
@@ -333,7 +345,10 @@ class SurveyResponseStorageService {
           );
         });
 
-      // Don't throw - allow survey flow to continue
+      // Don't throw in non-strict mode - allow survey flow to continue
+      if (this.isStrictMode()) {
+        throw error;
+      }
     }
   }
 
@@ -385,7 +400,33 @@ class SurveyResponseStorageService {
         },
         "Failed to mark survey as complete"
       );
-      throw error;
+
+      // Log to audit_log for monitoring (fire-and-forget)
+      dataService
+        .logAuditEvent({
+          eventType: "SURVEY_COMPLETE_FAILED",
+          customerId,
+          lgCustomerId,
+          details: {
+            error: error instanceof Error ? error.message : String(error),
+            timestamp: new Date().toISOString(),
+          },
+        })
+        .catch(auditError => {
+          logger.error(
+            {
+              error:
+                auditError instanceof Error
+                  ? auditError.message
+                  : String(auditError),
+            },
+            "Failed to log survey completion failure to audit (non-fatal)"
+          );
+        });
+
+      if (this.isStrictMode()) {
+        throw error;
+      }
     }
   }
 

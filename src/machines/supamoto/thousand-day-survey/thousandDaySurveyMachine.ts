@@ -518,6 +518,8 @@ export const thousandDaySurveyMachine = setup({
           logger.error(
             {
               error: error instanceof Error ? error.message : String(error),
+              lgCustomerId: context.lgCustomerId?.slice(-4),
+              customerId: context.customerId?.slice(-4),
               questionName: params.questionName,
             },
             "Fire-and-forget save failed (non-fatal)"
@@ -539,6 +541,8 @@ export const thousandDaySurveyMachine = setup({
           logger.error(
             {
               error: error instanceof Error ? error.message : String(error),
+              lgCustomerId: context.lgCustomerId?.slice(-4),
+              customerId: context.customerId?.slice(-4),
               answerCount: Object.keys(params.answers).length,
             },
             "Fire-and-forget save multiple failed (non-fatal)"
