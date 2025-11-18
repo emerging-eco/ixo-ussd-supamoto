@@ -10,15 +10,15 @@ build/
 npm-debug.log
 .DS_Store
 .vscode/
-specs/*
-.claude/*
+specs
+.claude
 
 # env files
 *.env
 *.env.local
 
 #logs
-logs/
+logs
 account-*.*
 console-output-*.*
 

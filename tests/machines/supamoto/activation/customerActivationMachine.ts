@@ -71,8 +71,6 @@ const VERIFY_CUSTOMER_PROMPT = "Verify Customer\nEnter Customer ID:";
 const ENTER_PHONE_PROMPT =
   "Enter customer's phone number (with country code, e.g., +260971234567):";
 
-const SENDING_ACTIVATION_SMS_MSG = "Sending activation SMS...\n1. Continue";
-
 const ACTIVATION_SMS_SENT = (customerId: string) =>
   `Activation SMS sent to customer ${customerId}.\nCustomer will receive a temporary PIN to activate their account.\n1. Continue`;
 
