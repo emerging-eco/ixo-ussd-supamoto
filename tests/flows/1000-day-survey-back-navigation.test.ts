@@ -108,10 +108,10 @@ describe("1,000 Day Survey - Back Navigation Test", () => {
     // Step 9: Select 1,000 Day Survey
     response = await sendUssdRequest("2*1*C73DE2A07*1*10101*1*1*2");
     expect(response).toContain(
-      "A Lead Generator completes this survey on behalf of a Customer"
+      "A Lead Generator completes this survey on behalf of a Customer."
     );
     expect(response).toContain(
-      "What is the Customer ID for the Customer on whose behalf you are completing the survey?"
+      "Enter the Customer ID on whose behalf you are completing the survey."
     );
     expect(response).toContain("0. Back to Agent Tools");
 

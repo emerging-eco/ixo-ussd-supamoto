@@ -115,6 +115,12 @@ export class SessionService {
         if (text) {
           console.log(`📝 Processing input: "${text}"`);
           this.processUserInput(actor, text);
+
+          // Wait for async state transitions to complete
+          // This allows invoked services (like database queries) to complete
+          // before taking the snapshot. 100ms is a reasonable delay for most
+          // async operations while keeping USSD response time acceptable.
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
 

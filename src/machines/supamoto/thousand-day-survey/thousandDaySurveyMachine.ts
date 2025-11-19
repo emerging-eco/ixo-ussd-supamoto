@@ -234,6 +234,72 @@ const recoverSessionService = fromPromise(
   }
 );
 
+const initializeSurveySessionService = fromPromise(
+  async ({
+    input,
+  }: {
+    input: {
+      lgCustomerId: string;
+      customerId: string;
+    };
+  }) => {
+    const { lgCustomerId, customerId } = input;
+
+    // 1. Validate customer exists
+    const customer = await dataService.getCustomerByCustomerId(customerId);
+    if (!customer) {
+      throw new Error(
+        `Customer ID ${customerId} not found in the system. Please verify the Customer ID.`
+      );
+    }
+
+    // 2. Get or create household claim (reuse semantics from createClaimService)
+    const existingClaim = await dataService.getClaimByLgAndCustomer(
+      lgCustomerId,
+      customerId
+    );
+
+    let claimId: number;
+    if (existingClaim) {
+      logger.info(
+        {
+          claimId: existingClaim.id,
+          lgCustomerId: lgCustomerId.slice(-4),
+          customerId: customerId.slice(-4),
+        },
+        "Existing household claim found - reusing claim (initializeSession)"
+      );
+      claimId = existingClaim.id;
+    } else {
+      logger.info(
+        {
+          lgCustomerId: lgCustomerId.slice(-4),
+          customerId: customerId.slice(-4),
+        },
+        "No existing claim found - creating new household claim (initializeSession)"
+      );
+
+      const claim = await dataService.createHouseholdClaim(
+        lgCustomerId,
+        customerId,
+        true // is1000DayHousehold
+      );
+
+      claimId = claim.id;
+    }
+
+    // 3. Recover session state (same behavior as recoverSessionService)
+    const surveyState =
+      await surveyResponseStorageService.getSurveyResponseState(
+        lgCustomerId,
+        customerId
+      );
+
+    return { claimId, surveyState };
+  }
+);
+
+
 const saveAnswerService = fromPromise(
   async ({
     input,
@@ -488,6 +554,7 @@ export const thousandDaySurveyMachine = setup({
     createClaimService,
     validateCustomerExistsService,
     recoverSessionService,
+    initializeSurveySessionService,
     saveAnswerService,
     saveMultipleAnswersService,
     markCompleteService,
@@ -578,7 +645,7 @@ export const thousandDaySurveyMachine = setup({
         INPUT: withNavigation(
           [
             {
-              target: "validatingCustomer",
+              target: "initializingSession",
               guard: "isValidCustomerId",
               actions: assign({
                 customerId: ({ event }) => {
@@ -608,226 +675,175 @@ export const thousandDaySurveyMachine = setup({
       },
     },
 
-    validatingCustomer: {
-      entry: assign(() => ({
-        message: "Validating Customer ID...\n\n1. Continue",
-      })),
+    initializingSession: {
+      // Internal state: validate customer, create/reuse claim, recover any existing answers
       invoke: {
-        id: "validateCustomerExists",
-        src: "validateCustomerExistsService",
-        input: ({ context }) => ({
-          customerId: context.customerId,
-        }),
-        onDone: {
-          target: "creatingClaim",
-        },
-        onError: {
-          target: "error",
-          actions: assign({
-            error: ({ event }) => {
-              const errorMessage =
-                event.error instanceof Error
-                  ? event.error.message
-                  : String(event.error);
-              return errorMessage;
-            },
-          }),
-        },
-      },
-      on: {
-        INPUT: {
-          target: "creatingClaim",
-        },
-      },
-    },
-
-    creatingClaim: {
-      entry: assign(() => {
-        return {
-          message: "Creating claim record...\n\n1. Continue",
-        };
-      }),
-      invoke: {
-        id: "createClaim",
-        src: "createClaimService",
+        id: "initializeSurveySession",
+        src: "initializeSurveySessionService",
         input: ({ context }) => ({
           lgCustomerId: context.lgCustomerId,
           customerId: context.customerId,
         }),
         onDone: {
+          target: "routeAfterInitialization",
           actions: assign({
             claimId: ({ event }) => event.output.claimId,
-          }),
-        },
-        onError: {
-          target: "error",
-          actions: assign({
-            error: ({ event }) => {
-              const errorMessage =
-                event.error instanceof Error
-                  ? event.error.message
-                  : String(event.error);
-              return errorMessage;
-            },
-          }),
-        },
-      },
-      on: {
-        INPUT: {
-          target: "recoveringSession",
-        },
-      },
-    },
-
-    recoveringSession: {
-      entry: assign(() => ({
-        message: "Checking for existing survey data...\n\n1. Continue",
-      })),
-      invoke: {
-        id: "recoverSession",
-        src: "recoverSessionService",
-        input: ({ context }) => ({
-          lgCustomerId: context.lgCustomerId,
-          customerId: context.customerId,
-        }),
-        onDone: {
-          actions: assign({
             // Populate context with recovered answers if they exist
             beneficiaryCategory: ({ event }) =>
-              event.output?.answers?.["ecs:beneficiaryCategory"],
+              event.output?.surveyState?.answers?.["ecs:beneficiaryCategory"],
             childAge: ({ event }) =>
-              event.output?.answers?.["schema:childMaxAge"],
+              event.output?.surveyState?.answers?.["schema:childMaxAge"],
             beanIntakeFrequency: ({ event }) =>
-              event.output?.answers?.["ecs:beanIntakeFrequency"],
+              event.output?.surveyState?.answers?.["ecs:beanIntakeFrequency"],
             priceSpecification: ({ event }) =>
-              event.output?.answers?.["schema:priceSpecification"],
+              event.output?.surveyState?.answers?.["schema:priceSpecification"],
             awarenessIronBeans: ({ event }) =>
-              event.output?.answers?.["ecs:awarenessIronBeans"],
+              event.output?.surveyState?.answers?.["ecs:awarenessIronBeans"],
             knowsNutritionalBenefits: ({ event }) =>
-              event.output?.answers?.["ecs:knowsNutritionalBenefits"],
+              event.output?.surveyState?.answers?.["ecs:knowsNutritionalBenefits"],
             nutritionalBenefitDetails: ({ event }) =>
-              event.output?.answers?.["ecs:nutritionalBenefitDetails"],
+              event.output?.surveyState?.answers?.["ecs:nutritionalBenefitDetails"],
             antenatalCardVerified: ({ event }) =>
-              event.output?.answers?.[
+              event.output?.surveyState?.answers?.[
                 "ecs:confirmAction_antenatal_card_verified"
               ],
           }),
         },
-        onError: {
-          // No existing data, start fresh - still transition to askBeneficiaryCategory
-          target: "askBeneficiaryCategory",
-        },
-      },
-      on: {
-        INPUT: withNavigation(
-          [
-            // Session recovery routing - evaluated in reverse question order
-            // Routes to the first unanswered question in the survey sequence
-            {
-              target: "askAntenatalCardVerified",
-              guard: "hasAntenatalCardVerified",
-              actions: () => {
-                logger.info(
-                  "Session recovery: Antenatal card already verified, showing last question"
-                );
-              },
-            },
-            {
-              target: "askAntenatalCardVerified",
-              guard: "hasNutritionalBenefits",
-              actions: () => {
-                logger.info(
-                  "Session recovery: Nutritional benefits answered, resuming at antenatal card question"
-                );
-              },
-            },
-            {
-              target: "askNutritionalBenefit1",
-              guard: "hasKnowsNutritionalBenefits",
-              actions: () => {
-                logger.info(
-                  "Session recovery: Knows nutritional benefits answered, resuming at multi-part question 1"
-                );
-              },
-            },
-            {
-              target: "askKnowsNutritionalBenefits",
-              guard: "hasAwarenessIronBeans",
-              actions: () => {
-                logger.info(
-                  "Session recovery: Awareness iron beans answered, resuming at knows nutritional benefits"
-                );
-              },
-            },
-            {
-              target: "askAwarenessIronBeans",
-              guard: "hasPriceSpecification",
-              actions: () => {
-                logger.info(
-                  "Session recovery: Price specification answered, resuming at awareness iron beans"
-                );
-              },
-            },
-            {
-              target: "askPriceSpecification",
-              guard: "hasBeanIntakeFrequency",
-              actions: () => {
-                logger.info(
-                  "Session recovery: Bean intake frequency answered, resuming at price specification"
-                );
-              },
-            },
-            {
-              target: "askBeanIntakeFrequency",
-              guard: "hasChildAge",
-              actions: () => {
-                logger.info(
-                  "Session recovery: Child age answered, resuming at bean intake frequency"
-                );
-              },
-            },
-            {
-              target: "askChildAge",
-              guard: ({ context }: { context: ThousandDaySurveyContext }) =>
-                context.beneficiaryCategory !== undefined &&
-                context.beneficiaryCategory !== null &&
-                (Array.isArray(context.beneficiaryCategory)
-                  ? context.beneficiaryCategory.length > 0
-                  : true) &&
-                shouldShowChildAgeQuestion(context.beneficiaryCategory),
-              actions: () => {
-                logger.info(
-                  "Session recovery: Beneficiary category answered (child selected), resuming at child age"
-                );
-              },
-            },
-            {
-              target: "askPriceSpecification",
-              guard: "hasBeneficiaryCategory",
-              actions: () => {
-                logger.info(
-                  "Session recovery: Beneficiary category answered (no child), resuming at price specification"
-                );
-              },
-            },
-            {
-              target: "askBeneficiaryCategory",
-              actions: () => {
-                logger.info(
-                  "Session recovery: No previous answers found, starting from beginning"
-                );
-              },
-            },
-          ],
+        onError: [
           {
-            backTarget: "askCustomerId",
-            exitTarget: "routeToMain",
-            enableBack: true,
-            enableExit: true,
-          }
-        ),
+            // Customer not found in validation step
+            target: "invalidCustomer",
+            guard: ({ event }) => {
+              const msg =
+                event.error instanceof Error
+                  ? event.error.message
+                  : String(event.error);
+              return msg.includes("not found in the system");
+            },
+            actions: assign({
+              error: ({ event }) =>
+                event.error instanceof Error
+                  ? event.error.message
+                  : String(event.error),
+            }),
+          },
+          {
+            target: "systemError",
+            actions: assign({
+              error: ({ event }) =>
+                event.error instanceof Error
+                  ? event.error.message
+                  : String(event.error),
+            }),
+          },
+        ],
       },
     },
+
+    routeAfterInitialization: {
+      // Pure routing state after session initialization completes.
+      // Uses recovered answers (if any) to resume at the correct question.
+      always: [
+        // Session recovery routing - evaluated in reverse question order
+        // Routes to the first unanswered question in the survey sequence
+        {
+          target: "askAntenatalCardVerified",
+          guard: "hasAntenatalCardVerified",
+          actions: () => {
+            logger.info(
+              "Session recovery: Antenatal card already verified, showing last question"
+            );
+          },
+        },
+        {
+          target: "askAntenatalCardVerified",
+          guard: "hasNutritionalBenefits",
+          actions: () => {
+            logger.info(
+              "Session recovery: Nutritional benefits answered, resuming at antenatal card question"
+            );
+          },
+        },
+        {
+          target: "askNutritionalBenefit1",
+          guard: "hasKnowsNutritionalBenefits",
+          actions: () => {
+            logger.info(
+              "Session recovery: Knows nutritional benefits answered, resuming at multi-part question 1"
+            );
+          },
+        },
+        {
+          target: "askKnowsNutritionalBenefits",
+          guard: "hasAwarenessIronBeans",
+          actions: () => {
+            logger.info(
+              "Session recovery: Awareness iron beans answered, resuming at knows nutritional benefits"
+            );
+          },
+        },
+        {
+          target: "askAwarenessIronBeans",
+          guard: "hasPriceSpecification",
+          actions: () => {
+            logger.info(
+              "Session recovery: Price specification answered, resuming at awareness iron beans"
+            );
+          },
+        },
+        {
+          target: "askPriceSpecification",
+          guard: "hasBeanIntakeFrequency",
+          actions: () => {
+            logger.info(
+              "Session recovery: Bean intake frequency answered, resuming at price specification"
+            );
+          },
+        },
+        {
+          target: "askBeanIntakeFrequency",
+          guard: "hasChildAge",
+          actions: () => {
+            logger.info(
+              "Session recovery: Child age answered, resuming at bean intake frequency"
+            );
+          },
+        },
+        {
+          target: "askChildAge",
+          guard: ({ context }: { context: ThousandDaySurveyContext }) =>
+            context.beneficiaryCategory !== undefined &&
+            context.beneficiaryCategory !== null &&
+            (Array.isArray(context.beneficiaryCategory)
+              ? context.beneficiaryCategory.length > 0
+              : true) &&
+            shouldShowChildAgeQuestion(context.beneficiaryCategory),
+          actions: () => {
+            logger.info(
+              "Session recovery: Beneficiary category answered (child selected), resuming at child age"
+            );
+          },
+        },
+        {
+          target: "askPriceSpecification",
+          guard: "hasBeneficiaryCategory",
+          actions: () => {
+            logger.info(
+              "Session recovery: Beneficiary category answered (no child), resuming at price specification"
+            );
+          },
+        },
+        {
+          target: "askBeneficiaryCategory",
+          actions: () => {
+            logger.info(
+              "Session recovery: No previous answers found, starting from beginning"
+            );
+          },
+        },
+      ],
+    },
+
 
     askBeneficiaryCategory: {
       entry: assign(() => ({
@@ -885,10 +901,20 @@ export const thousandDaySurveyMachine = setup({
               ],
             },
             {
-              target: "askBeanIntakeFrequency",
-              guard: ({ event }: { event: ThousandDaySurveyEvent }) => {
+              target: "askPriceSpecification",
+              guard: ({
+                event,
+                context,
+              }: {
+                event: ThousandDaySurveyEvent;
+                context: ThousandDaySurveyContext;
+              }) => {
                 if (event.type !== "INPUT") return false;
-                return validateBeneficiaryCategory(event.input).valid;
+                if (!validateBeneficiaryCategory(event.input).valid)
+                  return false;
+                // Check if child age should NOT be shown (no child in household)
+                const category = mapBeneficiaryCategory(event.input);
+                return !shouldShowChildAgeQuestion(category);
               },
               actions: [
                 assign({
@@ -1058,7 +1084,7 @@ export const thousandDaySurveyMachine = setup({
             },
           ],
           {
-            backTarget: "askBeneficiaryCategory",
+            backTarget: "askChildAge",
             exitTarget: "routeToMain",
             enableBack: true,
             enableExit: true,
@@ -1073,60 +1099,82 @@ export const thousandDaySurveyMachine = setup({
           "How much are you willing to pay for a 1 kg bag of beans? (ZMW)\n\n0. Back",
       })),
       on: {
-        INPUT: withNavigation(
-          [
-            {
-              target: "askAwarenessIronBeans",
-              guard: "isValidPriceSpecification",
-              actions: [
-                assign({
-                  priceSpecification: ({ event }) =>
-                    event.type === "INPUT"
-                      ? mapPriceSpecification(event.input)
-                      : "",
-                }),
-                ({
-                  context,
-                  event,
-                }: {
-                  context: ThousandDaySurveyContext;
-                  event: ThousandDaySurveyEvent;
-                }) => {
-                  // Fire-and-forget save - use event value directly
-                  if (event.type === "INPUT") {
-                    const answer = mapPriceSpecification(event.input);
-                    surveyResponseStorageService
-                      .saveSurveyAnswer(
-                        context.lgCustomerId,
-                        context.customerId,
-                        "schema:priceSpecification",
-                        answer
-                      )
-                      .catch(() => {
-                        /* ignore errors */
-                      });
-                  }
-                },
-              ],
-            },
-            {
-              target: "askPriceSpecification",
-              actions: assign({
-                message: ({ event }) => {
-                  if (event.type !== "INPUT") return "";
-                  const validation = validatePriceSpecification(event.input);
-                  return `${validation.error}\n\nPlease try again.\n\n0. Back`;
-                },
-              }),
-            },
-          ],
+        INPUT: [
+          // Exit navigation (*)
           {
-            backTarget: "askBeneficiaryCategory",
-            exitTarget: "routeToMain",
-            enableBack: true,
-            enableExit: true,
-          }
-        ),
+            target: "routeToMain",
+            guard: ({ event }: { event: ThousandDaySurveyEvent }) =>
+              event.type === "INPUT" && event.input === "*",
+          },
+          // Conditional back navigation (0)
+          // If child exists (beanIntakeFrequency was answered), go back to askBeanIntakeFrequency
+          // Otherwise, go back to askBeneficiaryCategory
+          {
+            target: "askBeanIntakeFrequency",
+            guard: ({
+              event,
+              context,
+            }: {
+              event: ThousandDaySurveyEvent;
+              context: ThousandDaySurveyContext;
+            }) =>
+              event.type === "INPUT" &&
+              event.input === "0" &&
+              context.beanIntakeFrequency !== undefined &&
+              context.beanIntakeFrequency !== null,
+          },
+          {
+            target: "askBeneficiaryCategory",
+            guard: ({ event }: { event: ThousandDaySurveyEvent }) =>
+              event.type === "INPUT" && event.input === "0",
+          },
+          // Valid price input
+          {
+            target: "askAwarenessIronBeans",
+            guard: "isValidPriceSpecification",
+            actions: [
+              assign({
+                priceSpecification: ({ event }) =>
+                  event.type === "INPUT"
+                    ? mapPriceSpecification(event.input)
+                    : "",
+              }),
+              ({
+                context,
+                event,
+              }: {
+                context: ThousandDaySurveyContext;
+                event: ThousandDaySurveyEvent;
+              }) => {
+                // Fire-and-forget save - use event value directly
+                if (event.type === "INPUT") {
+                  const answer = mapPriceSpecification(event.input);
+                  surveyResponseStorageService
+                    .saveSurveyAnswer(
+                      context.lgCustomerId,
+                      context.customerId,
+                      "schema:priceSpecification",
+                      answer
+                    )
+                    .catch(() => {
+                      /* ignore errors */
+                    });
+                }
+              },
+            ],
+          },
+          // Invalid input - show error
+          {
+            target: "askPriceSpecification",
+            actions: assign({
+              message: ({ event }) => {
+                if (event.type !== "INPUT") return "";
+                const validation = validatePriceSpecification(event.input);
+                return `${validation.error}\n\nPlease try again.\n\n0. Back`;
+              },
+            }),
+          },
+        ],
       },
     },
 
@@ -1644,6 +1692,55 @@ export const thousandDaySurveyMachine = setup({
     routeToMain: {
       type: "final",
     },
+
+    invalidCustomer: {
+      entry: assign(({ context }) => ({
+        message:
+          `Customer ID ${context.customerId} was not found.\n` +
+          "Please check and try again.\n\n" +
+          "1. Enter a different Customer ID\n" +
+          "0. Back to Agent Tools",
+      })),
+      on: {
+        INPUT: withNavigation(
+          [
+            {
+              target: "askCustomerId",
+              guard: ({ event }: { event: ThousandDaySurveyEvent }) =>
+                event.type === "INPUT" && event.input === "1",
+              actions: "clearErrors",
+            },
+          ],
+          {
+            backTarget: "routeToMain",
+            exitTarget: "routeToMain",
+            enableBack: true,
+            enableExit: true,
+          }
+        ),
+      },
+    },
+
+    systemError: {
+      entry: assign(() => ({
+        message:
+          "We couldn't start the 1,000 Day Survey due to a system error.\n" +
+          "Please try again later or contact support.\n\n" +
+          "0. Back to Agent Tools",
+      })),
+      on: {
+        INPUT: withNavigation(
+          [],
+          {
+            backTarget: "routeToMain",
+            exitTarget: "routeToMain",
+            enableBack: true,
+            enableExit: true,
+          }
+        ),
+      },
+    },
+
 
     error: {
       entry: assign({

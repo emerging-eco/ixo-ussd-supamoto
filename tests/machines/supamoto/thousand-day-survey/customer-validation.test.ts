@@ -6,6 +6,7 @@ import { thousandDaySurveyMachine } from "../../../../src/machines/supamoto/thou
 vi.mock("../../../../src/services/database-storage.js", () => ({
   dataService: {
     getCustomerByCustomerId: vi.fn(),
+    getClaimByLgAndCustomer: vi.fn(),
     createHouseholdClaim: vi.fn(),
     getHouseholdClaimById: vi.fn(),
     saveAnswer: vi.fn(),
@@ -18,6 +19,18 @@ vi.mock("../../../../src/services/database-storage.js", () => ({
 vi.mock("../../../../src/services/ixo/claims-bot.js", () => ({
   submitHouseholdClaim: vi.fn(),
 }));
+// Mock the survey response storage service
+vi.mock("../../../../src/services/survey-response-storage.js", () => ({
+  surveyResponseStorageService: {
+    getSurveyResponseState: vi.fn(),
+    saveSurveyAnswer: vi.fn(),
+    saveSurveyAnswers: vi.fn(),
+  },
+}));
+
+
+
+import { surveyResponseStorageService } from "../../../../src/services/survey-response-storage.js";
 
 import { dataService } from "../../../../src/services/database-storage.js";
 
@@ -83,11 +96,17 @@ describe("1,000 Day Survey - Customer Validation", () => {
 
       const snapshot = actor.getSnapshot();
 
-      // Should transition through validatingCustomer to creatingClaim
+      // Should validate customer, create/reuse claim, and store IDs in context
       expect(dataService.getCustomerByCustomerId).toHaveBeenCalledWith(
         "C12345678"
       );
+      expect(dataService.getClaimByLgAndCustomer).toHaveBeenCalledWith(
+        "CLG123456",
+        "C12345678"
+      );
+      expect(dataService.createHouseholdClaim).toHaveBeenCalled();
       expect(snapshot.context.customerId).toBe("C12345678");
+      expect(snapshot.context.claimId).toBe(1);
       expect(snapshot.context.error).toBeUndefined();
     });
   });
@@ -139,7 +158,7 @@ describe("1,000 Day Survey - Customer Validation", () => {
   });
 
   describe("Valid Format but Customer Doesn't Exist", () => {
-    it("should show 'not found' error when customer doesn't exist", async () => {
+    it("should go to invalidCustomer state when customer doesn't exist", async () => {
       // Mock customer doesn't exist
       vi.mocked(dataService.getCustomerByCustomerId).mockResolvedValue(null);
 
@@ -167,10 +186,45 @@ describe("1,000 Day Survey - Customer Validation", () => {
         "CBBB807C4"
       );
 
-      // Should transition to error state
-      expect(snapshot.value).toBe("error");
+      // Should transition to invalidCustomer state with friendly message
+      expect(snapshot.value).toBe("invalidCustomer");
       expect(snapshot.context.error).toContain("not found in the system");
       expect(snapshot.context.error).toContain("CBBB807C4");
+      expect(snapshot.context.message).toContain(
+        "Customer ID CBBB807C4 was not found."
+      );
+      expect(snapshot.context.message).toContain("Enter a different Customer ID");
+    });
+
+    it("should go to systemError state when validation throws unexpected error", async () => {
+      const error = new Error("Database unavailable");
+      vi.mocked(dataService.getCustomerByCustomerId).mockRejectedValue(error);
+
+      const actor = createActor(thousandDaySurveyMachine, {
+        input: {
+          sessionId: "test-session",
+          phoneNumber: "+260123456789",
+          serviceCode: "*2233#",
+          lgCustomerId: "CLG123456",
+        },
+      });
+
+      actor.start();
+
+      actor.send({ type: "INPUT", input: "CERROR001" });
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const snapshot = actor.getSnapshot();
+
+      expect(dataService.getCustomerByCustomerId).toHaveBeenCalledWith(
+        "CERROR001"
+      );
+      expect(snapshot.value).toBe("systemError");
+      expect(snapshot.context.error).toContain("Database unavailable");
+      expect(snapshot.context.message).toContain(
+        "We couldn't start the 1,000 Day Survey due to a system error."
+      );
     });
   });
 
@@ -202,6 +256,7 @@ describe("1,000 Day Survey - Customer Validation", () => {
         claimProcessedAt: null,
         claimStatus: "pending",
         beanVoucherAllocated: false,
+
         claimsBotResponse: null,
         surveyForm: null,
         surveyFormUpdatedAt: null,
@@ -233,6 +288,82 @@ describe("1,000 Day Survey - Customer Validation", () => {
       );
       expect(dataService.createHouseholdClaim).toHaveBeenCalled();
       expect(snapshot.context.customerId).toBe("C12345678");
+    });
+  });
+
+
+  describe("Session initialization with existing answers", () => {
+    it("should hydrate context from surveyResponseState and reuse existing claim", async () => {
+      vi.mocked(dataService.getCustomerByCustomerId).mockResolvedValue({
+        id: 1,
+        customerId: "C12345678",
+        fullName: "Test Customer",
+        email: undefined,
+        nationalId: undefined,
+        encryptedPin: "encrypted_pin",
+        preferredLanguage: "eng",
+        lastCompletedAction: "",
+        householdId: undefined,
+        role: "customer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      vi.mocked(dataService.getClaimByLgAndCustomer).mockResolvedValue({
+        id: 99,
+        lgCustomerId: "CLG123456",
+        customerId: "C12345678",
+        is1000DayHousehold: true,
+        claimSubmittedAt: new Date(),
+        claimProcessedAt: null,
+        claimStatus: "pending",
+        beanVoucherAllocated: false,
+        claimsBotResponse: null,
+        surveyForm: null,
+        surveyFormUpdatedAt: null,
+        createdAt: new Date(),
+      } as any);
+
+      vi
+        .mocked(surveyResponseStorageService.getSurveyResponseState)
+        .mockResolvedValue({
+          lgCustomerId: "CLG123456",
+          customerId: "C12345678",
+          answers: {
+            "ecs:beneficiaryCategory": ["pregnant_woman"],
+            "ecs:beanIntakeFrequency": "daily",
+          },
+          allFieldsCompleted: false,
+        });
+
+      const actor = createActor(thousandDaySurveyMachine, {
+        input: {
+          sessionId: "test-session",
+          phoneNumber: "+260123456789",
+          serviceCode: "*2233#",
+          lgCustomerId: "CLG123456",
+        },
+      });
+
+      actor.start();
+
+      actor.send({ type: "INPUT", input: "C12345678" });
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const snapshot = actor.getSnapshot();
+
+      expect(dataService.getClaimByLgAndCustomer).toHaveBeenCalledWith(
+        "CLG123456",
+        "C12345678"
+      );
+      expect(dataService.createHouseholdClaim).not.toHaveBeenCalled();
+      expect(
+        surveyResponseStorageService.getSurveyResponseState
+      ).toHaveBeenCalledWith("CLG123456", "C12345678");
+      expect(snapshot.context.claimId).toBe(99);
+      expect(snapshot.context.beneficiaryCategory).toEqual(["pregnant_woman"]);
+      expect(snapshot.context.beanIntakeFrequency).toBe("daily");
     });
   });
 

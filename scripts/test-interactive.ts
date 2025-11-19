@@ -200,9 +200,9 @@ class SessionLogger {
 // ============================================================================
 
 const SERVER_URL = 
-//  "http://127.0.0.1:3002/api/ussd"; //localhost
-  "https://ixo-ussd-supamoto-development.up.railway.app/api/ussd"; //development
-//  "https://ixo-ussd-supamoto-stage.up.railway.app/api/ussd";       //stage
+  "http://127.0.0.1:3002/api/ussd"; //localhost
+  // "https://ixo-ussd-supamoto-development.up.railway.app/api/ussd"; //development
+  // "https://ixo-ussd-supamoto-stage.up.railway.app/api/ussd";       //stage
 const sessionId = `interactive-test-${Date.now()}`;
 const phoneNumber = "+260971230001"; // Zambian number
 const serviceCode = "*2233#"; //*384*46361#	// Zambia

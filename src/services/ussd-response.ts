@@ -45,8 +45,9 @@ export class USSDResponseService {
 
   /**
    * Get message from snapshot, prioritizing active child machines
+   * Recursively checks nested children (grandchildren, great-grandchildren, etc.)
    */
-  private getMessageFromSnapshot(snapshot: any): string {
+  private getMessageFromSnapshot(snapshot: any, depth: number = 0): string {
     // Check if there are active child machines (invoked actors)
     if (snapshot.children && Object.keys(snapshot.children).length > 0) {
       // Look for active child machines and use their message if available
@@ -58,8 +59,23 @@ export class USSDResponseService {
         ) {
           try {
             const childSnapshot = (childActor as any).getSnapshot();
+
+            console.log(`🔍 [Depth ${depth}] Checking child: ${childId}, state: ${childSnapshot?.value}, message: ${childSnapshot?.context?.message?.substring(0, 50)}...`);
+
+            // Recursively check for nested children (grandchildren)
+            // This handles cases like parentMachine -> userServicesChild -> surveyChild
+            if (childSnapshot?.children && Object.keys(childSnapshot.children).length > 0) {
+              console.log(`🔍 [Depth ${depth}] Child ${childId} has ${Object.keys(childSnapshot.children).length} nested children, recursing...`);
+              const nestedMessage = this.getMessageFromSnapshot(childSnapshot, depth + 1);
+              if (nestedMessage && nestedMessage !== "Service unavailable") {
+                console.log(`✅ [Depth ${depth}] Returning nested message from ${childId}: ${nestedMessage.substring(0, 50)}...`);
+                return nestedMessage;
+              }
+            }
+
+            // If no nested children or nested message, use this child's message
             if (childSnapshot?.context?.message) {
-              console.log(`📨 Using message from child machine: ${childId}`);
+              console.log(`✅ [Depth ${depth}] Returning message from child ${childId}: ${childSnapshot.context.message.substring(0, 50)}...`);
               return childSnapshot?.context?.message;
             }
           } catch (error) {
@@ -74,9 +90,11 @@ export class USSDResponseService {
 
     // Fallback to parent machine message
     const parentMessage = snapshot.context?.message || "Service unavailable";
-    console.log(
-      `📨 Using message from parent machine: ${parentMessage.substring(0, 10)}...`
-    );
+    if (depth === 0) {
+      console.log(
+        `📨 Using message from parent machine: ${parentMessage.substring(0, 10)}...`
+      );
+    }
     return parentMessage;
   }
 
@@ -181,6 +199,7 @@ export class USSDResponseService {
 
   /**
    * Get the active state value, considering child machines first
+   * Recursively checks nested children to find the deepest active state
    */
   private getActiveStateValue(snapshot: any): string {
     // Try child machine value first
@@ -193,6 +212,16 @@ export class USSDResponseService {
         ) {
           try {
             const childSnapshot = (childActor as any).getSnapshot();
+
+            // Recursively check for nested children (grandchildren)
+            if (childSnapshot?.children && Object.keys(childSnapshot.children).length > 0) {
+              const nestedState = this.getActiveStateValue(childSnapshot);
+              if (nestedState) {
+                return nestedState;
+              }
+            }
+
+            // If no nested children, use this child's state
             if (childSnapshot?.value) {
               return childSnapshot.value as string;
             }

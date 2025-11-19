@@ -239,7 +239,9 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
 
     // Expected server response
     const expected =
-      "CON A Lead Generator completes this survey on behalf of a Customer.\nWhat is the Customer ID for the Customer on whose behalf you are completing the survey?\n1. Back to Agent Tools";
+      "CON A Lead Generator completes this survey on behalf of a Customer.\n" +
+      "Enter the Customer ID on whose behalf you are completing the survey.\n\n" +
+      "0. Back to Agent Tools";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -256,43 +258,13 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
       "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7"
     );
 
-    // Expected server response - now includes customer validation step
-    const expected = "CON Validating Customer ID...\n\n1. Continue";
-
-    // Assert response matches expected
-    expect(response).toBe(expected);
-  }, 10000); // 10 second timeout for this test
-
-  it('Turn 12: Input: "1" (Continue after validation)', async () => {
-    // Simulate realistic user interaction timing (2-second delay)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1"
-    // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1"
-    );
-
-    // Expected server response - Creating claim record
-    const expected = "CON Creating claim record...\n\n1. Continue";
-
-    // Assert response matches expected
-    expect(response).toBe(expected);
-  }, 10000); // 10 second timeout for this test
-
-  it('Turn 13: Input: "1" (Continue after claim creation)', async () => {
-    // Simulate realistic user interaction timing (2-second delay)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1"
-    // Send user input (USSD requires cumulative text)
-    const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1"
-    );
-
-    // Expected server response - First survey question
+    // Expected server response - should go directly to first survey question
     const expected =
-      "CON Select all TRUE options for your household\nA: Pregnant Woman\nB: Breastfeeding Mother\nC: Child under 2 years\n1. A\n2. B\n3. C\n4. A + B\n5. A + C\n6. B + C\n7. All\n8. None\n0. Back";
+      "CON Select all TRUE options for your household\n" +
+      "A: Pregnant Woman\n" +
+      "B: Breastfeeding Mother\n" +
+      "C: Child under 2 years\n" +
+      "1. A\n2. B\n3. C\n4. A + B\n5. A + C\n6. B + C\n7. All\n8. None\n0. Back";
 
     // Assert response matches expected
     expect(response).toBe(expected);
@@ -302,12 +274,12 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4"
+    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4"
     // Send user input (USSD requires cumulative text)
     // Option 4 = "A + B" (Pregnant Woman + Breastfeeding Mother) - NO child
     // Child age and bean frequency questions should be SKIPPED
     const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4"
+      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4"
     );
 
     // Expected server response - should skip directly to price specification
@@ -322,10 +294,10 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW"
+    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*10 ZMW"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW"
+      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*10 ZMW"
     );
 
     // Expected server response
@@ -340,10 +312,10 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2"
+    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*10 ZMW*2"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2"
+      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*10 ZMW*2"
     );
 
     // Expected server response
@@ -358,10 +330,10 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2"
+    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*10 ZMW*2"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2"
+      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*10 ZMW*2"
     );
 
     // Expected server response
@@ -376,10 +348,10 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2"
+    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*10 ZMW*2*2"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2"
+      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*10 ZMW*2*2"
     );
 
     // Expected server response
@@ -394,10 +366,10 @@ describe("1000-day-household-survey - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2*1"
+    // Cumulative USSD text: "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*10 ZMW*2*2*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(
-      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*1*1*4*10 ZMW*2*2*1"
+      "2*1*C73DE2A07*1*10101*1*1*2*1*C1F53E2F7*4*10 ZMW*2*2*1"
     );
 
     // Expected server response

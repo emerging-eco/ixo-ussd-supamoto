@@ -102,40 +102,18 @@ describe("1000 Day Survey - Session Recovery", () => {
     // First session: Answer Question 1 only
     await navigateToSurvey(sessionId1);
 
-    // Enter Customer ID
+    // Enter Customer ID - should go directly to Question 1
     let response = await sendUssdRequest(
       sessionId1,
       `2*1*C142316B7*1*10101*1*1*2*${customerId}`
-    );
-    expect(response).toContain("Validating Customer ID");
-
-    // Continue after validation
-    response = await sendUssdRequest(
-      sessionId1,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1`
-    );
-    expect(response).toContain("Creating claim record");
-
-    // Continue to recovery check
-    response = await sendUssdRequest(
-      sessionId1,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1`
-    );
-    expect(response).toContain("Checking for existing survey data");
-
-    // Continue to first question
-    response = await sendUssdRequest(
-      sessionId1,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1*1`
     );
     expect(response).toContain("Select all TRUE options for your household");
 
     // Answer Question 1: Pregnant Woman (option 1)
     response = await sendUssdRequest(
       sessionId1,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1*1*1`
+      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1`
     );
-    expect(response).toContain("Saving answer");
 
     // Session ends here (simulating interruption)
 
@@ -144,30 +122,10 @@ describe("1000 Day Survey - Session Recovery", () => {
 
     await navigateToSurvey(sessionId2);
 
-    // Enter same Customer ID
+    // Enter same Customer ID - should resume at Price Specification
     response = await sendUssdRequest(
       sessionId2,
       `2*1*C142316B7*1*10101*1*1*2*${customerId}`
-    );
-    expect(response).toContain("Validating Customer ID");
-
-    // Continue
-    response = await sendUssdRequest(
-      sessionId2,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1`
-    );
-
-    // Continue
-    response = await sendUssdRequest(
-      sessionId2,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1`
-    );
-    expect(response).toContain("Checking for existing survey data");
-
-    // Continue - should route to Price Specification (Question 2)
-    response = await sendUssdRequest(
-      sessionId2,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1*1`
     );
 
     // Verify we're at Price Specification, not Beneficiary Category
@@ -184,30 +142,17 @@ describe("1000 Day Survey - Session Recovery", () => {
     // First session: Answer Question 1 with child selected
     await navigateToSurvey(sessionId1);
 
-    // Navigate to survey and answer Question 1 with "Child under 2 years" (option 3)
+    // Enter Customer ID - should go directly to Question 1
     await sendUssdRequest(
       sessionId1,
       `2*1*C142316B7*1*10101*1*1*2*${customerId}`
     );
-    await sendUssdRequest(
-      sessionId1,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1`
-    );
-    await sendUssdRequest(
-      sessionId1,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1`
-    );
-    await sendUssdRequest(
-      sessionId1,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1*1`
-    );
 
-    // Answer with child selected (option 3)
+    // Answer Question 1 with "Child under 2 years" (option 3)
     let response = await sendUssdRequest(
       sessionId1,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1*1*3`
+      `2*1*C142316B7*1*10101*1*1*2*${customerId}*3`
     );
-    expect(response).toContain("Saving answer");
 
     // Session ends here
 
@@ -216,23 +161,10 @@ describe("1000 Day Survey - Session Recovery", () => {
 
     await navigateToSurvey(sessionId2);
 
-    await sendUssdRequest(
-      sessionId2,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}`
-    );
-    await sendUssdRequest(
-      sessionId2,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1`
-    );
-    await sendUssdRequest(
-      sessionId2,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1`
-    );
-
-    // Continue - should route to Child Age question
+    // Enter same Customer ID - should resume at Child Age
     response = await sendUssdRequest(
       sessionId2,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1*1`
+      `2*1*C142316B7*1*10101*1*1*2*${customerId}`
     );
 
     // Verify we're at Child Age question
@@ -243,10 +175,10 @@ describe("1000 Day Survey - Session Recovery", () => {
     const customerId = `CTEST${Date.now().toString().slice(-5)}`;
     const sessionId1 = `recovery-test-3-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-    // First session: Answer Questions 1, 2, 3
+    // First session: Answer Questions 1 and 2
     await navigateToSurvey(sessionId1);
 
-    // Navigate and answer Q1 (Pregnant Woman - no child)
+    // Q1: Pregnant Woman - no child (option 1)
     await sendUssdRequest(
       sessionId1,
       `2*1*C142316B7*1*10101*1*1*2*${customerId}`
@@ -255,35 +187,11 @@ describe("1000 Day Survey - Session Recovery", () => {
       sessionId1,
       `2*1*C142316B7*1*10101*1*1*2*${customerId}*1`
     );
-    await sendUssdRequest(
-      sessionId1,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1`
-    );
-    await sendUssdRequest(
-      sessionId1,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1*1`
-    );
-    await sendUssdRequest(
-      sessionId1,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1*1*1`
-    ); // Q1: Pregnant Woman
 
-    // Continue to Q2
+    // Q2: Price specification (e.g. 10)
     await sendUssdRequest(
       sessionId1,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1*1*1*1`
-    );
-
-    // Answer Q2 (Price: 10)
-    await sendUssdRequest(
-      sessionId1,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1*1*1*1*10`
-    );
-
-    // Continue to Q3
-    await sendUssdRequest(
-      sessionId1,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1*1*1*1*10*1`
+      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*10`
     );
 
     // Session ends here
@@ -293,23 +201,9 @@ describe("1000 Day Survey - Session Recovery", () => {
 
     await navigateToSurvey(sessionId2);
 
-    await sendUssdRequest(
-      sessionId2,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}`
-    );
-    await sendUssdRequest(
-      sessionId2,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1`
-    );
-    await sendUssdRequest(
-      sessionId2,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1`
-    );
-
-    // Continue - should route to Awareness Iron Beans
     const response = await sendUssdRequest(
       sessionId2,
-      `2*1*C142316B7*1*10101*1*1*2*${customerId}*1*1*1`
+      `2*1*C142316B7*1*10101*1*1*2*${customerId}`
     );
 
     // Verify we're at Awareness Iron Beans question
