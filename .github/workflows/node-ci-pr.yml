@@ -1,0 +1,9 @@
+name: Pull Request Build and Test
+on:
+  pull_request:
+
+jobs:
+  call-ci-workflow:
+    uses: ixoworld/ixo-github-actions/.github/workflows/node-ci-pr.yml@main
+    with:
+      package_manager: pnpm
