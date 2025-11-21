@@ -17,6 +17,7 @@ specs
 *.env
 *.env.local
 *.env.stage
+*.env.prod
 
 #logs
 logs

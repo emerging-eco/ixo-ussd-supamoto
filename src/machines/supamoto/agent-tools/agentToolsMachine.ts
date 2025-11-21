@@ -462,12 +462,12 @@ const createDeliveryConfirmationService = fromPromise(
     // Mark OTP as used
     await dataService.markOTPAsUsed(input.otpId);
 
-    // Create delivery confirmation record (7-day deadline)
+    // Create delivery confirmation record
     const confirmation = await dataService.createDeliveryConfirmation(
       input.customerId,
       input.lgCustomerId,
       input.otpId,
-      7 // 7-day deadline for confirmations
+      config.USSD.DELIVERY_CONFIRMATION_DAYS
     );
 
     // Send "valid OTP" SMS to LG - get LG phone number
@@ -1106,7 +1106,7 @@ export const agentToolsMachine = setup({
         complete: {
           entry: assign({
             message: ({ context }) =>
-              `Delivery confirmed!\n\nYou have confirmed delivery of beans to Customer ${context.customerId}.\n\nThe customer must also confirm receipt within 7 days for you to receive your bean voucher.\n\n1. Back to Agent Tools`,
+              `Delivery confirmed!\n\nYou have confirmed delivery of beans to Customer ${context.customerId}.\n\nThe customer must also confirm receipt within ${config.USSD.DELIVERY_CONFIRMATION_DAYS} days for you to receive your bean voucher.\n\n1. Back to Agent Tools`,
           }),
           on: {
             INPUT: [
