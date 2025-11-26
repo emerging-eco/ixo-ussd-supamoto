@@ -65,12 +65,12 @@ export enum LoginOutput {
 }
 
 // Messages
-export const CUSTOMER_ID_PROMPT = `Enter your Customer ID to log in:`;
+export const IDENTIFIER_PROMPT = `Enter your National ID Number or Customer ID to log in:`;
 export const PIN_PROMPT = "Enter your PIN:";
-export const INVALID_CUSTOMER_ID =
-  "Invalid Customer ID format. Please try again.";
+export const INVALID_IDENTIFIER =
+  "Invalid identifier format. Please try again.";
 export const CUSTOMER_NOT_FOUND_MSG =
-  "Customer ID not found. Please check and try again or contact support.";
+  "Customer ID or National ID not found. Please check and try again or contact support.";
 export const PIN_FIELD_EMPTY_MSG =
   "Your account needs PIN setup. Please contact support.";
 export const INCORRECT_PIN_MSG = (attempt: number) => {
@@ -79,7 +79,7 @@ export const INCORRECT_PIN_MSG = (attempt: number) => {
 };
 export const MAX_ATTEMPTS_MSG =
   "Your account was locked after 3 incorrect PIN attempts. Please contact your LG to activate your account.";
-export const VERIFYING_MSG = "Verifying Customer ID...\n1. Continue";
+export const VERIFYING_MSG = "Verifying identifier...\n1. Continue";
 export const VERIFYING_PIN_MSG = "Verifying PIN...\n1. Continue";
 export const LOGIN_SUCCESS_MSG = (
   customerId: string,
@@ -88,13 +88,22 @@ export const LOGIN_SUCCESS_MSG = (
   `Welcome, ${customerFullName}!\nLogin successful for Customer ID: ${customerId}.\n1. Continue`;
 
 /**
- * Validates customer ID format (C followed by 8+ digits)
+ * Validates identifier format (Customer ID or National ID)
+ * Customer ID format: C followed by 8+ alphanumeric characters
+ * National ID format: Zambian NRC (XXXXXX/XX/X or XXXXXXXXX)
  */
-const isValidCustomerId = ({ event }: { event: LoginEvent }) => {
+const isValidIdentifier = ({ event }: { event: LoginEvent }) => {
   if (event.type !== "INPUT") return false;
-  const customerId = event.input.trim();
-  // Basic validation: should start with 'C' and be followed by digits
-  return /^C[A-Za-z0-9]{8,}$/.test(customerId);
+  const identifier = event.input.trim();
+
+  // Check if it's a valid Customer ID format (C followed by 8+ alphanumeric)
+  const isCustomerId = /^C[A-Za-z0-9]{8,}$/i.test(identifier);
+
+  // Check if it's a valid National ID format (with or without slashes)
+  // Format: XXXXXX/XX/X (with slashes) or XXXXXXXXX (without slashes)
+  const isNationalId = /^(\d{6}\/\d{2}\/\d|\d{9})$/.test(identifier);
+
+  return isCustomerId || isNationalId;
 };
 
 /**
@@ -116,7 +125,7 @@ const hasMaxAttemptsExceeded = ({ context }: { context: LoginContext }) => {
 
 // Actors
 /**
- * Service actor that looks up customer by customer ID
+ * Service actor that looks up customer by identifier (customer ID or national ID)
  * Handles three scenarios:
  * - Customer not found: throws CUSTOMER_NOT_FOUND
  * - Customer found but no PIN: throws ENCRYPTED_PIN_FIELD_EMPTY
@@ -125,11 +134,11 @@ const hasMaxAttemptsExceeded = ({ context }: { context: LoginContext }) => {
 const customerLookupService = fromPromise(
   async ({ input }: { input: { customerId: string } }) => {
     logger.info(
-      { customerId: input.customerId.slice(-4) },
-      "Looking up customer"
+      { identifier: input.customerId.slice(-4) },
+      "Looking up customer by identifier (customer ID or national ID)"
     );
 
-    const customer = await dataService.getCustomerByCustomerId(
+    const customer = await dataService.getCustomerByIdentifier(
       input.customerId
     );
 
@@ -495,7 +504,7 @@ export const loginMachine = setup({
     input: {} as LoginInput,
   },
   guards: {
-    isValidCustomerId,
+    isValidIdentifier,
     isValidPin,
     hasMaxAttemptsExceeded,
     isCustomerFound,
@@ -525,7 +534,7 @@ export const loginMachine = setup({
     sessionId: input?.sessionId || "",
     phoneNumber: input?.phoneNumber || "",
     serviceCode: input?.serviceCode || "",
-    message: CUSTOMER_ID_PROMPT,
+    message: IDENTIFIER_PROMPT,
     error: undefined,
     customerId: undefined,
     customer: undefined,
@@ -542,13 +551,13 @@ export const loginMachine = setup({
   }),
   states: {
     customerIdEntry: {
-      entry: assign({ message: CUSTOMER_ID_PROMPT }),
+      entry: assign({ message: IDENTIFIER_PROMPT }),
       on: {
         INPUT: withNavigation(
           [
             {
               target: "pinEntry",
-              guard: "isValidCustomerId",
+              guard: "isValidIdentifier",
               actions: [
                 assign(({ event }) => {
                   if (event.type !== "INPUT") return {};
@@ -557,7 +566,7 @@ export const loginMachine = setup({
               ],
             },
             {
-              actions: assign({ message: INVALID_CUSTOMER_ID }),
+              actions: assign({ message: INVALID_IDENTIFIER }),
             },
           ],
           NavigationPatterns.loginChild

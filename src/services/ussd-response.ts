@@ -60,22 +60,36 @@ export class USSDResponseService {
           try {
             const childSnapshot = (childActor as any).getSnapshot();
 
-            console.log(`🔍 [Depth ${depth}] Checking child: ${childId}, state: ${childSnapshot?.value}, message: ${childSnapshot?.context?.message?.substring(0, 50)}...`);
+            console.log(
+              `🔍 [Depth ${depth}] Checking child: ${childId}, state: ${childSnapshot?.value}, message: ${childSnapshot?.context?.message?.substring(0, 50)}...`
+            );
 
             // Recursively check for nested children (grandchildren)
             // This handles cases like parentMachine -> userServicesChild -> surveyChild
-            if (childSnapshot?.children && Object.keys(childSnapshot.children).length > 0) {
-              console.log(`🔍 [Depth ${depth}] Child ${childId} has ${Object.keys(childSnapshot.children).length} nested children, recursing...`);
-              const nestedMessage = this.getMessageFromSnapshot(childSnapshot, depth + 1);
+            if (
+              childSnapshot?.children &&
+              Object.keys(childSnapshot.children).length > 0
+            ) {
+              console.log(
+                `🔍 [Depth ${depth}] Child ${childId} has ${Object.keys(childSnapshot.children).length} nested children, recursing...`
+              );
+              const nestedMessage = this.getMessageFromSnapshot(
+                childSnapshot,
+                depth + 1
+              );
               if (nestedMessage && nestedMessage !== "Service unavailable") {
-                console.log(`✅ [Depth ${depth}] Returning nested message from ${childId}: ${nestedMessage.substring(0, 50)}...`);
+                console.log(
+                  `✅ [Depth ${depth}] Returning nested message from ${childId}: ${nestedMessage.substring(0, 50)}...`
+                );
                 return nestedMessage;
               }
             }
 
             // If no nested children or nested message, use this child's message
             if (childSnapshot?.context?.message) {
-              console.log(`✅ [Depth ${depth}] Returning message from child ${childId}: ${childSnapshot.context.message.substring(0, 50)}...`);
+              console.log(
+                `✅ [Depth ${depth}] Returning message from child ${childId}: ${childSnapshot.context.message.substring(0, 50)}...`
+              );
               return childSnapshot?.context?.message;
             }
           } catch (error) {
@@ -214,7 +228,10 @@ export class USSDResponseService {
             const childSnapshot = (childActor as any).getSnapshot();
 
             // Recursively check for nested children (grandchildren)
-            if (childSnapshot?.children && Object.keys(childSnapshot.children).length > 0) {
+            if (
+              childSnapshot?.children &&
+              Object.keys(childSnapshot.children).length > 0
+            ) {
               const nestedState = this.getActiveStateValue(childSnapshot);
               if (nestedState) {
                 return nestedState;

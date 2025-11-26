@@ -13,12 +13,15 @@ export const phoneNumberSchema = z
   .max(15, "Phone number must not exceed 15 digits")
   .transform(val => {
     // Normalize phone number format while preserving + prefix for international format
-    const hasPlus = val.startsWith('+');
+    const hasPlus = val.startsWith("+");
     const cleaned = val.replace(/\D/g, ""); // Remove all non-digits
     const normalized = cleaned.startsWith("0") ? cleaned.substring(1) : cleaned;
     return hasPlus ? `+${normalized}` : normalized; // Re-add + if it was present
   })
-  .refine(val => /^(\+)?[1-9]\d{8,13}$/.test(val), "Invalid phone number format");
+  .refine(
+    val => /^(\+)?[1-9]\d{8,13}$/.test(val),
+    "Invalid phone number format"
+  );
 
 // Session ID validation - typically UUID or alphanumeric
 export const sessionIdSchema = z

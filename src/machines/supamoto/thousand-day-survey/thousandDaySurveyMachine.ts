@@ -299,7 +299,6 @@ const initializeSurveySessionService = fromPromise(
   }
 );
 
-
 const saveAnswerService = fromPromise(
   async ({
     input,
@@ -700,9 +699,13 @@ export const thousandDaySurveyMachine = setup({
             awarenessIronBeans: ({ event }) =>
               event.output?.surveyState?.answers?.["ecs:awarenessIronBeans"],
             knowsNutritionalBenefits: ({ event }) =>
-              event.output?.surveyState?.answers?.["ecs:knowsNutritionalBenefits"],
+              event.output?.surveyState?.answers?.[
+                "ecs:knowsNutritionalBenefits"
+              ],
             nutritionalBenefitDetails: ({ event }) =>
-              event.output?.surveyState?.answers?.["ecs:nutritionalBenefitDetails"],
+              event.output?.surveyState?.answers?.[
+                "ecs:nutritionalBenefitDetails"
+              ],
             antenatalCardVerified: ({ event }) =>
               event.output?.surveyState?.answers?.[
                 "ecs:confirmAction_antenatal_card_verified"
@@ -844,7 +847,6 @@ export const thousandDaySurveyMachine = setup({
       ],
     },
 
-
     askBeneficiaryCategory: {
       entry: assign(() => ({
         message:
@@ -855,13 +857,7 @@ export const thousandDaySurveyMachine = setup({
           [
             {
               target: "askChildAge",
-              guard: ({
-                event,
-                context,
-              }: {
-                event: ThousandDaySurveyEvent;
-                context: ThousandDaySurveyContext;
-              }) => {
+              guard: ({ event }: { event: ThousandDaySurveyEvent }) => {
                 if (event.type !== "INPUT") return false;
                 if (!validateBeneficiaryCategory(event.input).valid)
                   return false;
@@ -902,13 +898,7 @@ export const thousandDaySurveyMachine = setup({
             },
             {
               target: "askPriceSpecification",
-              guard: ({
-                event,
-                context,
-              }: {
-                event: ThousandDaySurveyEvent;
-                context: ThousandDaySurveyContext;
-              }) => {
+              guard: ({ event }: { event: ThousandDaySurveyEvent }) => {
                 if (event.type !== "INPUT") return false;
                 if (!validateBeneficiaryCategory(event.input).valid)
                   return false;
@@ -1729,18 +1719,14 @@ export const thousandDaySurveyMachine = setup({
           "0. Back to Agent Tools",
       })),
       on: {
-        INPUT: withNavigation(
-          [],
-          {
-            backTarget: "routeToMain",
-            exitTarget: "routeToMain",
-            enableBack: true,
-            enableExit: true,
-          }
-        ),
+        INPUT: withNavigation([], {
+          backTarget: "routeToMain",
+          exitTarget: "routeToMain",
+          enableBack: true,
+          enableExit: true,
+        }),
       },
     },
-
 
     error: {
       entry: assign({
