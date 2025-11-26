@@ -2,7 +2,7 @@
   "name": "ixo-ussd-server",
   "version": "0.1.0",
   "description": "A USSD server implementation for ixo platform integration",
-  "repository": "https://github.com/emerging-eco/ixo-ussd-server",
+  "repository": "https://github.com/emerging-eco/ixo-ussd-supamoto",
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {
