@@ -328,21 +328,21 @@ const verifyCredentialsService = fromPromise(
   }) => {
     logger.info(
       {
-        customerId: input.customerId.slice(-4),
+        identifier: input.customerId.slice(-4),
         attempts: input.attempts,
       },
       "Starting combined credential verification"
     );
 
-    // Step 1: Lookup customer by ID
-    const customer = await dataService.getCustomerByCustomerId(
+    // Step 1: Lookup customer by identifier (customer ID or national ID)
+    const customer = await dataService.getCustomerByIdentifier(
       input.customerId
     );
 
     if (!customer) {
       logger.warn(
-        { customerId: input.customerId.slice(-4) },
-        "Customer not found"
+        { identifier: input.customerId.slice(-4) },
+        "Customer not found by identifier"
       );
       throw new Error("CUSTOMER_NOT_FOUND");
     }
