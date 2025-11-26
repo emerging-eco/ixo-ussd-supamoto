@@ -6,4 +6,4 @@ jobs:
   call-ci-workflow:
     uses: emerging-eco/ixo-github-actions/.github/workflows/node-ci-pr.yml@main
     with:
-      package_manager: pnpm
+      package_manager: yarn

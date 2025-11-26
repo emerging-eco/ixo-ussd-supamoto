@@ -10,5 +10,5 @@ jobs:
     uses: emerging-eco/ixo-github-actions/.github/workflows/node-ci-build.yml@main
     with:
       commit_sha: ${{ github.sha }}
-      package_manager: pnpm
+      package_manager: yarn
     secrets: inherit
