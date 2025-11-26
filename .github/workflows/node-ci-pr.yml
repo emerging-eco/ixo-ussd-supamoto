@@ -7,3 +7,4 @@ jobs:
     uses: emerging-eco/ixo-github-actions/.github/workflows/node-ci-pr.yml@main
     with:
       package_manager: yarn
+      node_version: "20"

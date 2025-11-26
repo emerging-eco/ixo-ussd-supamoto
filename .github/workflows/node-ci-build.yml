@@ -11,4 +11,5 @@ jobs:
     with:
       commit_sha: ${{ github.sha }}
       package_manager: yarn
+      node_version: "20"
     secrets: inherit
