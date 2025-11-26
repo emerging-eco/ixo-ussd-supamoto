@@ -373,7 +373,7 @@ class DataService {
           "customers.created_at",
           "customers.updated_at",
         ])
-        .where("customers.customer_id", "=", customerId)
+        .where("customers.customer_id", "ilike", customerId)
         .executeTakeFirst();
 
       if (!result) {
