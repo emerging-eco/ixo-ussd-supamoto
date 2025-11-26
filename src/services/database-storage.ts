@@ -156,6 +156,30 @@ export interface AuditLogRecord {
  */
 class DataService {
   /**
+   * Helper method to normalize National ID to the format with slashes
+   * Converts "123456789" to "123456/78/9"
+   * Returns null if the input is not a valid National ID format
+   */
+  private normalizeNationalId(nationalId: string): string | null {
+    // Remove whitespace
+    const cleaned = nationalId.trim();
+
+    // Check if it already has slashes (format: XXXXXX/XX/X)
+    if (/^\d{6}\/\d{2}\/\d$/.test(cleaned)) {
+      return cleaned;
+    }
+
+    // Check if it's 9 digits without slashes (format: XXXXXXXXX)
+    if (/^\d{9}$/.test(cleaned)) {
+      // Convert to format with slashes: XXXXXX/XX/X
+      return `${cleaned.slice(0, 6)}/${cleaned.slice(6, 8)}/${cleaned.slice(8)}`;
+    }
+
+    // Invalid format
+    return null;
+  }
+
+  /**
    * Step 1: Create or update phone record (independent)
    */
   async createOrUpdatePhoneRecord(phoneNumber: string): Promise<PhoneRecord> {
@@ -421,16 +445,33 @@ class DataService {
 
   /**
    * Get customer by national ID
+   * Normalizes the national ID to the format with slashes (XXXXXX/XX/X) before querying
    */
   async getCustomerByNationalId(
     nationalId: string
   ): Promise<CustomerRecord | null> {
     const db = databaseManager.getKysely();
 
+    // Normalize national ID to format with slashes (e.g., "123456789" -> "123456/78/9")
+    // This ensures we can find customers regardless of whether they enter slashes or not
+    const normalizedId = this.normalizeNationalId(nationalId);
+
     logger.debug(
-      { nationalId: nationalId.slice(-4) },
+      {
+        inputNationalId: nationalId.slice(-4),
+        normalizedNationalId: normalizedId?.slice(-4),
+      },
       "Looking up customer by national ID"
     );
+
+    // If normalization failed, the ID is invalid - return null
+    if (!normalizedId) {
+      logger.debug(
+        { nationalId: nationalId.slice(-4) },
+        "Invalid national ID format - cannot normalize"
+      );
+      return null;
+    }
 
     try {
       const result = await db
@@ -448,7 +489,7 @@ class DataService {
           "customers.created_at",
           "customers.updated_at",
         ])
-        .where("customers.national_id", "=", nationalId)
+        .where("customers.national_id", "=", normalizedId)
         .executeTakeFirst();
 
       if (!result) {
