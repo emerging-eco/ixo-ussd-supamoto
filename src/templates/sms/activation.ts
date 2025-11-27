@@ -15,7 +15,7 @@ To log in:
 1. Dial ${serviceCode}
 2. Select 'Account Menu'
 3. Select 'Yes, log me in'
-4. Enter your Customer ID and this PIN`;
+4. Enter your National ID or Customer ID and this PIN`;
 }
 
 /**
@@ -33,5 +33,5 @@ They can reset your PIN by:
 2. Logging in to their account
 3. Selecting 'Agent Tools'
 4. Selecting 'Activate a Customer'
-5. Entering your Customer ID`;
+5. Entering your Customer ID and Phone Number`;
 }
