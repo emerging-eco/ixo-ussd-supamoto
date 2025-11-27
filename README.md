@@ -52,7 +52,7 @@ cp env.example .env
 
 ```bash
 # Run migrations and start server
-pnpm build && node dist/src/migrations/run-migrations.js
+pnpm build && node dist/migrations/run-migrations.js
 pnpm dev
 ```
 

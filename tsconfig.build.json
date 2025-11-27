@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src"
+  },
+  "include": ["src/**/*"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests",
+    "scripts",
+    "src/utils/session-log-parser.ts",
+    "src/utils/vitest-generator.ts"
+  ]
+}
+
