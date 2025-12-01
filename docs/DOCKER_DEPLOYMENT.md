@@ -222,7 +222,7 @@ The database is automatically initialized on first startup. Migrations run autom
 ```bash
 # Run migrations manually
 docker-compose -f docker-compose.production.yml exec ixo-ussd \
-  node dist/src/migrations/run-migrations.js
+  node dist/migrations/run-migrations.js
 ```
 
 ### Database Backup

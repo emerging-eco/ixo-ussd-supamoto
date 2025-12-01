@@ -196,7 +196,7 @@ The database schema is deployed using a single consolidated initialization scrip
 5. Audit & Logging
 6. Performance Indexes
 
-**Deployment**: Run `pnpm build && node dist/src/migrations/run-migrations.js`
+**Deployment**: Run `pnpm build && node dist/migrations/run-migrations.js`
 
 **Note**: The script is idempotent and can be safely re-run. It drops and recreates all tables, making it suitable for fresh deployments and development environments.
 

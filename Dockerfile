@@ -87,6 +87,7 @@ COPY --from=prod-dependencies --chown=nodejs:nodejs /app/node_modules ./node_mod
 # Copy built application
 COPY --from=build --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=build --chown=nodejs:nodejs /app/package.json ./package.json
+COPY --from=build --chown=nodejs:nodejs /app/scripts/build ./scripts/build
 
 # Create logs directory with proper permissions
 RUN mkdir -p /app/logs && chown -R nodejs:nodejs /app/logs
