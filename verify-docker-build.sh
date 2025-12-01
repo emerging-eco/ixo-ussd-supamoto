@@ -33,6 +33,8 @@ cp tsconfig.json "$TEMP_DIR/"
 cp tsconfig.build.json "$TEMP_DIR/"
 rsync -aq --exclude='reference/' src/ "$TEMP_DIR/src/"
 cp -r migrations "$TEMP_DIR/" 2>/dev/null || true
+mkdir -p "$TEMP_DIR/scripts/build"
+cp scripts/build/*.js "$TEMP_DIR/scripts/build/" 2>/dev/null || true
 
 cd "$TEMP_DIR"
 

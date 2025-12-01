@@ -92,7 +92,7 @@ pnpm install
 **2. Run Database Migrations:**
 
 ```bash
-pnpm build && node dist/src/migrations/run-migrations.js
+pnpm build && node dist/migrations/run-migrations.js
 ```
 
 **3. Start Server:**

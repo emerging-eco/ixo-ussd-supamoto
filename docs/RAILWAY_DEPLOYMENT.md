@@ -603,7 +603,7 @@ migrations/postgres/
 
 ```bash
 # Using Railway CLI
-railway run node dist/src/migrations/run-migrations.js
+railway run node dist/migrations/run-migrations.js
 
 # View migration logs
 railway logs | grep migration
@@ -2292,7 +2292,7 @@ Migration failed: relation "customers" already exists
 
    ```bash
    # Execute migration script
-   railway run node dist/src/migrations/run-migrations.js
+   railway run node dist/migrations/run-migrations.js
 
    # View output
    railway logs --tail 50
@@ -2651,7 +2651,7 @@ If automatic migrations fail, run them manually:
 
 ```bash
 # Run migration script
-railway run node dist/src/migrations/run-migrations.js
+railway run node dist/migrations/run-migrations.js
 
 # View output
 railway logs --tail 50 | grep migration
@@ -2722,14 +2722,14 @@ If migrations keep failing and blocking deployment:
 3. **Run migrations manually**:
 
    ```bash
-   railway run node dist/src/migrations/run-migrations.js
+   railway run node dist/migrations/run-migrations.js
    ```
 
 4. **Restore automatic migrations**:
 
    ```json
    // package.json
-   "start": "NODE_ENV=production dotenv -e .env node dist/src/migrations/run-migrations.js && sleep 2 && node dist/src/index.js"
+   "start": "node scripts/build/start-production.js"
    ```
 
 5. **Deploy with migrations restored**:

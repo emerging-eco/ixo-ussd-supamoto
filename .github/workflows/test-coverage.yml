@@ -74,7 +74,7 @@ jobs:
           PG_PORT: 5432
         run: |
           pnpm build
-          node dist/src/migrations/run-migrations.js || echo "No migrations to run"
+          node dist/migrations/run-migrations.js || echo "No migrations to run"
 
       - name: Run tests with coverage
         env:
