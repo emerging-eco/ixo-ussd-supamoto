@@ -89,7 +89,7 @@ describe("Account Creation Machine", () => {
       // Helper to get to email entry state
     });
 
-    it("should accept valid email and move to pin entry", () => {
+    it("should accept valid email and move to national ID entry", () => {
       const actor = createActor(accountCreationMachine, { input: mockInput });
       actor.start();
 
@@ -98,7 +98,7 @@ describe("Account Creation Machine", () => {
       actor.send({ type: "INPUT", input: "john@example.com" });
 
       const snapshot = actor.getSnapshot();
-      expect(snapshot.value).toBe("pinEntry");
+      expect(snapshot.value).toBe("nationalIdEntry");
       expect(snapshot.context.email).toBe("john@example.com");
     });
 
@@ -111,7 +111,7 @@ describe("Account Creation Machine", () => {
       actor.send({ type: "INPUT", input: SKIP_EMAIL_INPUT });
 
       const snapshot = actor.getSnapshot();
-      expect(snapshot.value).toBe("pinEntry");
+      expect(snapshot.value).toBe("nationalIdEntry");
       expect(snapshot.context.email).toBe("");
       expect(snapshot.context.isEmailSkipped).toBe(true);
     });
@@ -125,7 +125,7 @@ describe("Account Creation Machine", () => {
       actor.send({ type: "INPUT", input: "john@example.com" });
 
       const snapshot = actor.getSnapshot();
-      expect(snapshot.value).toBe("pinEntry");
+      expect(snapshot.value).toBe("nationalIdEntry");
       expect(snapshot.context.email).toBe("john@example.com");
       expect(snapshot.context.isEmailSkipped).toBe(false);
     });
@@ -139,6 +139,7 @@ describe("Account Creation Machine", () => {
       // Navigate to PIN entry
       actor.send({ type: "INPUT", input: "John Doe" });
       actor.send({ type: "INPUT", input: SKIP_EMAIL_INPUT }); // Skip email
+      actor.send({ type: "INPUT", input: "00" }); // Skip national ID
       actor.send({ type: "INPUT", input: "10101" });
 
       const snapshot = actor.getSnapshot();
@@ -169,6 +170,7 @@ describe("Account Creation Machine", () => {
       // Navigate to PIN confirmation
       actor.send({ type: "INPUT", input: "John Doe" });
       actor.send({ type: "INPUT", input: SKIP_EMAIL_INPUT }); // Skip email
+      actor.send({ type: "INPUT", input: "00" }); // Skip national ID
       actor.send({ type: "INPUT", input: "10101" });
       actor.send({ type: "INPUT", input: "10101" }); // Matching confirmation
 
@@ -184,6 +186,7 @@ describe("Account Creation Machine", () => {
       // Navigate to PIN confirmation
       actor.send({ type: "INPUT", input: "John Doe" });
       actor.send({ type: "INPUT", input: SKIP_EMAIL_INPUT }); // Skip email
+      actor.send({ type: "INPUT", input: "00" }); // Skip national ID
       actor.send({ type: "INPUT", input: "10101" });
       actor.send({ type: "INPUT", input: "50505" }); // Mismatched confirmation
 
@@ -220,6 +223,7 @@ describe("Account Creation Machine", () => {
       // (In real scenario, this would happen after database creation)
       actor.send({ type: "INPUT", input: "John Doe" });
       actor.send({ type: "INPUT", input: SKIP_EMAIL_INPUT }); // Skip email
+      actor.send({ type: "INPUT", input: "00" }); // Skip national ID
       actor.send({ type: "INPUT", input: "10101" }); // PIN
       actor.send({ type: "INPUT", input: "10101" }); // Confirm PIN
 
@@ -237,6 +241,7 @@ describe("Account Creation Machine", () => {
       // Complete the account creation flow
       actor.send({ type: "INPUT", input: "John Doe" });
       actor.send({ type: "INPUT", input: "00" }); // Skip email
+      actor.send({ type: "INPUT", input: "00" }); // Skip national ID
       actor.send({ type: "INPUT", input: "10101" }); // PIN
       actor.send({ type: "INPUT", input: "10101" }); // Confirm PIN
 

@@ -39,7 +39,7 @@ for (const [key, value] of Object.entries(defaultValues)) {
 console.log("🌐 Flow test environment initialized");
 console.log("📡 Tests will connect to real USSD server");
 console.log(
-  `🔗 Server URL: ${process.env.USSD_TEST_SERVER_URL || "http://127.0.0.1:3005/api/ussd"}`
+  `🔗 Server URL: ${process.env.USSD_TEST_SERVER_URL || "https://ixo-ussd-supamoto-development.up.railway.app/api/ussd"}`
 );
 console.log("");
 console.log(

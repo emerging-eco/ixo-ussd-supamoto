@@ -25,7 +25,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
 // Test Configuration
 const SERVER_URL =
-  process.env.USSD_TEST_SERVER_URL || "http://127.0.0.1:3005/api/ussd";
+  process.env.USSD_TEST_SERVER_URL || "https://ixo-ussd-supamoto-development.up.railway.app/api/ussd";
 const PHONE_NUMBER = "+260971230001";
 const SERVICE_CODE = "*2233#";
 const REQUEST_TIMEOUT = 5000; // 5 seconds
