@@ -32,7 +32,7 @@ The `@ixo/supamoto-bot-sdk` provides three distinct clients for interacting with
 
 ### SDK Version
 
-Current version: `^0.0.11` (see `package.json`)
+Current version: `0.1.0` (see `package.json`)
 
 ---
 

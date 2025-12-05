@@ -48,8 +48,8 @@ importers:
         specifier: ^0.3.4
         version: 0.3.4(debug@4.4.3)
       '@ixo/supamoto-bot-sdk':
-        specifier: ^0.0.11
-        version: 0.0.11
+        specifier: 0.1.0
+        version: 0.1.0
       '@types/blocked-at':
         specifier: ^1.0.4
         version: 1.0.4
@@ -948,8 +948,8 @@ packages:
   '@ixo/matrixclient-sdk@0.3.4':
     resolution: {integrity: sha512-HDk6ok8uo+/v1dECP2bjdUhN6kBPD3qnUQwd4+h5cNyZF6qiu1wAaVyysIUc9yZZ6UyhqTp4o6ZmXGfYXCwjPg==}
 
-  '@ixo/supamoto-bot-sdk@0.0.11':
-    resolution: {integrity: sha512-ALXh34I93+8fDyNTeq9EaP5TbJ2/XzrFSNPzgw+gw1hFyZlNcWMl+U95jPX13WSml/SNxc9VweTTrMwHlovFzg==}
+  '@ixo/supamoto-bot-sdk@0.1.0':
+    resolution: {integrity: sha512-pnAMizD2ZFcIDoFcFuROu3/42OduiVaKF3OayhNmqhS7v2Yir9H/KKpovIqHy9RNDSPgtxCO/O/mcBLPjwTpFw==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -7035,7 +7035,7 @@ snapshots:
       - encoding
       - utf-8-validate
 
-  '@ixo/supamoto-bot-sdk@0.0.11':
+  '@ixo/supamoto-bot-sdk@0.1.0':
     dependencies:
       '@babel/runtime': 7.19.4
       node-fetch: 3.3.2
