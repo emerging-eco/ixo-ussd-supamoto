@@ -242,6 +242,15 @@ export const config = {
     ACCESS_TOKEN: process.env.CLAIMS_BOT_ACCESS_TOKEN || "",
     DB_ENCRYPTION_KEY: process.env.CLAIMS_BOT_DB_ENCRYPTION_KEY || "",
   },
+  CLAIMS_BOT_DB: {
+    host: process.env.CLAIMS_BOT_DB_HOST || "localhost",
+    port: process.env.CLAIMS_BOT_DB_PORT
+      ? parseInt(process.env.CLAIMS_BOT_DB_PORT, 10)
+      : 5432,
+    user: process.env.CLAIMS_BOT_DB_USER || "supamoto_user",
+    password: process.env.CLAIMS_BOT_DB_PASSWORD || "",
+    database: process.env.CLAIMS_BOT_DB_NAME || "supamoto_db",
+  },
   CLAIMS_RETRY: {
     MAX_RETRIES: parseInt(process.env.CLAIMS_MAX_RETRIES || "3", 10),
     RETRY_DELAYS_MINUTES: [5, 30, 120], // 5min, 30min, 2hr

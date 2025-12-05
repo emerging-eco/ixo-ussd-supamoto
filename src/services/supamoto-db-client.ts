@@ -1,15 +1,17 @@
 /**
  * Supamoto Database Client Service
  *
- * Provides access to the @ixo/supamoto-bot-sdk Database Client for fetching
- * decrypted customer data. This client automatically handles encryption/decryption
- * of sensitive fields.
+ * Provides access to the @ixo/supamoto-bot-sdk Database Client for the Claims Bot Database (supamoto_db).
+ * This client automatically handles encryption/decryption of sensitive fields.
+ *
+ * IMPORTANT: This connects to the Claims Bot Database (supamoto_db), NOT the USSD database (ixo-ussd-dev).
  *
  * Key Features:
  * - Singleton pattern for efficient connection pooling
  * - Automatic encryption/decryption of customer data
  * - Returns ICustomerDecrypted with all fields as strings (not Buffers)
  * - Direct PostgreSQL access with type safety
+ * - Read-only access to Claims Bot Database
  *
  * Usage:
  * ```typescript
@@ -35,6 +37,8 @@ let dbClient: ReturnType<typeof createDatabaseClient> | null = null;
 /**
  * Get or create the Supamoto Database Client singleton
  *
+ * IMPORTANT: This connects to the Claims Bot Database (supamoto_db), NOT the USSD database.
+ *
  * The Database Client provides direct PostgreSQL access with automatic
  * encryption/decryption of sensitive fields using the configured encryption key.
  *
@@ -52,15 +56,17 @@ export function getSupamotoDbClient() {
       );
     }
 
-    logger.info("Initializing Supamoto Database Client");
+    logger.info(
+      "Initializing Supamoto Database Client for Claims Bot Database (supamoto_db)"
+    );
 
     dbClient = createDatabaseClient(
       {
-        user: config.DATABASE.PG.user,
-        password: config.DATABASE.PG.password,
-        host: config.DATABASE.PG.host,
-        database: config.DATABASE.PG.database,
-        port: config.DATABASE.PG.port,
+        user: config.CLAIMS_BOT_DB.user,
+        password: config.CLAIMS_BOT_DB.password,
+        host: config.CLAIMS_BOT_DB.host,
+        database: config.CLAIMS_BOT_DB.database,
+        port: config.CLAIMS_BOT_DB.port,
         ssl: false,
         // Connection pool configuration
         max: 20, // Maximum number of clients in pool
@@ -71,7 +77,9 @@ export function getSupamotoDbClient() {
       encryptionKey // Base64-encoded encryption key
     );
 
-    logger.info("Supamoto Database Client initialized successfully");
+    logger.info(
+      "Supamoto Database Client initialized successfully for Claims Bot Database"
+    );
   }
 
   return dbClient;
