@@ -393,38 +393,6 @@ export function validateNationalId(input: string): ValidationResult<string> {
     };
   }
 
-  // Validate province code (01-10)
-  const provinceNum = parseInt(provinceCode, 10);
-  if (
-    provinceNum < VALIDATION_RULES.NATIONAL_ID.ZAMBIAN_NRC.MIN_PROVINCE_CODE ||
-    provinceNum > VALIDATION_RULES.NATIONAL_ID.ZAMBIAN_NRC.MAX_PROVINCE_CODE
-  ) {
-    return {
-      isValid: false,
-      error: `Invalid province code. Must be 01-10 (got ${provinceCode})`,
-    };
-  }
-
-  // Validate check digit (basic validation - actual algorithm unknown)
-  // Note: The Zambian government's check digit algorithm is not publicly documented
-  // This performs basic validation only
-  const calculatedCheckDigit = calculateZambianNRCCheckDigit(
-    registrationNumber,
-    provinceCode
-  );
-
-  if (calculatedCheckDigit !== null && calculatedCheckDigit !== checkDigit) {
-    logger.warn(
-      {
-        input: sanitized,
-        expected: calculatedCheckDigit,
-        received: checkDigit,
-      },
-      "NRC check digit mismatch (validation may be approximate)"
-    );
-    // Note: We log but don't reject, as the algorithm may not be exact
-  }
-
   // Normalize to format with slashes
   const normalized = `${registrationNumber}/${provinceCode}/${checkDigit}`;
 
@@ -432,11 +400,6 @@ export function validateNationalId(input: string): ValidationResult<string> {
     {
       input: sanitized,
       normalized,
-      provinceCode,
-      provinceName:
-        VALIDATION_RULES.NATIONAL_ID.ZAMBIAN_NRC.PROVINCE_NAMES[
-          provinceCode as keyof typeof VALIDATION_RULES.NATIONAL_ID.ZAMBIAN_NRC.PROVINCE_NAMES
-        ],
       hadSlashes: hasSlashes,
     },
     "NRC validation completed"

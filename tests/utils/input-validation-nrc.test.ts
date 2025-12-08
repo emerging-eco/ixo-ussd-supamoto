@@ -63,22 +63,22 @@ describe("Zambian NRC Validation", () => {
       expect(result.error).toContain("Invalid registration number");
     });
 
-    it("should reject invalid province code 00", () => {
+    it("should accept province code 00 (province validation removed)", () => {
       const result = validateNationalId("123456/00/1");
-      expect(result.isValid).toBe(false);
-      expect(result.error).toContain("Invalid province code");
+      expect(result.isValid).toBe(true);
+      expect(result.value).toBe("123456/00/1");
     });
 
-    it("should reject invalid province code 11", () => {
+    it("should accept province code 11 (province validation removed)", () => {
       const result = validateNationalId("123456/11/1");
-      expect(result.isValid).toBe(false);
-      expect(result.error).toContain("Invalid province code");
+      expect(result.isValid).toBe(true);
+      expect(result.value).toBe("123456/11/1");
     });
 
-    it("should reject invalid province code 99", () => {
+    it("should accept province code 99 (province validation removed)", () => {
       const result = validateNationalId("123456/99/1");
-      expect(result.isValid).toBe(false);
-      expect(result.error).toContain("Invalid province code");
+      expect(result.isValid).toBe(true);
+      expect(result.value).toBe("123456/99/1");
     });
 
     it("should reject too short registration number", () => {

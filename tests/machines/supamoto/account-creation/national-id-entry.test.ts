@@ -67,7 +67,7 @@ describe("National ID Entry - Zambian NRC", () => {
     expect(snapshot.context.currentStep).toBe("pinEntry");
   });
 
-  it("should reject invalid province code", () => {
+  it("should accept province code 99 (province validation removed)", () => {
     const actor = createActor(accountCreationMachine, {
       input: {
         sessionId: "test-session",
@@ -81,11 +81,36 @@ describe("National ID Entry - Zambian NRC", () => {
     // Navigate through the flow
     actor.send({ type: "INPUT", input: "John Doe" }); // name
     actor.send({ type: "INPUT", input: "00" }); // skip email
-    actor.send({ type: "INPUT", input: "123456/99/1" }); // Invalid province
+    actor.send({ type: "INPUT", input: "123456/99/1" }); // Province code 99 now accepted
 
     const snapshot = actor.getSnapshot();
-    // Should remain in nationalIdEntry state
+    // Should move to pinEntry state
+    expect(snapshot.context.currentStep).toBe("pinEntry");
+    expect(snapshot.context.nationalId).toBe("123456/99/1");
+  });
+
+  it("should show error message for invalid national ID", () => {
+    const actor = createActor(accountCreationMachine, {
+      input: {
+        sessionId: "test-session",
+        phoneNumber: "+260123456789",
+        serviceCode: "*2233#",
+      },
+    });
+
+    actor.start();
+
+    // Navigate through the flow
+    actor.send({ type: "INPUT", input: "John Doe" }); // name
+    actor.send({ type: "INPUT", input: "00" }); // skip email
+    actor.send({ type: "INPUT", input: "12345/05/1" }); // Invalid NRC - too short registration number
+
+    const snapshot = actor.getSnapshot();
+    // Should remain in nationalIdEntry state with error
     expect(snapshot.context.currentStep).toBe("nationalIdEntry");
+    expect(snapshot.context.validationError).toBe("Invalid National ID format");
+    expect(snapshot.context.message).toContain("Invalid format");
+    expect(snapshot.context.message).toContain("123456/12/1");
   });
 
   it("should allow skipping national ID with 00", () => {
@@ -187,8 +212,6 @@ describe("National ID Entry - Zambian NRC", () => {
       "12345/05/1", // too short registration number
       "1234567/05/1", // too long registration number
       "ABC456/05/1", // alphabetic characters
-      "123456/00/1", // invalid province code (00)
-      "123456/11/1", // invalid province code (11)
       "000000/05/1", // all zeros registration number
     ];
 

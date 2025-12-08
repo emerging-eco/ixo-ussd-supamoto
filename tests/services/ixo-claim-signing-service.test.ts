@@ -67,9 +67,16 @@ describe("IXO Claim Signing Service", () => {
       };
 
       const mockWallet = {
-        baseAccount: { address: "ixo1abc123def456" },
+        baseAccount: {
+          address: "ixo1abc123def456",
+          algo: "secp256k1" as const,
+          pubkey: new Uint8Array(33),
+        },
         did: "did:ixo:abc123",
         mnemonic: "test mnemonic phrase",
+        getAccounts: vi.fn(),
+        signDirect: vi.fn(),
+        sign: vi.fn(),
       };
 
       const mockTxResult = {
@@ -77,6 +84,11 @@ describe("IXO Claim Signing Service", () => {
         height: 12345,
         rawLog: "",
         code: 0,
+        txIndex: 0,
+        events: [],
+        msgResponses: [],
+        gasUsed: BigInt(0),
+        gasWanted: BigInt(0),
       };
 
       mockGetCustomerIxoAccount.mockResolvedValue(mockIxoAccount);
@@ -136,9 +148,16 @@ describe("IXO Claim Signing Service", () => {
       };
 
       const mockWallet = {
-        baseAccount: { address: "ixo1different_address" }, // Mismatch!
+        baseAccount: {
+          address: "ixo1different_address", // Mismatch!
+          algo: "secp256k1" as const,
+          pubkey: new Uint8Array(33),
+        },
         did: "did:ixo:different",
         mnemonic: "test mnemonic phrase",
+        getAccounts: vi.fn(),
+        signDirect: vi.fn(),
+        sign: vi.fn(),
       };
 
       mockGetCustomerIxoAccount.mockResolvedValue(mockIxoAccount);
@@ -163,9 +182,16 @@ describe("IXO Claim Signing Service", () => {
       };
 
       const mockWallet = {
-        baseAccount: { address: "ixo1abc123def456" },
+        baseAccount: {
+          address: "ixo1abc123def456",
+          algo: "secp256k1" as const,
+          pubkey: new Uint8Array(33),
+        },
         did: "did:ixo:abc123",
         mnemonic: "test mnemonic phrase",
+        getAccounts: vi.fn(),
+        signDirect: vi.fn(),
+        sign: vi.fn(),
       };
 
       const mockTxResult = {
@@ -173,6 +199,11 @@ describe("IXO Claim Signing Service", () => {
         height: 12345,
         rawLog: "",
         code: 0,
+        txIndex: 0,
+        events: [],
+        msgResponses: [],
+        gasUsed: BigInt(0),
+        gasWanted: BigInt(0),
       };
 
       mockGetCustomerIxoAccount.mockResolvedValue(mockIxoAccount);

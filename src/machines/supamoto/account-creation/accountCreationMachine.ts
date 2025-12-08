@@ -263,6 +263,13 @@ export const accountCreationMachine = setup({
         "PIN must be 5 digits. Please try again.\n\nCreate a 5-digit PIN for your account:",
       currentStep: "pinEntry" as const,
     })),
+
+    setInvalidNationalIdError: assign(() => ({
+      validationError: "Invalid National ID format",
+      message:
+        "Invalid format. Use: 123456/12/1\n\nEnter your National ID (format: 123456/12/1):\n00. Skip",
+      currentStep: "nationalIdEntry" as const,
+    })),
   },
 
   guards: {
@@ -303,6 +310,12 @@ export const accountCreationMachine = setup({
       if (event.type !== "INPUT") return false;
       const validation = validateUserInput(event.input, "nationalId");
       return validation.isValid;
+    },
+
+    isInvalidNationalIdValue: ({ event }) => {
+      if (event.type !== "INPUT") return false;
+      const validation = validateUserInput(event.input, "nationalId");
+      return !validation.isValid;
     },
 
     isValidName: ({ event }) =>
@@ -408,6 +421,12 @@ export const accountCreationMachine = setup({
               target: "pinEntry",
               guard: "isValidNationalIdValue",
               actions: ["setNationalId", "clearErrors"],
+            },
+            // Handle invalid national ID - stay in same state with error
+            {
+              target: "nationalIdEntry",
+              guard: "isInvalidNationalIdValue",
+              actions: "setInvalidNationalIdError",
             },
           ],
           {
