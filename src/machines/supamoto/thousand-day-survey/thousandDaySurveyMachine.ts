@@ -243,20 +243,32 @@ const initializeSurveySessionService = fromPromise(
       customerId: string;
     };
   }) => {
-    const { lgCustomerId, customerId } = input;
+    const { lgCustomerId, customerId: inputIdentifier } = input;
 
-    // 1. Validate customer exists
-    const customer = await dataService.getCustomerByCustomerId(customerId);
+    // 1. Validate customer exists using either Customer ID or National ID
+    // getCustomerByIdentifier handles both formats and normalizes Customer ID to uppercase
+    const customer = await dataService.getCustomerByIdentifier(inputIdentifier);
     if (!customer) {
       throw new Error(
-        `Customer ID ${customerId} not found in the system. Please verify the Customer ID.`
+        `Customer ID or National ID ${inputIdentifier} not found in the system. Please verify the identifier.`
       );
     }
+
+    // Use the resolved Customer ID from the database (always uppercase)
+    const resolvedCustomerId = customer.customerId;
+
+    logger.info(
+      {
+        inputIdentifier: inputIdentifier.slice(-4),
+        resolvedCustomerId: resolvedCustomerId.slice(-4),
+      },
+      "Customer found - resolved identifier to Customer ID"
+    );
 
     // 2. Get or create household claim (reuse semantics from createClaimService)
     const existingClaim = await dataService.getClaimByLgAndCustomer(
       lgCustomerId,
-      customerId
+      resolvedCustomerId
     );
 
     let claimId: number;
@@ -265,7 +277,7 @@ const initializeSurveySessionService = fromPromise(
         {
           claimId: existingClaim.id,
           lgCustomerId: lgCustomerId.slice(-4),
-          customerId: customerId.slice(-4),
+          customerId: resolvedCustomerId.slice(-4),
         },
         "Existing household claim found - reusing claim (initializeSession)"
       );
@@ -274,14 +286,14 @@ const initializeSurveySessionService = fromPromise(
       logger.info(
         {
           lgCustomerId: lgCustomerId.slice(-4),
-          customerId: customerId.slice(-4),
+          customerId: resolvedCustomerId.slice(-4),
         },
         "No existing claim found - creating new household claim (initializeSession)"
       );
 
       const claim = await dataService.createHouseholdClaim(
         lgCustomerId,
-        customerId,
+        resolvedCustomerId,
         true // is1000DayHousehold
       );
 
@@ -292,10 +304,11 @@ const initializeSurveySessionService = fromPromise(
     const surveyState =
       await surveyResponseStorageService.getSurveyResponseState(
         lgCustomerId,
-        customerId
+        resolvedCustomerId
       );
 
-    return { claimId, surveyState };
+    // Return the resolved Customer ID so it can be stored in context
+    return { claimId, surveyState, resolvedCustomerId };
   }
 );
 
@@ -638,7 +651,7 @@ export const thousandDaySurveyMachine = setup({
     askCustomerId: {
       entry: assign(() => ({
         message:
-          "A Lead Generator completes this survey on behalf of a Customer.\nEnter the Customer ID on whose behalf you are completing the survey.\n\n0. Back to Agent Tools",
+          "A Lead Generator completes this survey on behalf of a Customer.\nEnter the Customer ID or National ID on whose behalf you are completing the survey.\n\n0. Back to Agent Tools",
       })),
       on: {
         INPUT: withNavigation(
@@ -648,6 +661,7 @@ export const thousandDaySurveyMachine = setup({
               guard: "isValidCustomerId",
               actions: assign({
                 customerId: ({ event }) => {
+                  // Store the raw input - will be resolved to actual Customer ID in initializingSession
                   const id = event.type === "INPUT" ? event.input : "";
                   return id;
                 },
@@ -689,6 +703,8 @@ export const thousandDaySurveyMachine = setup({
         onDone: {
           target: "routeAfterInitialization",
           actions: assign({
+            // Store the resolved Customer ID (normalized to uppercase)
+            customerId: ({ event }) => event.output.resolvedCustomerId,
             claimId: ({ event }) => event.output.claimId,
             // Populate context with recovered answers if they exist
             beneficiaryCategory: ({ event }) =>

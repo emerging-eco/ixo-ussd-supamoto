@@ -6,6 +6,7 @@ import { thousandDaySurveyMachine } from "../../../../src/machines/supamoto/thou
 vi.mock("../../../../src/services/database-storage.js", () => ({
   dataService: {
     getCustomerByCustomerId: vi.fn(),
+    getCustomerByIdentifier: vi.fn(),
     getClaimByLgAndCustomer: vi.fn(),
     createHouseholdClaim: vi.fn(),
     getHouseholdClaimById: vi.fn(),
@@ -40,7 +41,7 @@ describe("1,000 Day Survey - Customer Validation", () => {
   describe("Valid Customer ID (exists in database)", () => {
     it("should proceed to claim creation when customer exists", async () => {
       // Mock customer exists
-      vi.mocked(dataService.getCustomerByCustomerId).mockResolvedValue({
+      vi.mocked(dataService.getCustomerByIdentifier).mockResolvedValue({
         id: 1,
         customerId: "C12345678",
         fullName: "Test Customer",
@@ -95,7 +96,7 @@ describe("1,000 Day Survey - Customer Validation", () => {
       const snapshot = actor.getSnapshot();
 
       // Should validate customer, create/reuse claim, and store IDs in context
-      expect(dataService.getCustomerByCustomerId).toHaveBeenCalledWith(
+      expect(dataService.getCustomerByIdentifier).toHaveBeenCalledWith(
         "C12345678"
       );
       expect(dataService.getClaimByLgAndCustomer).toHaveBeenCalledWith(
@@ -122,14 +123,14 @@ describe("1,000 Day Survey - Customer Validation", () => {
 
       actor.start();
 
-      // Send invalid format (no 'C' prefix)
+      // Send invalid format (no 'C' prefix and not a valid National ID)
       actor.send({ type: "INPUT", input: "12345678" });
 
       const snapshot = actor.getSnapshot();
 
       // Should remain in askCustomerId state with error message
-      expect(snapshot.context.message).toContain("Invalid Customer ID format");
-      expect(dataService.getCustomerByCustomerId).not.toHaveBeenCalled();
+      expect(snapshot.context.message).toContain("Invalid format");
+      expect(dataService.getCustomerByIdentifier).not.toHaveBeenCalled();
     });
 
     it("should show format error for too short customer ID", () => {
@@ -150,15 +151,15 @@ describe("1,000 Day Survey - Customer Validation", () => {
       const snapshot = actor.getSnapshot();
 
       // Should remain in askCustomerId state with error message
-      expect(snapshot.context.message).toContain("Invalid Customer ID format");
-      expect(dataService.getCustomerByCustomerId).not.toHaveBeenCalled();
+      expect(snapshot.context.message).toContain("Invalid format");
+      expect(dataService.getCustomerByIdentifier).not.toHaveBeenCalled();
     });
   });
 
   describe("Valid Format but Customer Doesn't Exist", () => {
     it("should go to invalidCustomer state when customer doesn't exist", async () => {
       // Mock customer doesn't exist
-      vi.mocked(dataService.getCustomerByCustomerId).mockResolvedValue(null);
+      vi.mocked(dataService.getCustomerByIdentifier).mockResolvedValue(null);
 
       const actor = createActor(thousandDaySurveyMachine, {
         input: {
@@ -180,7 +181,7 @@ describe("1,000 Day Survey - Customer Validation", () => {
       const snapshot = actor.getSnapshot();
 
       // Should call validation service
-      expect(dataService.getCustomerByCustomerId).toHaveBeenCalledWith(
+      expect(dataService.getCustomerByIdentifier).toHaveBeenCalledWith(
         "CBBB807C4"
       );
 
@@ -196,7 +197,7 @@ describe("1,000 Day Survey - Customer Validation", () => {
 
     it("should go to systemError state when validation throws unexpected error", async () => {
       const error = new Error("Database unavailable");
-      vi.mocked(dataService.getCustomerByCustomerId).mockRejectedValue(error);
+      vi.mocked(dataService.getCustomerByIdentifier).mockRejectedValue(error);
 
       const actor = createActor(thousandDaySurveyMachine, {
         input: {
@@ -215,7 +216,7 @@ describe("1,000 Day Survey - Customer Validation", () => {
 
       const snapshot = actor.getSnapshot();
 
-      expect(dataService.getCustomerByCustomerId).toHaveBeenCalledWith(
+      expect(dataService.getCustomerByIdentifier).toHaveBeenCalledWith(
         "CERROR001"
       );
       expect(snapshot.value).toBe("systemError");
@@ -229,7 +230,7 @@ describe("1,000 Day Survey - Customer Validation", () => {
   describe("Navigation from Validating Customer State", () => {
     it("should automatically proceed through validation and claim creation", async () => {
       // Mock customer exists
-      vi.mocked(dataService.getCustomerByCustomerId).mockResolvedValue({
+      vi.mocked(dataService.getCustomerByIdentifier).mockResolvedValue({
         id: 1,
         customerId: "C12345678",
         fullName: "Test Customer",
@@ -281,7 +282,7 @@ describe("1,000 Day Survey - Customer Validation", () => {
       const snapshot = actor.getSnapshot();
 
       // Should have validated customer and created claim
-      expect(dataService.getCustomerByCustomerId).toHaveBeenCalledWith(
+      expect(dataService.getCustomerByIdentifier).toHaveBeenCalledWith(
         "C12345678"
       );
       expect(dataService.createHouseholdClaim).toHaveBeenCalled();
@@ -291,7 +292,7 @@ describe("1,000 Day Survey - Customer Validation", () => {
 
   describe("Session initialization with existing answers", () => {
     it("should hydrate context from surveyResponseState and reuse existing claim", async () => {
-      vi.mocked(dataService.getCustomerByCustomerId).mockResolvedValue({
+      vi.mocked(dataService.getCustomerByIdentifier).mockResolvedValue({
         id: 1,
         customerId: "C12345678",
         fullName: "Test Customer",
@@ -367,7 +368,7 @@ describe("1,000 Day Survey - Customer Validation", () => {
   describe("Error Message Content", () => {
     it("should include customer ID in error message", async () => {
       // Mock customer doesn't exist
-      vi.mocked(dataService.getCustomerByCustomerId).mockResolvedValue(null);
+      vi.mocked(dataService.getCustomerByIdentifier).mockResolvedValue(null);
 
       const actor = createActor(thousandDaySurveyMachine, {
         input: {
@@ -390,7 +391,197 @@ describe("1,000 Day Survey - Customer Validation", () => {
 
       // Error message should include the customer ID
       expect(snapshot.context.error).toContain(testCustomerId);
-      expect(snapshot.context.error).toContain("Please verify the Customer ID");
+      expect(snapshot.context.error).toContain("Please verify the identifier");
+    });
+  });
+
+  describe("National ID Input", () => {
+    it("should accept National ID with slashes and resolve to Customer ID", async () => {
+      // Mock customer lookup by National ID
+      vi.mocked(dataService.getCustomerByIdentifier).mockResolvedValue({
+        id: 1,
+        customerId: "CA6A546EF",
+        fullName: "Test Customer",
+        email: undefined,
+        nationalId: "123456/05/1",
+        encryptedPin: "encrypted_pin",
+        preferredLanguage: "eng",
+        lastCompletedAction: "",
+        householdId: undefined,
+        role: "customer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      // Mock no existing claim
+      vi.mocked(dataService.getClaimByLgAndCustomer).mockResolvedValue(null);
+
+      vi.mocked(dataService.createHouseholdClaim).mockResolvedValue({
+        id: 1,
+        lgCustomerId: "CLG123456",
+        customerId: "CA6A546EF",
+        is1000DayHousehold: true,
+        claimSubmittedAt: new Date(),
+        claimProcessedAt: null,
+        claimStatus: "pending",
+        beanVoucherAllocated: false,
+        claimsBotResponse: null,
+        surveyForm: null,
+        surveyFormUpdatedAt: null,
+        createdAt: new Date(),
+      });
+
+      const actor = createActor(thousandDaySurveyMachine, {
+        input: {
+          sessionId: "test-session",
+          phoneNumber: "+260123456789",
+          serviceCode: "*2233#",
+          lgCustomerId: "CLG123456",
+        },
+      });
+
+      actor.start();
+
+      // Send National ID with slashes
+      actor.send({ type: "INPUT", input: "123456/05/1" });
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const snapshot = actor.getSnapshot();
+
+      // Should validate and resolve to Customer ID
+      expect(dataService.getCustomerByIdentifier).toHaveBeenCalledWith(
+        "123456/05/1"
+      );
+      expect(snapshot.context.customerId).toBe("CA6A546EF");
+      expect(snapshot.context.claimId).toBe(1);
+      expect(snapshot.context.error).toBeUndefined();
+    });
+
+    it("should accept National ID without slashes and resolve to Customer ID", async () => {
+      // Mock customer lookup by National ID
+      vi.mocked(dataService.getCustomerByIdentifier).mockResolvedValue({
+        id: 1,
+        customerId: "CA6A546EF",
+        fullName: "Test Customer",
+        email: undefined,
+        nationalId: "123456/05/1",
+        encryptedPin: "encrypted_pin",
+        preferredLanguage: "eng",
+        lastCompletedAction: "",
+        householdId: undefined,
+        role: "customer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      // Mock no existing claim
+      vi.mocked(dataService.getClaimByLgAndCustomer).mockResolvedValue(null);
+
+      vi.mocked(dataService.createHouseholdClaim).mockResolvedValue({
+        id: 1,
+        lgCustomerId: "CLG123456",
+        customerId: "CA6A546EF",
+        is1000DayHousehold: true,
+        claimSubmittedAt: new Date(),
+        claimProcessedAt: null,
+        claimStatus: "pending",
+        beanVoucherAllocated: false,
+        claimsBotResponse: null,
+        surveyForm: null,
+        surveyFormUpdatedAt: null,
+        createdAt: new Date(),
+      });
+
+      const actor = createActor(thousandDaySurveyMachine, {
+        input: {
+          sessionId: "test-session",
+          phoneNumber: "+260123456789",
+          serviceCode: "*2233#",
+          lgCustomerId: "CLG123456",
+        },
+      });
+
+      actor.start();
+
+      // Send National ID without slashes
+      actor.send({ type: "INPUT", input: "123456051" });
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const snapshot = actor.getSnapshot();
+
+      // Should validate and resolve to Customer ID
+      expect(dataService.getCustomerByIdentifier).toHaveBeenCalledWith(
+        "123456051"
+      );
+      expect(snapshot.context.customerId).toBe("CA6A546EF");
+      expect(snapshot.context.claimId).toBe(1);
+      expect(snapshot.context.error).toBeUndefined();
+    });
+  });
+
+  describe("Case-Insensitive Customer ID", () => {
+    it("should accept lowercase Customer ID and resolve to uppercase", async () => {
+      // Mock customer lookup - getCustomerByIdentifier normalizes to uppercase
+      vi.mocked(dataService.getCustomerByIdentifier).mockResolvedValue({
+        id: 1,
+        customerId: "CA6A546EF",
+        fullName: "Test Customer",
+        email: undefined,
+        nationalId: undefined,
+        encryptedPin: "encrypted_pin",
+        preferredLanguage: "eng",
+        lastCompletedAction: "",
+        householdId: undefined,
+        role: "customer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      // Mock no existing claim
+      vi.mocked(dataService.getClaimByLgAndCustomer).mockResolvedValue(null);
+
+      vi.mocked(dataService.createHouseholdClaim).mockResolvedValue({
+        id: 1,
+        lgCustomerId: "CLG123456",
+        customerId: "CA6A546EF",
+        is1000DayHousehold: true,
+        claimSubmittedAt: new Date(),
+        claimProcessedAt: null,
+        claimStatus: "pending",
+        beanVoucherAllocated: false,
+        claimsBotResponse: null,
+        surveyForm: null,
+        surveyFormUpdatedAt: null,
+        createdAt: new Date(),
+      });
+
+      const actor = createActor(thousandDaySurveyMachine, {
+        input: {
+          sessionId: "test-session",
+          phoneNumber: "+260123456789",
+          serviceCode: "*2233#",
+          lgCustomerId: "CLG123456",
+        },
+      });
+
+      actor.start();
+
+      // Send lowercase Customer ID
+      actor.send({ type: "INPUT", input: "ca6a546ef" });
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const snapshot = actor.getSnapshot();
+
+      // Should validate and resolve to uppercase Customer ID
+      expect(dataService.getCustomerByIdentifier).toHaveBeenCalledWith(
+        "ca6a546ef"
+      );
+      expect(snapshot.context.customerId).toBe("CA6A546EF");
+      expect(snapshot.context.claimId).toBe(1);
+      expect(snapshot.context.error).toBeUndefined();
     });
   });
 });
