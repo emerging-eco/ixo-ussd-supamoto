@@ -49,6 +49,9 @@ async function runMigrations() {
     console.log("✅ Connected to PostgreSQL");
 
     // Get migration files directory
+    // In production (Docker): __dirname = /app/dist/migrations
+    // In development: __dirname = /path/to/project/dist/src/migrations
+    // SQL files are always in postgres/ subdirectory relative to this file
     const migrationsDir = path.join(__dirname, "postgres");
 
     if (!fs.existsSync(migrationsDir)) {

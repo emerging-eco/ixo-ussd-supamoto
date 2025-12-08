@@ -12,10 +12,8 @@
  */
 
 import { assign, fromPromise, setup } from "xstate";
-import { DbTypes } from "@ixo/supamoto-bot-sdk";
 import { createModuleLogger } from "../../../services/logger.js";
 
-type ICustomerDecrypted = DbTypes.ICustomerDecrypted;
 import {
   dataService,
   type CustomerRecord,
@@ -26,7 +24,6 @@ import { withNavigation } from "../utils/navigation-mixin.js";
 import { NavigationPatterns } from "../utils/navigation-patterns.js";
 import { sendSMSWithRetry } from "../../../services/sms.js";
 import { accountLockedSMS } from "../../../templates/sms/index.js";
-import { getDecryptedCustomerData } from "../../../services/supamoto-db-client.js";
 
 const logger = createModuleLogger("loginMachine");
 
@@ -39,7 +36,7 @@ export interface LoginContext {
   error?: string;
   customerId?: string;
   customer?: CustomerRecord;
-  customerData?: ICustomerDecrypted; // Decrypted customer data from SDK
+  customerData?: CustomerRecord; // Customer data from USSD database
   sessionPin?: string; // ephemeral, used for Matrix vault decryption in-session
   pinAttempts: number;
   nextParentState: LoginOutput;
@@ -65,12 +62,12 @@ export enum LoginOutput {
 }
 
 // Messages
-export const CUSTOMER_ID_PROMPT = `Enter your Customer ID to log in:`;
+export const IDENTIFIER_PROMPT = `Enter your National ID Number or Customer ID to log in:`;
 export const PIN_PROMPT = "Enter your PIN:";
-export const INVALID_CUSTOMER_ID =
-  "Invalid Customer ID format. Please try again.";
+export const INVALID_IDENTIFIER =
+  "Invalid identifier format. Please try again.";
 export const CUSTOMER_NOT_FOUND_MSG =
-  "Customer ID not found. Please check and try again or contact support.";
+  "Customer ID or National ID not found. Please check and try again or contact support.";
 export const PIN_FIELD_EMPTY_MSG =
   "Your account needs PIN setup. Please contact support.";
 export const INCORRECT_PIN_MSG = (attempt: number) => {
@@ -79,7 +76,7 @@ export const INCORRECT_PIN_MSG = (attempt: number) => {
 };
 export const MAX_ATTEMPTS_MSG =
   "Your account was locked after 3 incorrect PIN attempts. Please contact your LG to activate your account.";
-export const VERIFYING_MSG = "Verifying Customer ID...\n1. Continue";
+export const VERIFYING_MSG = "Verifying identifier...\n1. Continue";
 export const VERIFYING_PIN_MSG = "Verifying PIN...\n1. Continue";
 export const LOGIN_SUCCESS_MSG = (
   customerId: string,
@@ -88,13 +85,22 @@ export const LOGIN_SUCCESS_MSG = (
   `Welcome, ${customerFullName}!\nLogin successful for Customer ID: ${customerId}.\n1. Continue`;
 
 /**
- * Validates customer ID format (C followed by 8+ digits)
+ * Validates identifier format (Customer ID or National ID)
+ * Customer ID format: C followed by 8+ alphanumeric characters
+ * National ID format: Zambian NRC (XXXXXX/XX/X or XXXXXXXXX)
  */
-const isValidCustomerId = ({ event }: { event: LoginEvent }) => {
+const isValidIdentifier = ({ event }: { event: LoginEvent }) => {
   if (event.type !== "INPUT") return false;
-  const customerId = event.input.trim();
-  // Basic validation: should start with 'C' and be followed by digits
-  return /^C[A-Za-z0-9]{8,}$/.test(customerId);
+  const identifier = event.input.trim();
+
+  // Check if it's a valid Customer ID format (C followed by 8+ alphanumeric)
+  const isCustomerId = /^C[A-Za-z0-9]{8,}$/i.test(identifier);
+
+  // Check if it's a valid National ID format (with or without slashes)
+  // Format: XXXXXX/XX/X (with slashes) or XXXXXXXXX (without slashes)
+  const isNationalId = /^(\d{6}\/\d{2}\/\d|\d{9})$/.test(identifier);
+
+  return isCustomerId || isNationalId;
 };
 
 /**
@@ -116,7 +122,7 @@ const hasMaxAttemptsExceeded = ({ context }: { context: LoginContext }) => {
 
 // Actors
 /**
- * Service actor that looks up customer by customer ID
+ * Service actor that looks up customer by identifier (customer ID or national ID)
  * Handles three scenarios:
  * - Customer not found: throws CUSTOMER_NOT_FOUND
  * - Customer found but no PIN: throws ENCRYPTED_PIN_FIELD_EMPTY
@@ -125,11 +131,11 @@ const hasMaxAttemptsExceeded = ({ context }: { context: LoginContext }) => {
 const customerLookupService = fromPromise(
   async ({ input }: { input: { customerId: string } }) => {
     logger.info(
-      { customerId: input.customerId.slice(-4) },
-      "Looking up customer"
+      { identifier: input.customerId.slice(-4) },
+      "Looking up customer by identifier (customer ID or national ID)"
     );
 
-    const customer = await dataService.getCustomerByCustomerId(
+    const customer = await dataService.getCustomerByIdentifier(
       input.customerId
     );
 
@@ -251,34 +257,34 @@ const pinVerificationService = fromPromise(
 );
 
 /**
- * Service actor that loads decrypted customer data from SDK
+ * Service actor that loads customer data from USSD database
  * This is called after successful PIN verification to fetch full customer details
  */
 const loadCustomerDataService = fromPromise(
   async ({ input }: { input: { customerId: string } }) => {
     logger.info(
       { customerId: input.customerId.slice(-4) },
-      "Loading decrypted customer data from SDK"
+      "Loading customer data from USSD database"
     );
 
     try {
-      const customerData = await getDecryptedCustomerData(input.customerId);
+      const customerData = await dataService.getCustomerByCustomerId(input.customerId);
 
       if (!customerData) {
         logger.warn(
           { customerId: input.customerId.slice(-4) },
-          "Customer data not found in SDK"
+          "Customer data not found in USSD database"
         );
         return null;
       }
 
       logger.info(
         {
-          customerId: customerData.customer_id,
-          hasFullName: !!customerData.full_name,
+          customerId: customerData.customerId,
+          hasFullName: !!customerData.fullName,
           hasEmail: !!customerData.email,
         },
-        "Customer data loaded successfully from SDK"
+        "Customer data loaded successfully from USSD database"
       );
 
       return customerData;
@@ -288,9 +294,9 @@ const loadCustomerDataService = fromPromise(
           error: error instanceof Error ? error.message : String(error),
           customerId: input.customerId.slice(-4),
         },
-        "Failed to load customer data from SDK"
+        "Failed to load customer data from USSD database"
       );
-      // Don't throw - we can still proceed with login even if SDK data fails
+      // Don't throw - we can still proceed with login even if data load fails
       return null;
     }
   }
@@ -319,21 +325,21 @@ const verifyCredentialsService = fromPromise(
   }) => {
     logger.info(
       {
-        customerId: input.customerId.slice(-4),
+        identifier: input.customerId.slice(-4),
         attempts: input.attempts,
       },
       "Starting combined credential verification"
     );
 
-    // Step 1: Lookup customer by ID
-    const customer = await dataService.getCustomerByCustomerId(
+    // Step 1: Lookup customer by identifier (customer ID or national ID)
+    const customer = await dataService.getCustomerByIdentifier(
       input.customerId
     );
 
     if (!customer) {
       logger.warn(
-        { customerId: input.customerId.slice(-4) },
-        "Customer not found"
+        { identifier: input.customerId.slice(-4) },
+        "Customer not found by identifier"
       );
       throw new Error("CUSTOMER_NOT_FOUND");
     }
@@ -427,17 +433,17 @@ const verifyCredentialsService = fromPromise(
       throw new Error(`INCORRECT_PIN:${input.attempts}`);
     }
 
-    // Step 4: Load customer data from SDK (optional - don't fail if this fails)
-    let customerData: ICustomerDecrypted | null = null;
+    // Step 4: Load customer data from USSD database (optional - don't fail if this fails)
+    let customerData: CustomerRecord | null = null;
     try {
-      customerData = await getDecryptedCustomerData(input.customerId);
+      customerData = await dataService.getCustomerByCustomerId(input.customerId);
       if (customerData) {
         logger.info(
           {
-            customerId: customerData.customer_id,
-            hasFullName: !!customerData.full_name,
+            customerId: customerData.customerId,
+            hasFullName: !!customerData.fullName,
           },
-          "Customer data loaded successfully from SDK"
+          "Customer data loaded successfully from USSD database"
         );
       }
     } catch (error) {
@@ -446,7 +452,7 @@ const verifyCredentialsService = fromPromise(
           error: error instanceof Error ? error.message : String(error),
           customerId: input.customerId.slice(-4),
         },
-        "Failed to load customer data from SDK (non-fatal)"
+        "Failed to load customer data from USSD database (non-fatal)"
       );
     }
 
@@ -495,7 +501,7 @@ export const loginMachine = setup({
     input: {} as LoginInput,
   },
   guards: {
-    isValidCustomerId,
+    isValidIdentifier,
     isValidPin,
     hasMaxAttemptsExceeded,
     isCustomerFound,
@@ -525,7 +531,7 @@ export const loginMachine = setup({
     sessionId: input?.sessionId || "",
     phoneNumber: input?.phoneNumber || "",
     serviceCode: input?.serviceCode || "",
-    message: CUSTOMER_ID_PROMPT,
+    message: IDENTIFIER_PROMPT,
     error: undefined,
     customerId: undefined,
     customer: undefined,
@@ -542,13 +548,13 @@ export const loginMachine = setup({
   }),
   states: {
     customerIdEntry: {
-      entry: assign({ message: CUSTOMER_ID_PROMPT }),
+      entry: assign({ message: IDENTIFIER_PROMPT }),
       on: {
         INPUT: withNavigation(
           [
             {
               target: "pinEntry",
-              guard: "isValidCustomerId",
+              guard: "isValidIdentifier",
               actions: [
                 assign(({ event }) => {
                   if (event.type !== "INPUT") return {};
@@ -557,7 +563,7 @@ export const loginMachine = setup({
               ],
             },
             {
-              actions: assign({ message: INVALID_CUSTOMER_ID }),
+              actions: assign({ message: INVALID_IDENTIFIER }),
             },
           ],
           NavigationPatterns.loginChild

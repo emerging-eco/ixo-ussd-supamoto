@@ -28,8 +28,6 @@ vi.mock("../../../../src/services/survey-response-storage.js", () => ({
   },
 }));
 
-
-
 import { surveyResponseStorageService } from "../../../../src/services/survey-response-storage.js";
 
 import { dataService } from "../../../../src/services/database-storage.js";
@@ -290,7 +288,6 @@ describe("1,000 Day Survey - Customer Validation", () => {
       expect(snapshot.context.customerId).toBe("C12345678");
     });
   });
-
 
   describe("Session initialization with existing answers", () => {
     it("should hydrate context from surveyResponseState and reuse existing claim", async () => {

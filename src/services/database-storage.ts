@@ -156,6 +156,30 @@ export interface AuditLogRecord {
  */
 class DataService {
   /**
+   * Helper method to normalize National ID to the format with slashes
+   * Converts "123456789" to "123456/78/9"
+   * Returns null if the input is not a valid National ID format
+   */
+  private normalizeNationalId(nationalId: string): string | null {
+    // Remove whitespace
+    const cleaned = nationalId.trim();
+
+    // Check if it already has slashes (format: XXXXXX/XX/X)
+    if (/^\d{6}\/\d{2}\/\d$/.test(cleaned)) {
+      return cleaned;
+    }
+
+    // Check if it's 9 digits without slashes (format: XXXXXXXXX)
+    if (/^\d{9}$/.test(cleaned)) {
+      // Convert to format with slashes: XXXXXX/XX/X
+      return `${cleaned.slice(0, 6)}/${cleaned.slice(6, 8)}/${cleaned.slice(8)}`;
+    }
+
+    // Invalid format
+    return null;
+  }
+
+  /**
    * Step 1: Create or update phone record (independent)
    */
   async createOrUpdatePhoneRecord(phoneNumber: string): Promise<PhoneRecord> {
@@ -373,7 +397,7 @@ class DataService {
           "customers.created_at",
           "customers.updated_at",
         ])
-        .where("customers.customer_id", "=", customerId)
+        .where("customers.customer_id", "ilike", customerId)
         .executeTakeFirst();
 
       if (!result) {
@@ -417,6 +441,139 @@ class DataService {
       );
       throw error;
     }
+  }
+
+  /**
+   * Get customer by national ID
+   * Normalizes the national ID to the format with slashes (XXXXXX/XX/X) before querying
+   */
+  async getCustomerByNationalId(
+    nationalId: string
+  ): Promise<CustomerRecord | null> {
+    const db = databaseManager.getKysely();
+
+    // Normalize national ID to format with slashes (e.g., "123456789" -> "123456/78/9")
+    // This ensures we can find customers regardless of whether they enter slashes or not
+    const normalizedId = this.normalizeNationalId(nationalId);
+
+    logger.debug(
+      {
+        inputNationalId: nationalId.slice(-4),
+        normalizedNationalId: normalizedId?.slice(-4),
+      },
+      "Looking up customer by national ID"
+    );
+
+    // If normalization failed, the ID is invalid - return null
+    if (!normalizedId) {
+      logger.debug(
+        { nationalId: nationalId.slice(-4) },
+        "Invalid national ID format - cannot normalize"
+      );
+      return null;
+    }
+
+    try {
+      const result = await db
+        .selectFrom("customers")
+        .select([
+          "customers.id",
+          "customers.customer_id",
+          "customers.full_name",
+          "customers.email",
+          "customers.encrypted_pin",
+          "customers.preferred_language",
+          "customers.last_completed_action",
+          "customers.household_id",
+          "customers.role",
+          "customers.created_at",
+          "customers.updated_at",
+        ])
+        .where("customers.national_id", "=", normalizedId)
+        .executeTakeFirst();
+
+      if (!result) {
+        logger.debug(
+          { nationalId: nationalId.slice(-4) },
+          "No customer found for national ID"
+        );
+        return null;
+      }
+
+      logger.info(
+        {
+          customerId: result.customer_id,
+          customerDbId: result.id,
+          fullName: result.full_name,
+          hasEncryptedPin: !!result.encrypted_pin,
+        },
+        "Found customer by national ID"
+      );
+
+      return {
+        id: result.id!,
+        customerId: result.customer_id,
+        fullName: result.full_name || "",
+        email: result.email || undefined,
+        encryptedPin: result.encrypted_pin,
+        preferredLanguage: result.preferred_language || "eng",
+        lastCompletedAction: result.last_completed_action || "",
+        householdId: result.household_id || undefined,
+        role: result.role || "customer",
+        createdAt: result.created_at,
+        updatedAt: result.updated_at,
+      };
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          nationalId: nationalId.slice(-4),
+        },
+        "Failed to get customer by national ID"
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Get customer by identifier (customer ID or national ID)
+   * Attempts lookup by customer_id first, then by national_id if not found
+   */
+  async getCustomerByIdentifier(
+    identifier: string
+  ): Promise<CustomerRecord | null> {
+    logger.debug(
+      { identifier: identifier.slice(-4) },
+      "Looking up customer by identifier (customer ID or national ID)"
+    );
+
+    // First, try to find by customer_id
+    let customer = await this.getCustomerByCustomerId(identifier);
+
+    if (customer) {
+      logger.info(
+        { customerId: customer.customerId },
+        "Customer found by customer ID"
+      );
+      return customer;
+    }
+
+    // If not found, try to find by national_id
+    customer = await this.getCustomerByNationalId(identifier);
+
+    if (customer) {
+      logger.info(
+        { customerId: customer.customerId },
+        "Customer found by national ID"
+      );
+      return customer;
+    }
+
+    logger.debug(
+      { identifier: identifier.slice(-4) },
+      "No customer found for identifier (tried both customer ID and national ID)"
+    );
+    return null;
   }
 
   /**

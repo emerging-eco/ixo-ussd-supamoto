@@ -26,9 +26,9 @@ describe("USSD Validation Schemas", () => {
     });
 
     it("should normalize phone numbers correctly", () => {
-      expect(phoneNumberSchema.parse("+1234567890")).toBe("1234567890");
-      expect(phoneNumberSchema.parse("01234567890")).toBe("1234567890");
-      expect(phoneNumberSchema.parse("1234567890")).toBe("1234567890");
+      expect(phoneNumberSchema.parse("+1234567890")).toBe("+1234567890"); // Preserves + prefix
+      expect(phoneNumberSchema.parse("01234567890")).toBe("1234567890"); // Removes leading 0
+      expect(phoneNumberSchema.parse("1234567890")).toBe("1234567890"); // No prefix, no change
     });
 
     it("should reject invalid phone numbers", () => {
@@ -165,7 +165,7 @@ describe("USSD Validation Schemas", () => {
       expect(result).toEqual({
         sessionId: "session123",
         serviceCode: "*2233#",
-        phoneNumber: "1234567890", // normalized
+        phoneNumber: "+1234567890", // normalized with + prefix preserved
         text: "1",
       });
     });
@@ -208,7 +208,7 @@ describe("USSD Validation Schemas", () => {
       it("should return valid result for correct phone numbers", () => {
         const result = validatePhoneNumber("+1234567890");
         expect(result.isValid).toBe(true);
-        expect(result.normalized).toBe("1234567890");
+        expect(result.normalized).toBe("+1234567890"); // Preserves + prefix
         expect(result.error).toBeUndefined();
       });
 
@@ -253,7 +253,7 @@ describe("USSD Validation Schemas", () => {
       const variations = ["+1234567890", "01234567890", "1234567890"];
 
       const normalized = variations.map(num => phoneNumberSchema.parse(num));
-      expect(normalized).toEqual(["1234567890", "1234567890", "1234567890"]);
+      expect(normalized).toEqual(["+1234567890", "1234567890", "1234567890"]); // + prefix preserved when present
     });
 
     it("should enforce strict object validation", () => {

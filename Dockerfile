@@ -24,6 +24,10 @@ WORKDIR /app
 # ============================================================================
 FROM base AS dependencies
 
+# Install build dependencies for native modules
+# python3, make, g++ are required for node-gyp (used by bcrypt, ssh2, etc.)
+RUN apk add --no-cache python3 make g++
+
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
 
@@ -49,6 +53,9 @@ RUN pnpm build
 # Stage 4: Production Dependencies - Install only runtime dependencies
 # ============================================================================
 FROM base AS prod-dependencies
+
+# Install build dependencies for native modules (bcrypt needs these)
+RUN apk add --no-cache python3 make g++
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
@@ -80,6 +87,7 @@ COPY --from=prod-dependencies --chown=nodejs:nodejs /app/node_modules ./node_mod
 # Copy built application
 COPY --from=build --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=build --chown=nodejs:nodejs /app/package.json ./package.json
+COPY --from=build --chown=nodejs:nodejs /app/scripts/build ./scripts/build
 
 # Create logs directory with proper permissions
 RUN mkdir -p /app/logs && chown -R nodejs:nodejs /app/logs

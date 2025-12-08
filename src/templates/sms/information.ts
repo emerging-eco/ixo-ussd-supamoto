@@ -67,7 +67,7 @@ Track your performance to stay on track!`;
  */
 export function digitalVoucherInfoSMS(): string {
   return `${GREETING}
-You're eligible to redeem a bag of pellets or a 5kg packet of beans at a discounted price, based on your performance.
+You're eligible to redeem a bag of pellets or a 1kg packet of beans at a discounted price, based on your performance.
 Keep up the good work!`;
 }
 

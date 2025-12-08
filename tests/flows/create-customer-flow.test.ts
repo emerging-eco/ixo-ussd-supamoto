@@ -43,7 +43,7 @@ import { CUSTOMER_ID_PATTERN } from "../../src/utils/customer-id.js";
 
 // Test Configuration
 const SERVER_URL =
-  process.env.USSD_TEST_SERVER_URL || "http://127.0.0.1:3005/api/ussd";
+  process.env.USSD_TEST_SERVER_URL || "https://ixo-ussd-supamoto-development.up.railway.app/api/ussd";
 // Dynamic session ID to prevent conflicts when running tests multiple times
 const SESSION_ID = `flow-test-create-customer-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 const PHONE_NUMBER = "+260971230001";

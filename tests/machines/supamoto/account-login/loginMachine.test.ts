@@ -11,21 +11,16 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createActor } from "xstate";
-import {
-  loginMachine,
-  LoginOutput,
-  PIN_PROMPT,
-  VERIFYING_MSG,
-  VERIFYING_PIN_MSG,
-} from "./loginMachine.js";
+import { loginMachine, LoginOutput, PIN_PROMPT } from "./loginMachine.js";
 import { dataService } from "../../../../src/services/database-storage.js";
 import { encryptPin } from "../../../../src/utils/encryption.js";
-import { sendSMSWithRetry } from "../../../../src/services/sms.js";
 
 // Mock dependencies
 vi.mock("../../../../src/services/database-storage.js", () => ({
   dataService: {
     getCustomerByCustomerId: vi.fn(),
+    getCustomerByNationalId: vi.fn(),
+    getCustomerByIdentifier: vi.fn(),
     clearCustomerPin: vi.fn(),
     createAuditLog: vi.fn(),
     logAuditEvent: vi.fn(),
@@ -51,7 +46,6 @@ vi.mock("../../../../src/services/supamoto-db-client.js", () => ({
 
 const mockDataService = vi.mocked(dataService);
 const mockEncryptPin = vi.mocked(encryptPin);
-const mockSendSMS = vi.mocked(sendSMSWithRetry);
 
 describe("loginMachine", () => {
   const mockInput = {
@@ -78,14 +72,14 @@ describe("loginMachine", () => {
     vi.clearAllMocks();
   });
 
-  describe("Customer ID Entry", () => {
+  describe("Identifier Entry (Customer ID or National ID)", () => {
     it("should start in customerIdEntry state with correct message", () => {
       const actor = createActor(loginMachine, { input: mockInput });
       actor.start();
 
       expect(actor.getSnapshot().value).toBe("customerIdEntry");
       expect(actor.getSnapshot().context.message).toBe(
-        "Enter your Customer ID to log in:"
+        "Enter your National ID Number or Customer ID to log in:"
       );
     });
 
@@ -97,12 +91,32 @@ describe("loginMachine", () => {
       actor.send({ type: "INPUT", input: "invalid" });
       expect(actor.getSnapshot().value).toBe("customerIdEntry");
       expect(actor.getSnapshot().context.message).toBe(
-        "Invalid Customer ID format. Please try again."
+        "Invalid identifier format. Please try again."
       );
 
-      // Valid format - now goes directly to PIN entry
+      // Valid Customer ID format - now goes directly to PIN entry
       actor.send({ type: "INPUT", input: "C12345678" });
       expect(actor.getSnapshot().value).toBe("pinEntry");
+    });
+
+    it("should validate national ID format with slashes", () => {
+      const actor = createActor(loginMachine, { input: mockInput });
+      actor.start();
+
+      // Valid National ID format with slashes - should go to PIN entry
+      actor.send({ type: "INPUT", input: "123456/05/1" });
+      expect(actor.getSnapshot().value).toBe("pinEntry");
+      expect(actor.getSnapshot().context.customerId).toBe("123456/05/1");
+    });
+
+    it("should validate national ID format without slashes", () => {
+      const actor = createActor(loginMachine, { input: mockInput });
+      actor.start();
+
+      // Valid National ID format without slashes - should go to PIN entry
+      actor.send({ type: "INPUT", input: "123456051" });
+      expect(actor.getSnapshot().value).toBe("pinEntry");
+      expect(actor.getSnapshot().context.customerId).toBe("123456051");
     });
 
     it("should handle exit navigation", () => {
@@ -116,9 +130,9 @@ describe("loginMachine", () => {
   });
 
   describe("Customer Verification", () => {
-    it("should handle customer not found", async () => {
+    it("should handle customer not found by customer ID", async () => {
       // Customer verification now happens after PIN entry in verifyingCredentials state
-      mockDataService.getCustomerByCustomerId.mockResolvedValue(null);
+      mockDataService.getCustomerByIdentifier.mockResolvedValue(null);
 
       const actor = createActor(loginMachine, { input: mockInput });
       actor.start();
@@ -138,10 +152,32 @@ describe("loginMachine", () => {
       );
     });
 
+    it("should handle customer not found by national ID", async () => {
+      // Customer verification now happens after PIN entry in verifyingCredentials state
+      mockDataService.getCustomerByIdentifier.mockResolvedValue(null);
+
+      const actor = createActor(loginMachine, { input: mockInput });
+      actor.start();
+
+      // Enter national ID
+      actor.send({ type: "INPUT", input: "123456/05/1" });
+      expect(actor.getSnapshot().value).toBe("pinEntry");
+
+      // Enter PIN
+      actor.send({ type: "INPUT", input: "12345" });
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // Should route to main with customer not found error
+      expect(actor.getSnapshot().value).toBe("routeToMain");
+      expect((actor.getSnapshot().output as any)?.result).toBe(
+        LoginOutput.CUSTOMER_NOT_FOUND
+      );
+    });
+
     it("should handle customer with empty PIN", async () => {
       // Mock customer with null encrypted PIN
       const customerWithoutPin = { ...mockCustomer, encryptedPin: null };
-      mockDataService.getCustomerByCustomerId.mockResolvedValue(
+      mockDataService.getCustomerByIdentifier.mockResolvedValue(
         customerWithoutPin
       );
 
@@ -163,7 +199,7 @@ describe("loginMachine", () => {
       );
     });
 
-    it("should proceed to PIN entry for valid customer", async () => {
+    it("should proceed to PIN entry for valid customer ID", async () => {
       const actor = createActor(loginMachine, { input: mockInput });
       actor.start();
 
@@ -172,11 +208,21 @@ describe("loginMachine", () => {
       expect(actor.getSnapshot().value).toBe("pinEntry");
       expect(actor.getSnapshot().context.customerId).toBe("C12345678");
     });
+
+    it("should proceed to PIN entry for valid national ID", async () => {
+      const actor = createActor(loginMachine, { input: mockInput });
+      actor.start();
+
+      // Enter national ID - should go directly to PIN entry
+      actor.send({ type: "INPUT", input: "123456/05/1" });
+      expect(actor.getSnapshot().value).toBe("pinEntry");
+      expect(actor.getSnapshot().context.customerId).toBe("123456/05/1");
+    });
   });
 
   describe("PIN Entry and Verification", () => {
     beforeEach(async () => {
-      mockDataService.getCustomerByCustomerId.mockResolvedValue(mockCustomer);
+      mockDataService.getCustomerByIdentifier.mockResolvedValue(mockCustomer);
     });
 
     it("should validate PIN format", async () => {
@@ -196,10 +242,10 @@ describe("loginMachine", () => {
       expect(actor.getSnapshot().value).toBe("verifyingCredentials");
     });
 
-    it("should handle successful PIN verification", async () => {
+    it("should handle successful PIN verification with customer ID", async () => {
       // Mock encryptPin to return the same value as stored encrypted PIN
       mockEncryptPin.mockReturnValue("9YMhFg0zu5IKq9aFG5a/PA==");
-      mockDataService.getCustomerByCustomerId.mockResolvedValue(mockCustomer);
+      mockDataService.getCustomerByIdentifier.mockResolvedValue(mockCustomer);
 
       const actor = createActor(loginMachine, { input: mockInput });
       actor.start();
@@ -216,10 +262,30 @@ describe("loginMachine", () => {
       expect(actor.getSnapshot().value).toBe("loginSuccess");
     });
 
+    it("should handle successful PIN verification with national ID", async () => {
+      // Mock encryptPin to return the same value as stored encrypted PIN
+      mockEncryptPin.mockReturnValue("9YMhFg0zu5IKq9aFG5a/PA==");
+      mockDataService.getCustomerByIdentifier.mockResolvedValue(mockCustomer);
+
+      const actor = createActor(loginMachine, { input: mockInput });
+      actor.start();
+
+      // Enter national ID
+      actor.send({ type: "INPUT", input: "123456/05/1" });
+      expect(actor.getSnapshot().value).toBe("pinEntry");
+
+      // Enter correct PIN
+      actor.send({ type: "INPUT", input: "10101" });
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Should go to loginSuccess after verification
+      expect(actor.getSnapshot().value).toBe("loginSuccess");
+    });
+
     it("should handle incorrect PIN with retry", async () => {
       // Mock encryptPin to return a different value than stored (wrong PIN)
       mockEncryptPin.mockReturnValue("different-encrypted-value");
-      mockDataService.getCustomerByCustomerId.mockResolvedValue(mockCustomer);
+      mockDataService.getCustomerByIdentifier.mockResolvedValue(mockCustomer);
 
       const actor = createActor(loginMachine, { input: mockInput });
       actor.start();
@@ -241,7 +307,7 @@ describe("loginMachine", () => {
     it("should handle max attempts exceeded", async () => {
       // Mock encryptPin to return wrong encrypted value for all attempts
       mockEncryptPin.mockReturnValue("wrong-encrypted-value");
-      mockDataService.getCustomerByCustomerId.mockResolvedValue(mockCustomer);
+      mockDataService.getCustomerByIdentifier.mockResolvedValue(mockCustomer);
       mockDataService.clearCustomerPin.mockResolvedValue();
       mockDataService.createAuditLog.mockResolvedValue({
         id: 1,
@@ -292,7 +358,7 @@ describe("loginMachine", () => {
   describe("Error Handling", () => {
     it("should handle database errors gracefully", async () => {
       // Database errors now happen in verifyingCredentials state
-      mockDataService.getCustomerByCustomerId.mockRejectedValue(
+      mockDataService.getCustomerByIdentifier.mockRejectedValue(
         new Error("Database connection failed")
       );
 

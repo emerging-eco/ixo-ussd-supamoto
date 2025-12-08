@@ -76,6 +76,7 @@ Thumbs.db
 # Scripts (not needed in production)
 scripts/
 !scripts/validate-machines.js
+!scripts/build/
 
 # Reference files
 src/reference/
