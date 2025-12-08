@@ -676,6 +676,9 @@ export const thousandDaySurveyMachine = setup({
 
     initializingSession: {
       // Internal state: validate customer, create/reuse claim, recover any existing answers
+      entry: assign(() => ({
+        message: "Processing...",
+      })),
       invoke: {
         id: "initializeSurveySession",
         src: "initializeSurveySessionService",
