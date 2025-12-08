@@ -1,0 +1,450 @@
+import { assign, sendTo, setup } from "xstate";
+import { accountCreationMachine, AccountCreationOutput, } from "./account-creation/index.js";
+import { accountMenuMachine, AccountMenuOutput, } from "./account-menu/accountMenuMachine.js";
+import { loginMachine, LoginOutput } from "./account-login/loginMachine.js";
+import { navigationGuards } from "./guards/index.js";
+import { knowMoreMachine } from "./information/index.js";
+import { withNavigation } from "./utils/navigation-mixin.js";
+import { NavigationPatterns } from "./utils/navigation-patterns.js";
+import { userServicesMachine } from "./user-services/userServicesMachine.js";
+import { messages } from "../../../src/constants/branding.js";
+const buildPreMenuMessage = (isAuthenticated) => `${messages.welcome()}\n1. Know More\n2. Account Menu${isAuthenticated ? "\n3. Services" : ""}\n*. Exit`;
+export const supamotoMachine = setup({
+    types: {
+        context: {},
+        events: {},
+        input: {},
+    },
+    actors: {
+        // Child state machines
+        knowMoreMachine,
+        accountMenuMachine,
+        loginMachine,
+        accountCreationMachine,
+        userServicesMachine,
+    },
+    actions: {
+        initializeSession: assign(({ context }) => ({
+            sessionId: context.sessionId ||
+                `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+            sessionStartTime: new Date().toISOString(),
+            isAuthenticated: false,
+            error: undefined,
+            validationError: undefined,
+        })),
+        setPhoneAndService: assign(({ event, context }) => ({
+            phoneNumber: event.type === "DIAL_USSD" ? event.phoneNumber : "",
+            serviceCode: event.type === "DIAL_USSD" ? event.serviceCode : "",
+            message: buildPreMenuMessage(!!context.isAuthenticated),
+        })),
+        setPreMenuMessage: assign(({ context }) => {
+            // If there's a lockout message, preserve it and append the menu options
+            if (context.message && context.message.includes("account was locked")) {
+                return {
+                    message: `${context.message}\n\n${buildPreMenuMessage(!!context.isAuthenticated)}`,
+                };
+            }
+            return {
+                message: buildPreMenuMessage(!!context.isAuthenticated),
+            };
+        }),
+        setAgentIdEntryMessage: assign(() => ({
+            message: "Enter your Agent ID:",
+        })),
+        setVerifyingMessage: assign(() => ({
+            message: "Verifying... Please wait.",
+        })),
+        setErrorMessage: assign(({ context }) => ({
+            message: context.error ||
+                context.validationError ||
+                "An error occurred. Please try again.",
+        })),
+        setUserAuthenticated: assign(() => ({
+            isAuthenticated: true,
+            isAgent: false,
+        })),
+        setAgentAuthenticated: assign(() => ({
+            isAuthenticated: true,
+            isAgent: true,
+        })),
+        updateBalanceFromChild: assign(({ context, event }) => ({
+            currentBalance: event.type === "CHILD_MACHINE_DONE"
+                ? event.output?.context?.currentBalance !== undefined
+                    ? event.output.context.currentBalance
+                    : context.currentBalance
+                : context.currentBalance,
+        })),
+        setError: assign(({ event }) => ({
+            error: event.type === "ERROR" ? event.error : "An error occurred",
+        })),
+        clearErrors: assign(() => ({
+            error: undefined,
+            validationError: undefined,
+        })),
+        resetSession: assign(() => ({
+            customerName: undefined,
+            currentBalance: undefined,
+            isAuthenticated: false,
+            error: undefined,
+            validationError: undefined,
+        })),
+        logToConsole: ({ event, context }) => {
+            let details = `👀 Parent log: context: ${JSON.stringify(context)} \n| event: ${event.type}`;
+            if ("input" in event) {
+                details += ` | input: ${event.input}`;
+            }
+            if ("error" in event) {
+                details += ` | error: ${event.error}`;
+            }
+            console.log(details);
+        },
+    },
+    guards: {
+        // Business logic guards (machine-specific)
+        hasError: ({ context }) => Boolean(context.error),
+        hasValidationError: ({ context }) => Boolean(context.validationError),
+        // Navigation guards - these handle universal commands
+        isBack: ({ event }) => navigationGuards.isBackCommand(null, event),
+        isExit: ({ event }) => navigationGuards.isExitCommand(null, event),
+        // Navigation guards (adapted from modular guards)
+        isInput1: ({ event }) => navigationGuards.isInput("1")(null, event),
+        isInput2: ({ event }) => navigationGuards.isInput("2")(null, event),
+        isInput3: ({ event }) => navigationGuards.isInput("3")(null, event),
+        isInput3AndAuthenticated: ({ event, context }) => navigationGuards.isInput("3")(null, event) &&
+            !!context.isAuthenticated,
+        // Basic input validation guards
+        isValidAgentIdInput: ({ event }) => event.type === "INPUT" && event.input.trim().length >= 6,
+    },
+}).createMachine({
+    id: "supamotoMachine",
+    initial: "idle",
+    context: ({ input }) => ({
+        sessionId: input?.sessionId || "",
+        phoneNumber: input?.phoneNumber || "",
+        serviceCode: input?.serviceCode || "",
+        isAuthenticated: false,
+        sessionStartTime: "",
+        message: buildPreMenuMessage(false),
+    }),
+    states: {
+        // Initial state - waiting for USSD dial
+        idle: {
+            on: {
+                DIAL_USSD: {
+                    target: "preMenu",
+                    actions: ["initializeSession", "setPhoneAndService"],
+                },
+            },
+        },
+        preMenu: {
+            entry: ["clearErrors", "setPreMenuMessage"],
+            on: {
+                INPUT: withNavigation([
+                    {
+                        target: "knowMoreService",
+                        guard: "isInput1",
+                        actions: "clearErrors",
+                    },
+                    {
+                        target: "accountMenu",
+                        guard: "isInput2",
+                        actions: "clearErrors",
+                    },
+                    {
+                        target: "userMainMenu",
+                        guard: "isInput3AndAuthenticated",
+                        actions: "clearErrors",
+                    },
+                    {
+                        target: "preMenu",
+                        actions: assign(({ context }) => ({
+                            message: `Invalid selection. Please choose ${context.isAuthenticated ? "1, 2 or 3" : "1 or 2"}.\n\n${buildPreMenuMessage(!!context.isAuthenticated)}`,
+                        })),
+                    },
+                ], NavigationPatterns.mainMenu // Uses predefined pattern: no back, exit to closeSession
+                ),
+                ERROR: {
+                    target: "error",
+                    actions: "setError",
+                },
+            },
+        },
+        // Know More service - delegates to knowMoreMachine
+        knowMoreService: {
+            on: {
+                INPUT: { actions: sendTo("knowMoreChild", ({ event }) => event) },
+            },
+            invoke: {
+                id: "knowMoreChild",
+                src: "knowMoreMachine",
+                input: ({ context }) => ({
+                    sessionId: context.sessionId,
+                    phoneNumber: context.phoneNumber,
+                    serviceCode: context.serviceCode,
+                }),
+                onDone: {
+                    target: "preMenu",
+                },
+                onError: {
+                    target: "error",
+                    actions: "setError",
+                },
+            },
+        },
+        // Account Menu - routes to login or account creation
+        accountMenu: {
+            on: {
+                INPUT: {
+                    actions: [sendTo("accountMenuChild", ({ event }) => event)],
+                },
+            },
+            invoke: {
+                id: "accountMenuChild",
+                src: "accountMenuMachine",
+                input: ({ context }) => ({
+                    sessionId: context.sessionId,
+                    phoneNumber: context.phoneNumber,
+                    serviceCode: context.serviceCode,
+                }),
+                onDone: [
+                    {
+                        target: "login",
+                        guard: ({ event }) => event.output
+                            ?.result === AccountMenuOutput.LOGIN_SELECTED,
+                    },
+                    {
+                        target: "accountCreation",
+                        guard: ({ event }) => event.output
+                            ?.result === AccountMenuOutput.CREATE_SELECTED,
+                    },
+                    {
+                        target: "preMenu",
+                        guard: ({ event }) => event.output
+                            ?.result === AccountMenuOutput.UNDEFINED,
+                    },
+                    {
+                        target: "preMenu",
+                    },
+                ],
+                onError: {
+                    target: "error",
+                    actions: "setError",
+                },
+            },
+        },
+        // Login service - handles existing user authentication
+        login: {
+            on: {
+                INPUT: {
+                    actions: sendTo("loginChild", ({ event }) => event),
+                },
+            },
+            invoke: {
+                id: "loginChild",
+                src: "loginMachine",
+                input: ({ context }) => ({
+                    sessionId: context.sessionId,
+                    phoneNumber: context.phoneNumber,
+                    serviceCode: context.serviceCode,
+                }),
+                onDone: [
+                    {
+                        target: "userMainMenu",
+                        guard: ({ event }) => event.output?.result === LoginOutput.LOGIN_SUCCESS,
+                        actions: [
+                            "clearErrors",
+                            assign(({ event }) => {
+                                const output = event.output;
+                                return {
+                                    customerId: output?.customer?.customerId,
+                                    customerName: output?.customer?.fullName || "Existing User",
+                                    customerRole: output?.customer?.role || "customer", // Store role for access control
+                                    customerData: output?.customerData, // Store decrypted customer data from SDK
+                                    isAuthenticated: true,
+                                    // Thread session PIN for Matrix vault decryption in services
+                                    sessionPin: output?.sessionPin,
+                                    message: output?.message,
+                                };
+                            }),
+                        ],
+                    },
+                    {
+                        target: "accountMenu",
+                        guard: ({ event }) => event.output?.result === LoginOutput.CUSTOMER_NOT_FOUND,
+                        actions: [
+                            "clearErrors",
+                            assign(({ event }) => ({
+                                message: event.output?.message,
+                            })),
+                        ],
+                    },
+                    {
+                        target: "accountMenu",
+                        guard: ({ event }) => event.output?.result ===
+                            LoginOutput.ENCRYPTED_PIN_FIELD_EMPTY,
+                        actions: [
+                            "clearErrors",
+                            assign(({ event }) => ({
+                                message: event.output?.message,
+                            })),
+                        ],
+                    },
+                    {
+                        target: "preMenu",
+                        guard: ({ event }) => event.output?.result ===
+                            LoginOutput.MAX_ATTEMPTS_EXCEEDED,
+                        actions: [
+                            "clearErrors",
+                            assign(({ event }) => ({
+                                message: event.output?.message,
+                            })),
+                        ],
+                    },
+                    {
+                        target: "preMenu",
+                        actions: [
+                            "clearErrors",
+                            assign(({ event }) => ({
+                                message: event.output?.message,
+                            })),
+                        ],
+                    },
+                ],
+                onError: {
+                    target: "error",
+                    actions: "setError",
+                },
+            },
+        },
+        // Account Creation service - handles new user registration
+        accountCreation: {
+            on: {
+                INPUT: {
+                    actions: sendTo("accountCreationChild", ({ event }) => event),
+                },
+            },
+            invoke: {
+                id: "accountCreationChild",
+                src: "accountCreationMachine",
+                input: ({ context }) => ({
+                    sessionId: context.sessionId,
+                    phoneNumber: context.phoneNumber,
+                    serviceCode: context.serviceCode,
+                }),
+                onDone: [
+                    {
+                        target: "accountCreationSuccess",
+                        guard: ({ event }) => event.output?.type ===
+                            AccountCreationOutput.ACCOUNT_CREATED,
+                        actions: [
+                            "clearErrors",
+                            assign(({ event }) => {
+                                const output = event.output;
+                                return {
+                                    customerName: output?.customer?.fullName || "Existing User",
+                                };
+                            }),
+                        ],
+                    },
+                    {
+                        target: "accountMenu",
+                        guard: ({ event }) => event.output?.type === AccountCreationOutput.CANCELLED,
+                        actions: ["clearErrors"],
+                    },
+                    {
+                        target: "accountMenu",
+                        actions: ["clearErrors"],
+                    },
+                ],
+                onError: {
+                    target: "error",
+                    actions: "setError",
+                },
+            },
+        },
+        // Account creation success state
+        accountCreationSuccess: {
+            entry: assign(() => ({
+                message: "Account created successfully!\n\nYou can now:\n1. Return to main menu\n0. Back",
+                isEnd: false,
+            })),
+            on: {
+                INPUT: withNavigation([
+                    {
+                        target: "preMenu",
+                        guard: "isInput1",
+                        actions: "clearErrors",
+                    },
+                ], {
+                    backTarget: "preMenu",
+                    exitTarget: "closeSession",
+                    enableBack: true,
+                    enableExit: true,
+                }),
+            },
+        },
+        // Services - delegates to userServicesMachine (Customer Tools or Agent Tools based on role)
+        userMainMenu: {
+            on: {
+                INPUT: {
+                    actions: [sendTo("userServicesChild", ({ event }) => event)],
+                },
+            },
+            invoke: {
+                id: "userServicesChild",
+                src: "userServicesMachine",
+                input: ({ context }) => ({
+                    sessionId: context.sessionId,
+                    phoneNumber: context.phoneNumber,
+                    serviceCode: context.serviceCode,
+                    pin: context.sessionPin,
+                    customerId: context.customerId, // Pass customer ID for child machines
+                    customerRole: context.customerRole, // Pass role for access control
+                }),
+                onDone: {
+                    target: "preMenu",
+                    actions: "clearErrors",
+                },
+                onError: {
+                    target: "error",
+                    actions: "setError",
+                },
+            },
+        },
+        // Placeholder for agent services - redirect to main menu
+        agentMainMenu: {
+            entry: assign(() => ({
+                message: "Agent services are currently under development.\nReturning to main menu...",
+            })),
+            after: {
+                2000: {
+                    target: "preMenu",
+                    actions: "clearErrors",
+                },
+            },
+        },
+        // Error state with custom back behavior
+        error: {
+            entry: "setErrorMessage",
+            on: {
+                INPUT: withNavigation([], NavigationPatterns.error // Uses predefined pattern: back to preMenu, exit to closeSession
+                ),
+                DIAL_USSD: {
+                    target: "preMenu",
+                    actions: ["resetSession", "setPhoneAndService", "clearErrors"],
+                },
+            },
+        },
+        // Session closed - final state
+        closeSession: {
+            type: "final",
+            entry: [
+                "resetSession",
+                assign(() => ({
+                    message: messages.goodbye(),
+                })),
+            ],
+        },
+    },
+});
+//# sourceMappingURL=parentMachine.js.map

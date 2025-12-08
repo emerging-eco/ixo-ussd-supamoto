@@ -1,0 +1,147 @@
+/**
+ * Script to query phone and customer data from the database.
+ * Usage:
+ *   ts-node db-queries.ts <phoneNumber>
+ *   ts-node db-queries.ts         # (to list all phones)
+ */
+import { Pool } from "pg";
+import "dotenv/config";
+const ssl = process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false;
+const pool = new Pool({
+    database: process.env.PG_DATABASE || "ixo-ussd-dev",
+    user: process.env.PG_USER || "postgres",
+    password: process.env.PG_PASSWORD || "",
+    host: process.env.PG_HOST || "localhost",
+    port: parseInt(process.env.PG_PORT || "5432", 10),
+    ssl,
+});
+async function queryPhones(phoneNumber) {
+    console.log("Connecting to the database to view users...");
+    console.log("PG_USER:", process.env.PG_USER);
+    console.log("PG_HOST:", process.env.PG_HOST);
+    console.log("PG_PORT:", process.env.PG_PORT);
+    console.log("PG_DATABASE:", process.env.PG_DATABASE);
+    const client = await pool.connect();
+    try {
+        let query = `
+      SELECT
+        p.id AS phone_id,
+        p.phone_number,
+        p.first_seen,
+        p.last_seen,
+        p.number_of_visits,
+        p.created_at,
+        p.updated_at,
+        COALESCE(
+          json_agg(
+            jsonb_build_object(
+              'customer_db_id', c.id,
+              'customer_id', c.customer_id,
+              'full_name', c.full_name,
+              'email', c.email,
+              'encrypted_pin', c.encrypted_pin,
+              'preferred_language', c.preferred_language,
+              'date_added', c.date_added,
+              'last_completed_action', c.last_completed_action,
+              'household_id', c.household_id,
+              'created_at', c.created_at,
+              'updated_at', c.updated_at
+            )
+          ) FILTER (WHERE c.id IS NOT NULL), '[]'
+        ) AS customers
+      FROM phones p
+      LEFT JOIN customer_phones cp ON p.id = cp.phone_id
+      LEFT JOIN customers c ON cp.customer_id = c.id
+    `;
+        const params = [];
+        if (phoneNumber) {
+            query += ` WHERE p.phone_number = $1`;
+            params.push(phoneNumber);
+        }
+        query += `
+      GROUP BY p.id
+      ORDER BY p.last_seen DESC
+    `;
+        const res = await client.query(query, params);
+        if (res.rows.length === 0) {
+            console.log(phoneNumber
+                ? `\nNo data found for phone number: ${phoneNumber}`
+                : "\nNo phone records found.");
+        }
+        else {
+            console.log(phoneNumber
+                ? `\nData for phone number: ${phoneNumber}`
+                : "\nAll phone records:");
+            // Display main phone info, showing customer count
+            const displayRows = res.rows.map(row => {
+                let customers = row.customers;
+                if (typeof customers === "string") {
+                    try {
+                        customers = JSON.parse(customers);
+                    }
+                    catch {
+                        customers = [];
+                    }
+                }
+                return {
+                    ...row,
+                    customers: Array.isArray(customers) ? customers.length : 0,
+                };
+            });
+            console.table(displayRows);
+            // Print detailed customers for each phone
+            res.rows.forEach((row, idx) => {
+                let customers = row.customers;
+                if (typeof customers === "string") {
+                    try {
+                        customers = JSON.parse(customers);
+                    }
+                    catch {
+                        customers = [];
+                    }
+                }
+                if (Array.isArray(customers) && customers.length > 0) {
+                    console.log(`\nPhone #${idx} (${row.phone_number}) customers:`);
+                    customers.forEach((cust, i) => {
+                        console.log(`  [${i + 1}]`, JSON.stringify(cust, null, 2));
+                    });
+                }
+            });
+        }
+    }
+    catch (err) {
+        console.error("\nError executing query:", err);
+    }
+    finally {
+        client.release();
+    }
+}
+// Parse command line arguments
+const args = process.argv.slice(2);
+async function main() {
+    try {
+        if (args.length === 0) {
+            // Default: list all phones
+            await queryPhones();
+        }
+        else if (!args[0].startsWith("--")) {
+            // Phone number query
+            await queryPhones(args[0]);
+        }
+        else {
+            console.log(`
+Usage:
+  ts-node db-queries.ts <phoneNumber>     # Query by phone number
+  ts-node db-queries.ts                   # List all phones
+      `);
+        }
+    }
+    finally {
+        await pool.end();
+        console.log("\nDatabase connection closed.");
+    }
+}
+main().catch(err => {
+    console.error("\nFailed to run the script:", err);
+});
+//# sourceMappingURL=db-queries.js.map
