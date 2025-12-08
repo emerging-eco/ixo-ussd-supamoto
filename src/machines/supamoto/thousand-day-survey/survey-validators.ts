@@ -3,23 +3,52 @@
  */
 
 /**
- * Validate customer ID format
- * Pattern: /^C[A-Za-z0-9]{8,}$/
- * Example: CDDA2FB60
+ * Validate customer identifier (Customer ID or National ID)
+ * Accepts:
+ * - Customer ID: C[A-Za-z0-9]{8,} (e.g., CA6A546EF, ca6a546ef)
+ * - National ID: XXXXXX/XX/X or XXXXXXXXX (e.g., 123456/05/1, 123456051)
  */
 export function validateCustomerId(input: string): {
   valid: boolean;
   error?: string;
 } {
-  const pattern = /^C[A-Za-z0-9]{8,}$/;
-  if (!pattern.test(input)) {
+  // Normalize input: trim and remove dangerous characters
+  const sanitized = input
+    .trim()
+    .replace(/[<>"'&]/g, "")
+    .replace(/\s+/g, "");
+
+  if (!sanitized) {
     return {
       valid: false,
-      error:
-        "Invalid Customer ID format. Must start with 'C' followed by at least 8 alphanumeric characters.",
+      error: "Customer ID or National ID cannot be empty.",
     };
   }
-  return { valid: true };
+
+  // Check if it's a Customer ID (case-insensitive)
+  const customerIdPattern = /^C[A-Za-z0-9]{8,}$/i;
+  if (customerIdPattern.test(sanitized)) {
+    return { valid: true };
+  }
+
+  // Check if it's a National ID with slashes (XXXXXX/XX/X)
+  const nationalIdWithSlashes = /^(\d{6})\/(\d{2})\/(\d)$/;
+  if (nationalIdWithSlashes.test(sanitized)) {
+    return { valid: true };
+  }
+
+  // Check if it's a National ID without slashes (XXXXXXXXX)
+  const nationalIdWithoutSlashes = /^(\d{6})(\d{2})(\d)$/;
+  if (nationalIdWithoutSlashes.test(sanitized)) {
+    return { valid: true };
+  }
+
+  // If none of the patterns match, return error
+  return {
+    valid: false,
+    error:
+      "Invalid format. Enter a Customer ID (e.g., CA6A546EF) or National ID (e.g., 123456/05/1).",
+  };
 }
 
 /**
