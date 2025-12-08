@@ -88,6 +88,30 @@ describe("National ID Entry - Zambian NRC", () => {
     expect(snapshot.context.currentStep).toBe("nationalIdEntry");
   });
 
+  it("should show error message for invalid national ID", () => {
+    const actor = createActor(accountCreationMachine, {
+      input: {
+        sessionId: "test-session",
+        phoneNumber: "+260123456789",
+        serviceCode: "*2233#",
+      },
+    });
+
+    actor.start();
+
+    // Navigate through the flow
+    actor.send({ type: "INPUT", input: "John Doe" }); // name
+    actor.send({ type: "INPUT", input: "00" }); // skip email
+    actor.send({ type: "INPUT", input: "111111111" }); // Invalid NRC
+
+    const snapshot = actor.getSnapshot();
+    // Should remain in nationalIdEntry state with error
+    expect(snapshot.context.currentStep).toBe("nationalIdEntry");
+    expect(snapshot.context.validationError).toBe("Invalid National ID format");
+    expect(snapshot.context.message).toContain("Invalid format");
+    expect(snapshot.context.message).toContain("123456/12/1");
+  });
+
   it("should allow skipping national ID with 00", () => {
     const actor = createActor(accountCreationMachine, {
       input: {
