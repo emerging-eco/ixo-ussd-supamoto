@@ -12,10 +12,8 @@
  */
 
 import { assign, fromPromise, setup } from "xstate";
-import { DbTypes } from "@ixo/supamoto-bot-sdk";
 import { createModuleLogger } from "../../../services/logger.js";
 
-type ICustomerDecrypted = DbTypes.ICustomerDecrypted;
 import {
   dataService,
   type CustomerRecord,
@@ -26,7 +24,6 @@ import { withNavigation } from "../utils/navigation-mixin.js";
 import { NavigationPatterns } from "../utils/navigation-patterns.js";
 import { sendSMSWithRetry } from "../../../services/sms.js";
 import { accountLockedSMS } from "../../../templates/sms/index.js";
-import { getDecryptedCustomerData } from "../../../services/supamoto-db-client.js";
 
 const logger = createModuleLogger("loginMachine");
 
@@ -39,7 +36,7 @@ export interface LoginContext {
   error?: string;
   customerId?: string;
   customer?: CustomerRecord;
-  customerData?: ICustomerDecrypted; // Decrypted customer data from SDK
+  customerData?: CustomerRecord; // Customer data from USSD database
   sessionPin?: string; // ephemeral, used for Matrix vault decryption in-session
   pinAttempts: number;
   nextParentState: LoginOutput;
@@ -260,34 +257,34 @@ const pinVerificationService = fromPromise(
 );
 
 /**
- * Service actor that loads decrypted customer data from SDK
+ * Service actor that loads customer data from USSD database
  * This is called after successful PIN verification to fetch full customer details
  */
 const loadCustomerDataService = fromPromise(
   async ({ input }: { input: { customerId: string } }) => {
     logger.info(
       { customerId: input.customerId.slice(-4) },
-      "Loading decrypted customer data from SDK"
+      "Loading customer data from USSD database"
     );
 
     try {
-      const customerData = await getDecryptedCustomerData(input.customerId);
+      const customerData = await dataService.getCustomerByCustomerId(input.customerId);
 
       if (!customerData) {
         logger.warn(
           { customerId: input.customerId.slice(-4) },
-          "Customer data not found in SDK"
+          "Customer data not found in USSD database"
         );
         return null;
       }
 
       logger.info(
         {
-          customerId: customerData.customer_id,
-          hasFullName: !!customerData.full_name,
+          customerId: customerData.customerId,
+          hasFullName: !!customerData.fullName,
           hasEmail: !!customerData.email,
         },
-        "Customer data loaded successfully from SDK"
+        "Customer data loaded successfully from USSD database"
       );
 
       return customerData;
@@ -297,9 +294,9 @@ const loadCustomerDataService = fromPromise(
           error: error instanceof Error ? error.message : String(error),
           customerId: input.customerId.slice(-4),
         },
-        "Failed to load customer data from SDK"
+        "Failed to load customer data from USSD database"
       );
-      // Don't throw - we can still proceed with login even if SDK data fails
+      // Don't throw - we can still proceed with login even if data load fails
       return null;
     }
   }
@@ -436,17 +433,17 @@ const verifyCredentialsService = fromPromise(
       throw new Error(`INCORRECT_PIN:${input.attempts}`);
     }
 
-    // Step 4: Load customer data from SDK (optional - don't fail if this fails)
-    let customerData: ICustomerDecrypted | null = null;
+    // Step 4: Load customer data from USSD database (optional - don't fail if this fails)
+    let customerData: CustomerRecord | null = null;
     try {
-      customerData = await getDecryptedCustomerData(input.customerId);
+      customerData = await dataService.getCustomerByCustomerId(input.customerId);
       if (customerData) {
         logger.info(
           {
-            customerId: customerData.customer_id,
-            hasFullName: !!customerData.full_name,
+            customerId: customerData.customerId,
+            hasFullName: !!customerData.fullName,
           },
-          "Customer data loaded successfully from SDK"
+          "Customer data loaded successfully from USSD database"
         );
       }
     } catch (error) {
@@ -455,7 +452,7 @@ const verifyCredentialsService = fromPromise(
           error: error instanceof Error ? error.message : String(error),
           customerId: input.customerId.slice(-4),
         },
-        "Failed to load customer data from SDK (non-fatal)"
+        "Failed to load customer data from USSD database (non-fatal)"
       );
     }
 

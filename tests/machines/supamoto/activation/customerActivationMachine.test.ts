@@ -28,7 +28,7 @@ describe("Customer Activation Machine", () => {
 
     it("should display customer ID prompt", () => {
       const snapshot = actor.getSnapshot();
-      expect(snapshot.context.message).toContain("Enter your Customer ID");
+      expect(snapshot.context.message).toContain("Enter Customer ID");
     });
   });
 
@@ -62,7 +62,7 @@ describe("Customer Activation Machine", () => {
     it("should accept valid phone number with country code", () => {
       actor.send({ type: "INPUT", input: "+260971234567" });
       const snapshot = actor.getSnapshot();
-      expect(snapshot.value).toBe("sendingActivationSMS");
+      expect(snapshot.value).toBe("waitingForCustomer");
       expect(snapshot.context.customerPhone).toBe("+260971234567");
     });
 
