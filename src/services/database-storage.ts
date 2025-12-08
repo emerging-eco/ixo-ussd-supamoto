@@ -376,8 +376,11 @@ class DataService {
   ): Promise<CustomerRecord | null> {
     const db = databaseManager.getKysely();
 
+    // Normalize customer ID to uppercase for case-insensitive comparison
+    const normalizedCustomerId = customerId.toUpperCase();
+
     logger.debug(
-      { customerId: customerId.slice(-4) },
+      { customerId: normalizedCustomerId.slice(-4) },
       "Looking up customer by customer ID"
     );
 
@@ -397,7 +400,7 @@ class DataService {
           "customers.created_at",
           "customers.updated_at",
         ])
-        .where("customers.customer_id", "ilike", customerId)
+        .where("customers.customer_id", "=", normalizedCustomerId)
         .executeTakeFirst();
 
       if (!result) {
@@ -582,8 +585,11 @@ class DataService {
   async clearCustomerPin(customerId: string): Promise<void> {
     const db = databaseManager.getKysely();
 
+    // Normalize customer ID to uppercase for case-insensitive comparison
+    const normalizedCustomerId = customerId.toUpperCase();
+
     logger.info(
-      { customerId: customerId.slice(-4) },
+      { customerId: normalizedCustomerId.slice(-4) },
       "Clearing customer PIN due to max attempts exceeded"
     );
 
@@ -594,22 +600,22 @@ class DataService {
           encrypted_pin: null,
           updated_at: new Date(),
         })
-        .where("customer_id", "=", customerId)
+        .where("customer_id", "=", normalizedCustomerId)
         .executeTakeFirst();
 
       if (result.numUpdatedRows === 0n) {
-        throw new Error(`Customer not found: ${customerId}`);
+        throw new Error(`Customer not found: ${normalizedCustomerId}`);
       }
 
       logger.info(
-        { customerId: customerId.slice(-4) },
+        { customerId: normalizedCustomerId.slice(-4) },
         "Successfully cleared customer PIN"
       );
     } catch (error) {
       logger.error(
         {
           error: error instanceof Error ? error.message : String(error),
-          customerId: customerId.slice(-4),
+          customerId: normalizedCustomerId.slice(-4),
         },
         "Failed to clear customer PIN"
       );
@@ -709,10 +715,14 @@ class DataService {
   ): Promise<void> {
     const db = databaseManager.getKysely();
 
+    // Normalize customer IDs to uppercase for case-insensitive comparison
+    const normalizedCustomerId = customerId.toUpperCase();
+    const normalizedLgCustomerId = lgCustomerId?.toUpperCase();
+
     logger.info(
       {
-        customerId: customerId.slice(-4),
-        lgCustomerId: lgCustomerId?.slice(-4),
+        customerId: normalizedCustomerId.slice(-4),
+        lgCustomerId: normalizedLgCustomerId?.slice(-4),
       },
       "🔐 Resetting customer PIN during activation"
     );
@@ -725,7 +735,7 @@ class DataService {
         // Encrypt the temporary PIN
         const encryptedPin = encryptPin(tempPin);
         logger.info(
-          { customerId: customerId.slice(-4) },
+          { customerId: normalizedCustomerId.slice(-4) },
           "📝 Encrypted temporary PIN"
         );
 
@@ -734,11 +744,11 @@ class DataService {
         const customer = await trx
           .selectFrom("customers")
           .select("id")
-          .where("customer_id", "=", customerId)
+          .where("customer_id", "=", normalizedCustomerId)
           .executeTakeFirst();
 
         if (!customer) {
-          throw new Error(`Customer not found: ${customerId}`);
+          throw new Error(`Customer not found: ${normalizedCustomerId}`);
         }
 
         // Update the PIN
@@ -748,11 +758,11 @@ class DataService {
             encrypted_pin: encryptedPin,
             updated_at: new Date(),
           })
-          .where("customer_id", "=", customerId)
+          .where("customer_id", "=", normalizedCustomerId)
           .execute();
 
         logger.info(
-          { customerId: customerId.slice(-4) },
+          { customerId: normalizedCustomerId.slice(-4) },
           "✅ Temporary PIN stored in customers.encrypted_pin"
         );
 
@@ -761,8 +771,8 @@ class DataService {
           .insertInto("audit_log")
           .values({
             event_type: "PIN_RESET",
-            customer_id: customerId,
-            lg_customer_id: lgCustomerId || null,
+            customer_id: normalizedCustomerId,
+            lg_customer_id: normalizedLgCustomerId || null,
             details: JSON.stringify({
               action: "CUSTOMER_ACTIVATED",
               timestamp: new Date().toISOString(),
@@ -775,8 +785,8 @@ class DataService {
 
         logger.info(
           {
-            customerId: customerId.slice(-4),
-            lgCustomerId: lgCustomerId?.slice(-4),
+            customerId: normalizedCustomerId.slice(-4),
+            lgCustomerId: normalizedLgCustomerId?.slice(-4),
           },
           "📋 Audit log entry created for PIN_RESET"
         );
@@ -785,8 +795,8 @@ class DataService {
       logger.error(
         {
           error: error instanceof Error ? error.message : String(error),
-          customerId: customerId.slice(-4),
-          lgCustomerId: lgCustomerId?.slice(-4),
+          customerId: normalizedCustomerId.slice(-4),
+          lgCustomerId: normalizedLgCustomerId?.slice(-4),
         },
         "❌ Failed to reset customer PIN"
       );
@@ -811,7 +821,10 @@ class DataService {
   ): Promise<void> {
     const db = databaseManager.getKysely();
 
-    logger.info({ customerId: customerId.slice(-4) }, "Updating customer PIN");
+    // Normalize customer ID to uppercase for case-insensitive comparison
+    const normalizedCustomerId = customerId.toUpperCase();
+
+    logger.info({ customerId: normalizedCustomerId.slice(-4) }, "Updating customer PIN");
 
     try {
       await db
@@ -820,18 +833,18 @@ class DataService {
           encrypted_pin: encryptedPin,
           updated_at: new Date(),
         })
-        .where("customer_id", "=", customerId)
+        .where("customer_id", "=", normalizedCustomerId)
         .execute();
 
       logger.info(
-        { customerId: customerId.slice(-4) },
+        { customerId: normalizedCustomerId.slice(-4) },
         "Customer PIN updated successfully"
       );
     } catch (error) {
       logger.error(
         {
           error: error instanceof Error ? error.message : String(error),
-          customerId: customerId.slice(-4),
+          customerId: normalizedCustomerId.slice(-4),
         },
         "Failed to update customer PIN"
       );
@@ -850,11 +863,15 @@ class DataService {
   ): Promise<void> {
     const db = databaseManager.getKysely();
 
+    // Normalize customer IDs to uppercase for case-insensitive comparison
+    const normalizedCustomerId = customerId.toUpperCase();
+    const normalizedAssignedBy = assignedBy.toUpperCase();
+
     logger.info(
       {
-        customerId: customerId.slice(-4),
+        customerId: normalizedCustomerId.slice(-4),
         newRole: role,
-        assignedBy: assignedBy.slice(-4),
+        assignedBy: normalizedAssignedBy.slice(-4),
       },
       "Assigning agent role to customer"
     );
@@ -866,14 +883,14 @@ class DataService {
           role: role,
           updated_at: new Date(),
         })
-        .where("customer_id", "=", customerId)
+        .where("customer_id", "=", normalizedCustomerId)
         .execute();
 
       logger.info(
         {
-          customerId: customerId.slice(-4),
+          customerId: normalizedCustomerId.slice(-4),
           newRole: role,
-          assignedBy: assignedBy.slice(-4),
+          assignedBy: normalizedAssignedBy.slice(-4),
         },
         "Agent role assigned successfully"
       );
@@ -881,7 +898,7 @@ class DataService {
       logger.error(
         {
           error: error instanceof Error ? error.message : String(error),
-          customerId: customerId.slice(-4),
+          customerId: normalizedCustomerId.slice(-4),
           role: role,
         },
         "Failed to assign agent role"
@@ -1022,8 +1039,11 @@ class DataService {
   ): Promise<BeanDistributionOTPRecord | null> {
     const db = databaseManager.getKysely();
 
+    // Normalize customer ID to uppercase for case-insensitive comparison
+    const normalizedCustomerId = customerId.toUpperCase();
+
     logger.info(
-      { customerId: customerId.slice(-4) },
+      { customerId: normalizedCustomerId.slice(-4) },
       "Validating bean distribution OTP"
     );
 
@@ -1031,7 +1051,7 @@ class DataService {
       const result = await db
         .selectFrom("bean_distribution_otps")
         .selectAll()
-        .where("customer_id", "=", customerId)
+        .where("customer_id", "=", normalizedCustomerId)
         .where("otp", "=", otp)
         .where("is_valid", "=", true)
         .where("used_at", "is", null)
@@ -1039,7 +1059,7 @@ class DataService {
 
       if (!result) {
         logger.warn(
-          { customerId: customerId.slice(-4) },
+          { customerId: normalizedCustomerId.slice(-4) },
           "OTP not found or already used"
         );
         return null;
@@ -1048,7 +1068,7 @@ class DataService {
       // Check if expired
       const now = new Date();
       if (now > result.expires_at) {
-        logger.warn({ customerId: customerId.slice(-4) }, "OTP has expired");
+        logger.warn({ customerId: normalizedCustomerId.slice(-4) }, "OTP has expired");
         // Mark as invalid
         await db
           .updateTable("bean_distribution_otps")
@@ -1248,10 +1268,14 @@ class DataService {
   ): Promise<BeanDeliveryConfirmationRecord | null> {
     const db = databaseManager.getKysely();
 
+    // Normalize customer IDs to uppercase for case-insensitive comparison
+    const normalizedCustomerId = customerId.toUpperCase();
+    const normalizedLgCustomerId = lgCustomerId.toUpperCase();
+
     logger.info(
       {
-        customerId: customerId.slice(-4),
-        lgCustomerId: lgCustomerId.slice(-4),
+        customerId: normalizedCustomerId.slice(-4),
+        lgCustomerId: normalizedLgCustomerId.slice(-4),
       },
       "Getting delivery confirmation"
     );
@@ -1260,8 +1284,8 @@ class DataService {
       const result = await db
         .selectFrom("bean_delivery_confirmations")
         .selectAll()
-        .where("customer_id", "=", customerId)
-        .where("lg_customer_id", "=", lgCustomerId)
+        .where("customer_id", "=", normalizedCustomerId)
+        .where("lg_customer_id", "=", normalizedLgCustomerId)
         .orderBy("created_at", "desc")
         .executeTakeFirst();
 
@@ -1520,10 +1544,14 @@ class DataService {
     const { config } = await import("../config.js");
     const encryptionKey = config.SYSTEM.ENCRYPTION_KEY;
 
+    // Normalize customer IDs to uppercase for case-insensitive comparison
+    const normalizedLgCustomerId = lgCustomerId.toUpperCase();
+    const normalizedCustomerId = customerId.toUpperCase();
+
     logger.info(
       {
-        lgCustomerId: lgCustomerId.slice(-4),
-        customerId: customerId.slice(-4),
+        lgCustomerId: normalizedLgCustomerId.slice(-4),
+        customerId: normalizedCustomerId.slice(-4),
       },
       "Updating claim survey form"
     );
@@ -1542,8 +1570,8 @@ class DataService {
           survey_form: encryptedJson,
           survey_form_updated_at: new Date(),
         })
-        .where("lg_customer_id", "=", lgCustomerId)
-        .where("customer_id", "=", customerId)
+        .where("lg_customer_id", "=", normalizedLgCustomerId)
+        .where("customer_id", "=", normalizedCustomerId)
         .executeTakeFirst();
 
       // If no claim exists, create one
@@ -1551,8 +1579,8 @@ class DataService {
         await db
           .insertInto("household_claims")
           .values({
-            lg_customer_id: lgCustomerId,
-            customer_id: customerId,
+            lg_customer_id: normalizedLgCustomerId,
+            customer_id: normalizedCustomerId,
             is_1000_day_household: false, // Will be updated when claim is submitted
             claim_submitted_at: new Date(),
             survey_form: encryptedJson,
@@ -1566,7 +1594,7 @@ class DataService {
       logger.error(
         {
           error: error instanceof Error ? error.message : String(error),
-          customerId: customerId.slice(-4),
+          customerId: normalizedCustomerId.slice(-4),
         },
         "Failed to update claim survey form"
       );
@@ -1586,10 +1614,14 @@ class DataService {
     const { config } = await import("../config.js");
     const encryptionKey = config.SYSTEM.ENCRYPTION_KEY;
 
+    // Normalize customer IDs to uppercase for case-insensitive comparison
+    const normalizedLgCustomerId = lgCustomerId.toUpperCase();
+    const normalizedCustomerId = customerId.toUpperCase();
+
     logger.debug(
       {
-        lgCustomerId: lgCustomerId.slice(-4),
-        customerId: customerId.slice(-4),
+        lgCustomerId: normalizedLgCustomerId.slice(-4),
+        customerId: normalizedCustomerId.slice(-4),
       },
       "Fetching claim by LG and customer"
     );
@@ -1598,8 +1630,8 @@ class DataService {
       const result = await db
         .selectFrom("household_claims")
         .selectAll()
-        .where("lg_customer_id", "=", lgCustomerId)
-        .where("customer_id", "=", customerId)
+        .where("lg_customer_id", "=", normalizedLgCustomerId)
+        .where("customer_id", "=", normalizedCustomerId)
         .orderBy("created_at", "desc")
         .executeTakeFirst();
 
