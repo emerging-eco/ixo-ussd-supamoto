@@ -268,7 +268,9 @@ const loadCustomerDataService = fromPromise(
     );
 
     try {
-      const customerData = await dataService.getCustomerByCustomerId(input.customerId);
+      const customerData = await dataService.getCustomerByCustomerId(
+        input.customerId
+      );
 
       if (!customerData) {
         logger.warn(
@@ -436,7 +438,9 @@ const verifyCredentialsService = fromPromise(
     // Step 4: Load customer data from USSD database (optional - don't fail if this fails)
     let customerData: CustomerRecord | null = null;
     try {
-      customerData = await dataService.getCustomerByCustomerId(input.customerId);
+      customerData = await dataService.getCustomerByCustomerId(
+        input.customerId
+      );
       if (customerData) {
         logger.info(
           {
