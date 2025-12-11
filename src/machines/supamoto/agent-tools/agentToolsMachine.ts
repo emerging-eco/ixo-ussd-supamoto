@@ -338,47 +338,79 @@ const submitBeanClaimIntentService = fromPromise(
           height: result.height,
           eventsCount: result.events?.length || 0,
           msgResponsesCount: result.msgResponses?.length || 0,
+          hasRawLog: !!result.rawLog,
         },
         "Blockchain transaction completed, extracting claim intent ID"
       );
 
-      // Extract claim intent ID from msgResponses (protobuf decoded response)
+      // Extract claim intent ID from rawLog (JSON format)
       let claimIntentId: string | undefined;
 
-      if (result.msgResponses && result.msgResponses.length > 0) {
-        // The first msgResponse should be MsgClaimIntentResponse
-        const msgResponse = result.msgResponses[0];
-
-        logger.debug(
-          {
-            customerId: input.customerId.slice(-4),
-            msgResponseTypeUrl: msgResponse.typeUrl,
-            msgResponseValue: msgResponse.value,
-          },
-          "Examining msgResponse for claim intent ID"
-        );
-
-        // Try to decode the response
+      // Try to parse rawLog which contains the transaction events in JSON format
+      if (result.rawLog) {
         try {
-          // The msgResponse.value is a Uint8Array containing the protobuf-encoded response
-          // For MsgClaimIntentResponse, it should contain the claim_intent_id field
-          const decoded = ixo.claims.v1beta1.MsgClaimIntentResponse.decode(msgResponse.value);
-          claimIntentId = decoded.claimIntentId;
+          const logs = JSON.parse(result.rawLog);
 
-          logger.info(
+          logger.debug(
             {
               customerId: input.customerId.slice(-4),
-              claimIntentId,
+              logsType: typeof logs,
+              logsIsArray: Array.isArray(logs),
+              logsLength: Array.isArray(logs) ? logs.length : 0,
             },
-            "Successfully decoded claim intent ID from msgResponse"
+            "Parsed rawLog"
           );
-        } catch (decodeError) {
+
+          // rawLog is an array of log entries, each with events
+          if (Array.isArray(logs) && logs.length > 0) {
+            // Look through all events in all logs
+            for (const log of logs) {
+              if (log.events && Array.isArray(log.events)) {
+                for (const event of log.events) {
+                  // Look for the claim intent created event
+                  if (event.type === "ixo.claims.v1beta1.ClaimIntentCreated" ||
+                      event.type === "claim_intent_created") {
+                    // Find the claim_intent_id attribute
+                    const idAttr = event.attributes?.find(
+                      (attr: any) => attr.key === "claim_intent_id" || attr.key === "claimIntentId"
+                    );
+                    if (idAttr) {
+                      claimIntentId = idAttr.value;
+                      logger.info(
+                        {
+                          customerId: input.customerId.slice(-4),
+                          claimIntentId,
+                          eventType: event.type,
+                        },
+                        "Successfully extracted claim intent ID from rawLog"
+                      );
+                      break;
+                    }
+                  }
+                }
+              }
+              if (claimIntentId) break;
+            }
+          }
+
+          // If not found, log the full structure for debugging
+          if (!claimIntentId) {
+            logger.warn(
+              {
+                customerId: input.customerId.slice(-4),
+                logs: logs,
+              },
+              "Could not find claim intent ID in rawLog, logging full structure"
+            );
+          }
+        } catch (parseError) {
           logger.error(
             {
               customerId: input.customerId.slice(-4),
-              error: decodeError instanceof Error ? decodeError.message : String(decodeError),
+              error: parseError instanceof Error ? parseError.message : String(parseError),
+              rawLog: result.rawLog.substring(0, 500),
             },
-            "Failed to decode MsgClaimIntentResponse"
+            "Failed to parse rawLog"
           );
         }
       }
@@ -390,6 +422,7 @@ const submitBeanClaimIntentService = fromPromise(
             txHash: result.transactionHash,
             msgResponsesCount: result.msgResponses?.length || 0,
             eventsCount: result.events?.length || 0,
+            hasRawLog: !!result.rawLog,
           },
           "Failed to extract claim intent ID from transaction"
         );
@@ -714,39 +747,69 @@ const submitBeanClaimService = fromPromise(
       memo: `Bean delivery claim for customer ${input.customerId}`,
     });
 
-    // Extract claim ID from msgResponses (protobuf decoded response)
+    // Extract claim ID from rawLog (JSON format)
     let claimId: string | undefined;
 
-    if (result.msgResponses && result.msgResponses.length > 0) {
-      const msgResponse = result.msgResponses[0];
-
-      logger.debug(
-        {
-          customerId: input.customerId.slice(-4),
-          msgResponseTypeUrl: msgResponse.typeUrl,
-        },
-        "Examining msgResponse for claim ID"
-      );
-
+    if (result.rawLog) {
       try {
-        // Decode MsgSubmitClaimResponse to get claim_id
-        const decoded = ixo.claims.v1beta1.MsgSubmitClaimResponse.decode(msgResponse.value);
-        claimId = decoded.claimId;
+        const logs = JSON.parse(result.rawLog);
 
-        logger.info(
+        logger.debug(
           {
             customerId: input.customerId.slice(-4),
-            claimId,
+            logsType: typeof logs,
+            logsIsArray: Array.isArray(logs),
           },
-          "Successfully decoded claim ID from msgResponse"
+          "Parsed rawLog for claim submission"
         );
-      } catch (decodeError) {
+
+        // Look through all events in all logs
+        if (Array.isArray(logs) && logs.length > 0) {
+          for (const log of logs) {
+            if (log.events && Array.isArray(log.events)) {
+              for (const event of log.events) {
+                // Look for the claim submitted event
+                if (event.type === "ixo.claims.v1beta1.ClaimSubmitted" ||
+                    event.type === "claim_submitted") {
+                  const idAttr = event.attributes?.find(
+                    (attr: any) => attr.key === "claim_id" || attr.key === "claimId"
+                  );
+                  if (idAttr) {
+                    claimId = idAttr.value;
+                    logger.info(
+                      {
+                        customerId: input.customerId.slice(-4),
+                        claimId,
+                        eventType: event.type,
+                      },
+                      "Successfully extracted claim ID from rawLog"
+                    );
+                    break;
+                  }
+                }
+              }
+            }
+            if (claimId) break;
+          }
+        }
+
+        if (!claimId) {
+          logger.warn(
+            {
+              customerId: input.customerId.slice(-4),
+              logs: logs,
+            },
+            "Could not find claim ID in rawLog, logging full structure"
+          );
+        }
+      } catch (parseError) {
         logger.error(
           {
             customerId: input.customerId.slice(-4),
-            error: decodeError instanceof Error ? decodeError.message : String(decodeError),
+            error: parseError instanceof Error ? parseError.message : String(parseError),
+            rawLog: result.rawLog.substring(0, 500),
           },
-          "Failed to decode MsgSubmitClaimResponse"
+          "Failed to parse rawLog for claim submission"
         );
       }
     }
@@ -756,7 +819,7 @@ const submitBeanClaimService = fromPromise(
         {
           customerId: input.customerId.slice(-4),
           txHash: result.transactionHash,
-          msgResponsesCount: result.msgResponses?.length || 0,
+          hasRawLog: !!result.rawLog,
         },
         "Failed to extract claim ID from transaction"
       );
