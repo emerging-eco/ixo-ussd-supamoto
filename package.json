@@ -13,7 +13,7 @@
     "build:copy": "node scripts/build/copy-migrations.js",
     "build:verify": "node scripts/build/verify-build.js",
     "copy-sql": "node scripts/build/copy-migrations.js",
-    "dev": "NODE_ENV=dev node --watch --env-file=.env --loader ts-node/esm src/index.ts --no-warnings",
+    "dev": "NODE_ENV=dev node --watch --env-file=.env.local --loader ts-node/esm src/index.ts --no-warnings",
     "start": "node scripts/build/start-production.js",
     "test": "vitest --run --reporter=verbose",
     "test:watch": "vitest",
@@ -33,7 +33,9 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,md}\" \"*.{ts,tsx,js,jsx,json,md}\"",
     "lint": "eslint \"src/**/*.{ts,tsx,js,jsx}\" \"tests/**/*.{ts,tsx,js,jsx}\" --fix",
     "validate:machines": "node scripts/validate-machines.js",
-    "view:db-queries": "NODE_ENV=dev NODE_OPTIONS='--loader ts-node/esm' ts-node --require dotenv/config scripts/db-queries.ts"
+    "validate:csv": "NODE_OPTIONS='--loader ts-node/esm' ts-node scripts/validate-csv-import.ts",
+    "view:db-queries": "NODE_ENV=dev NODE_OPTIONS='--loader ts-node/esm' ts-node --require dotenv/config scripts/db-queries.ts",
+    "import:customers": "NODE_ENV=dev NODE_OPTIONS='--loader ts-node/esm' ts-node --require dotenv/config scripts/import-customers-from-csv.ts"
   },
   "engines": {
     "node": ">=20"

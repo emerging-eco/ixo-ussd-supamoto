@@ -824,7 +824,10 @@ class DataService {
     // Normalize customer ID to uppercase for case-insensitive comparison
     const normalizedCustomerId = customerId.toUpperCase();
 
-    logger.info({ customerId: normalizedCustomerId.slice(-4) }, "Updating customer PIN");
+    logger.info(
+      { customerId: normalizedCustomerId.slice(-4) },
+      "Updating customer PIN"
+    );
 
     try {
       await db
@@ -1068,7 +1071,10 @@ class DataService {
       // Check if expired
       const now = new Date();
       if (now > result.expires_at) {
-        logger.warn({ customerId: normalizedCustomerId.slice(-4) }, "OTP has expired");
+        logger.warn(
+          { customerId: normalizedCustomerId.slice(-4) },
+          "OTP has expired"
+        );
         // Mark as invalid
         await db
           .updateTable("bean_distribution_otps")

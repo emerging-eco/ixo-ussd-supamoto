@@ -11,6 +11,12 @@
  * 2. LG submits customer's OTP → blockchain MsgSubmitClaim (useIntent=true)
  * 3. Customer confirms receipt → blockchain MsgEvaluateClaim (APPROVED)
  * 4. LG confirms delivery → record logged
+ *
+ * Architecture:
+ * - Each Lead Generator signs blockchain transactions with their own mnemonic
+ * - Mnemonics are retrieved from the Claims Bot Database (supamoto_db)
+ * - This ensures proper accountability and traceability on the blockchain
+ * - No shared wallet credentials are used
  */
 
 import { setup, assign, fromPromise } from "xstate";
@@ -33,6 +39,7 @@ import {
   lgValidOTPSMS,
 } from "../../../templates/sms/otp.js";
 import { getSecpClient } from "../../../utils/secp.js";
+import { getCustomerIxoAccount } from "../../../services/ixo-account-service.js";
 
 const logger = createModuleLogger("agentTools");
 
@@ -142,7 +149,9 @@ const fetchCustomerDataService = fromPromise(
           { customerId: input.customerId },
           "No primary phone number found for customer"
         );
-        throw new Error(`No phone number found for customer ${input.customerId}`);
+        throw new Error(
+          `No phone number found for customer ${input.customerId}`
+        );
       }
 
       logger.info(
@@ -158,7 +167,8 @@ const fetchCustomerDataService = fromPromise(
         customerPhone: phoneResult.phone_number,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       logger.error(
         {
           customerId: input.customerId.slice(-4),
@@ -206,7 +216,8 @@ const checkVoucherService = fromPromise(
         },
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       logger.error(
         {
           customerId: input.customerId.slice(-4),
@@ -238,28 +249,43 @@ const submitBeanClaimIntentService = fromPromise(
     );
 
     try {
-      // Get LG wallet details
+      // Get LG's IXO account from Claims Bot Database
       logger.debug(
         {
           customerId: input.customerId.slice(-4),
-          hasMnemonic: !!config.BEAN_DISTRIBUTION.LG_WALLET_MNEMONIC,
+          lgCustomerId: input.lgCustomerId.slice(-4),
         },
-        "Getting LG wallet from mnemonic"
+        "Fetching LG's IXO account from Claims Bot Database"
       );
 
-      const lgWallet = await getSecpClient(
-        config.BEAN_DISTRIBUTION.LG_WALLET_MNEMONIC
-      );
+      const lgIxoAccount = await getCustomerIxoAccount(input.lgCustomerId);
+
+      if (!lgIxoAccount) {
+        logger.error(
+          { lgCustomerId: input.lgCustomerId.slice(-4) },
+          "Lead Generator does not have an IXO account"
+        );
+        throw new Error(
+          "Lead Generator does not have an IXO account. Please contact support."
+        );
+      }
+
+      // Convert Buffer to string (SDK already decrypted the mnemonic)
+      const lgMnemonic = lgIxoAccount.encryptedMnemonic.toString("utf-8");
+
+      // Create wallet from LG's mnemonic
+      const lgWallet = await getSecpClient(lgMnemonic);
       const lgAddress = lgWallet.baseAccount.address;
-      const lgDid = `did:ixo:${lgAddress}`;
+      const lgDid = lgWallet.did;
 
       logger.debug(
         {
           customerId: input.customerId.slice(-4),
+          lgCustomerId: input.lgCustomerId.slice(-4),
           lgAddress: lgAddress.slice(0, 10) + "...",
           lgDid,
         },
-        "LG wallet retrieved successfully"
+        "LG wallet retrieved successfully from database"
       );
 
       // Get customer's claim collection ID (default to 120 for bean distribution)
@@ -274,9 +300,9 @@ const submitBeanClaimIntentService = fromPromise(
         "Preparing to submit claim intent to blockchain"
       );
 
-      // Submit claim intent to blockchain
+      // Submit claim intent to blockchain using LG's mnemonic
       const result = await submitClaimIntent({
-        mnemonic: config.BEAN_DISTRIBUTION.LG_WALLET_MNEMONIC,
+        mnemonic: lgMnemonic,
         chainRpcUrl: CHAIN_RPC_URL,
         intent: {
           collectionId,
@@ -308,7 +334,10 @@ const submitBeanClaimIntentService = fromPromise(
             txHash: result.transactionHash,
             events: result.events.map(e => ({
               type: e.type,
-              attributes: e.attributes.map(a => ({ key: a.key, value: a.value })),
+              attributes: e.attributes.map(a => ({
+                key: a.key,
+                value: a.value,
+              })),
             })),
           },
           "Failed to extract claim intent ID from transaction events"
@@ -331,7 +360,8 @@ const submitBeanClaimIntentService = fromPromise(
         claimIntentResponse: result,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
 
       logger.error(
@@ -473,7 +503,8 @@ const generateAndSendOTPService = fromPromise(
         otpId: otpRecord.id,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       logger.error(
         {
           customerId: input.customerId.slice(-4),
@@ -559,19 +590,51 @@ const submitBeanClaimService = fromPromise(
       "Submitting bean claim to blockchain"
     );
 
-    // Get LG wallet details
-    const lgWallet = await getSecpClient(
-      config.BEAN_DISTRIBUTION.LG_WALLET_MNEMONIC
+    // Get LG's IXO account from Claims Bot Database
+    logger.debug(
+      {
+        customerId: input.customerId.slice(-4),
+        lgCustomerId: input.lgCustomerId.slice(-4),
+      },
+      "Fetching LG's IXO account from Claims Bot Database"
     );
+
+    const lgIxoAccount = await getCustomerIxoAccount(input.lgCustomerId);
+
+    if (!lgIxoAccount) {
+      logger.error(
+        { lgCustomerId: input.lgCustomerId.slice(-4) },
+        "Lead Generator does not have an IXO account"
+      );
+      throw new Error(
+        "Lead Generator does not have an IXO account. Please contact support."
+      );
+    }
+
+    // Convert Buffer to string (SDK already decrypted the mnemonic)
+    const lgMnemonic = lgIxoAccount.encryptedMnemonic.toString("utf-8");
+
+    // Create wallet from LG's mnemonic
+    const lgWallet = await getSecpClient(lgMnemonic);
     const lgAddress = lgWallet.baseAccount.address;
-    const lgDid = `did:ixo:${lgAddress}`;
+    const lgDid = lgWallet.did;
+
+    logger.debug(
+      {
+        customerId: input.customerId.slice(-4),
+        lgCustomerId: input.lgCustomerId.slice(-4),
+        lgAddress: lgAddress.slice(0, 10) + "...",
+        lgDid,
+      },
+      "LG wallet retrieved successfully from database"
+    );
 
     // Get customer's claim collection ID
     const collectionId = config.BEAN_DISTRIBUTION.COLLECTION_ID;
 
-    // Submit claim with useIntent=true to link to the claim intent
+    // Submit claim with useIntent=true to link to the claim intent using LG's mnemonic
     const result = await submitClaim({
-      mnemonic: config.BEAN_DISTRIBUTION.LG_WALLET_MNEMONIC,
+      mnemonic: lgMnemonic,
       chainRpcUrl: CHAIN_RPC_URL,
       claim: {
         collectionId,
@@ -789,7 +852,8 @@ const storeIntentInDatabaseService = fromPromise(
         intentId: intent.id,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       logger.error(
         {
           customerId: input.customerId.slice(-4),
@@ -895,7 +959,10 @@ export const agentToolsMachine = setup({
           }
           // Handle string errors
           if (typeof err === "string") {
-            logger.error({ errorMessage: err }, "State machine string error captured");
+            logger.error(
+              { errorMessage: err },
+              "State machine string error captured"
+            );
             return err;
           }
           // Handle other error types

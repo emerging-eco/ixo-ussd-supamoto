@@ -847,31 +847,36 @@ SMS_RETRY_ATTEMPTS=3
 TIMEZONE=Africa/Nairobi
 ```
 
-#### 8. Bean Distribution Configuration (CRITICAL - Wallet Mnemonics)
-
-⚠️ **EXTREMELY SENSITIVE**: These wallet mnemonics control blockchain transactions. **NEVER commit to version control.**
+#### 8. Bean Distribution Configuration
 
 ```bash
 # Bean distribution collection ID
 BEAN_DISTRIBUTION_COLLECTION_ID=120
 
-# Lead Generator wallet mnemonic (24 words)
-LG_WALLET_MNEMONIC="word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20 word21 word22 word23 word24"
+# DEPRECATED: LG_WALLET_MNEMONIC is no longer required
+# Each Lead Generator now uses their own mnemonic from the Claims Bot Database
+# The system automatically retrieves the logged-in LG's mnemonic when submitting claims
+# This variable can be omitted or left empty
+# LG_WALLET_MNEMONIC=""
 
-# Evaluator wallet mnemonic (24 words)
+# Evaluator wallet mnemonic (24 words) - CRITICAL if using a single evaluator service
+# NOTE: If evaluators are individual users, update the code to use their mnemonics from the database
 EVALUATOR_WALLET_MNEMONIC="word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12 word13 word14 word15 word16 word17 word18 word19 word20 word21 word22 word23 word24"
 ```
 
-**Setting wallet mnemonics securely**:
+⚠️ **IMPORTANT ARCHITECTURE CHANGE**:
+- **Lead Generators**: Each LG now signs blockchain transactions with their own mnemonic stored in the Claims Bot Database
+- **Evaluators**: If using a single evaluator service, set `EVALUATOR_WALLET_MNEMONIC`. If evaluators are individual users, update the code to retrieve their mnemonics from the database.
+
+**Setting evaluator wallet mnemonic securely** (if needed):
 
 ```bash
-# Store mnemonics in a secure password manager
+# Store mnemonic in a secure password manager
 # Set on Railway via CLI (not visible in terminal history)
-railway variables set LG_WALLET_MNEMONIC="your 24 word mnemonic here"
 railway variables set EVALUATOR_WALLET_MNEMONIC="your 24 word mnemonic here"
 
-# Verify they're set (values are hidden)
-railway variables | grep WALLET
+# Verify it's set (value is hidden)
+railway variables | grep EVALUATOR_WALLET
 ```
 
 #### 9. Claims Retry Configuration
