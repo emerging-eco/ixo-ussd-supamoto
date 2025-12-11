@@ -20,7 +20,7 @@
  */
 
 import { setup, assign, fromPromise } from "xstate";
-import { ixo } from "@ixo/impactxclient-sdk";
+// import { ixo } from "@ixo/impactxclient-sdk";
 import { dataService } from "../../../services/database-storage.js";
 import { databaseManager } from "../../../services/database-manager.js";
 import { createModuleLogger } from "../../../services/logger.js";
@@ -41,6 +41,7 @@ import {
 } from "../../../templates/sms/otp.js";
 import { getSecpClient } from "../../../utils/secp.js";
 import { getCustomerIxoAccount } from "../../../services/ixo-account-service.js";
+import { getCustomerCollectionId } from "../../../services/claims-bot-api-client.js";
 
 const logger = createModuleLogger("agentTools");
 
@@ -307,8 +308,23 @@ const submitBeanClaimIntentService = fromPromise(
         "LG wallet retrieved successfully from database"
       );
 
-      // Get customer's claim collection ID (default to 120 for bean distribution)
-      const collectionId = config.BEAN_DISTRIBUTION.COLLECTION_ID;
+      // Get customer's claim collection ID from Claims Bot API
+      logger.info(
+        { customerId: input.customerId.slice(-4) },
+        "Fetching customer's collection ID from Claims Bot API"
+      );
+
+      const collectionId = await getCustomerCollectionId(input.customerId);
+
+      if (!collectionId) {
+        logger.error(
+          { customerId: input.customerId.slice(-4) },
+          "Customer does not have a collection ID. Cannot submit claim intent."
+        );
+        throw new Error(
+          `Customer ${input.customerId} does not have a collection ID. The customer may not have been onboarded to the Claims Bot system.`
+        );
+      }
 
       logger.debug(
         {
@@ -731,8 +747,31 @@ const submitBeanClaimService = fromPromise(
       "LG wallet retrieved successfully from database"
     );
 
-    // Get customer's claim collection ID
-    const collectionId = config.BEAN_DISTRIBUTION.COLLECTION_ID;
+    // Get customer's claim collection ID from Claims Bot API
+    logger.info(
+      { customerId: input.customerId.slice(-4) },
+      "Fetching customer's collection ID from Claims Bot API for claim submission"
+    );
+
+    const collectionId = await getCustomerCollectionId(input.customerId);
+
+    if (!collectionId) {
+      logger.error(
+        { customerId: input.customerId.slice(-4) },
+        "Customer does not have a collection ID. Cannot submit claim."
+      );
+      throw new Error(
+        `Customer ${input.customerId} does not have a collection ID. The customer may not have been onboarded to the Claims Bot system.`
+      );
+    }
+
+    logger.debug(
+      {
+        customerId: input.customerId.slice(-4),
+        collectionId,
+      },
+      "Collection ID retrieved, preparing to submit claim"
+    );
 
     // Submit claim with useIntent=true to link to the claim intent using LG's mnemonic
     const result = await submitClaim({
