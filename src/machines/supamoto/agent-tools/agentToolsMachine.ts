@@ -20,6 +20,7 @@
  */
 
 import { setup, assign, fromPromise } from "xstate";
+import { ixo } from "@ixo/impactxclient-sdk";
 import { dataService } from "../../../services/database-storage.js";
 import { databaseManager } from "../../../services/database-manager.js";
 import { createModuleLogger } from "../../../services/logger.js";
@@ -336,34 +337,63 @@ const submitBeanClaimIntentService = fromPromise(
           txHash: result.transactionHash,
           height: result.height,
           eventsCount: result.events?.length || 0,
+          msgResponsesCount: result.msgResponses?.length || 0,
         },
         "Blockchain transaction completed, extracting claim intent ID"
       );
 
-      // Extract claim intent ID from transaction events
-      let claimIntentId = result.events
-        .find(e => e.type === "ixo.claims.v1beta1.ClaimIntentCreated")
-        ?.attributes.find(a => a.key === "claim_intent_id")?.value;
+      // Extract claim intent ID from msgResponses (protobuf decoded response)
+      let claimIntentId: string | undefined;
 
-      // TEMPORARY: Use transaction hash as claim intent ID for testing
-      // TODO: Fix event parsing to extract actual claim intent ID from blockchain events
+      if (result.msgResponses && result.msgResponses.length > 0) {
+        // The first msgResponse should be MsgClaimIntentResponse
+        const msgResponse = result.msgResponses[0];
+
+        logger.debug(
+          {
+            customerId: input.customerId.slice(-4),
+            msgResponseTypeUrl: msgResponse.typeUrl,
+            msgResponseValue: msgResponse.value,
+          },
+          "Examining msgResponse for claim intent ID"
+        );
+
+        // Try to decode the response
+        try {
+          // The msgResponse.value is a Uint8Array containing the protobuf-encoded response
+          // For MsgClaimIntentResponse, it should contain the claim_intent_id field
+          const decoded = ixo.claims.v1beta1.MsgClaimIntentResponse.decode(msgResponse.value);
+          claimIntentId = decoded.claimIntentId;
+
+          logger.info(
+            {
+              customerId: input.customerId.slice(-4),
+              claimIntentId,
+            },
+            "Successfully decoded claim intent ID from msgResponse"
+          );
+        } catch (decodeError) {
+          logger.error(
+            {
+              customerId: input.customerId.slice(-4),
+              error: decodeError instanceof Error ? decodeError.message : String(decodeError),
+            },
+            "Failed to decode MsgClaimIntentResponse"
+          );
+        }
+      }
+
       if (!claimIntentId) {
-        logger.warn(
+        logger.error(
           {
             customerId: input.customerId.slice(-4),
             txHash: result.transactionHash,
-            events: result.events.map(e => ({
-              type: e.type,
-              attributes: e.attributes.map(a => ({
-                key: a.key,
-                value: a.value,
-              })),
-            })),
+            msgResponsesCount: result.msgResponses?.length || 0,
+            eventsCount: result.events?.length || 0,
           },
-          "Failed to extract claim intent ID from transaction events - using txHash as fallback"
+          "Failed to extract claim intent ID from transaction"
         );
-        // Use transaction hash as a temporary claim intent ID
-        claimIntentId = result.transactionHash;
+        throw new Error("Failed to extract claim intent ID from transaction");
       }
 
       logger.info(
@@ -684,12 +714,52 @@ const submitBeanClaimService = fromPromise(
       memo: `Bean delivery claim for customer ${input.customerId}`,
     });
 
-    // Extract claim ID from transaction events
-    const claimId = result.events
-      .find(e => e.type === "ixo.claims.v1beta1.ClaimSubmitted")
-      ?.attributes.find(a => a.key === "claim_id")?.value;
+    // Extract claim ID from msgResponses (protobuf decoded response)
+    let claimId: string | undefined;
+
+    if (result.msgResponses && result.msgResponses.length > 0) {
+      const msgResponse = result.msgResponses[0];
+
+      logger.debug(
+        {
+          customerId: input.customerId.slice(-4),
+          msgResponseTypeUrl: msgResponse.typeUrl,
+        },
+        "Examining msgResponse for claim ID"
+      );
+
+      try {
+        // Decode MsgSubmitClaimResponse to get claim_id
+        const decoded = ixo.claims.v1beta1.MsgSubmitClaimResponse.decode(msgResponse.value);
+        claimId = decoded.claimId;
+
+        logger.info(
+          {
+            customerId: input.customerId.slice(-4),
+            claimId,
+          },
+          "Successfully decoded claim ID from msgResponse"
+        );
+      } catch (decodeError) {
+        logger.error(
+          {
+            customerId: input.customerId.slice(-4),
+            error: decodeError instanceof Error ? decodeError.message : String(decodeError),
+          },
+          "Failed to decode MsgSubmitClaimResponse"
+        );
+      }
+    }
 
     if (!claimId) {
+      logger.error(
+        {
+          customerId: input.customerId.slice(-4),
+          txHash: result.transactionHash,
+          msgResponsesCount: result.msgResponses?.length || 0,
+        },
+        "Failed to extract claim ID from transaction"
+      );
       throw new Error("Failed to extract claim ID from transaction");
     }
 
