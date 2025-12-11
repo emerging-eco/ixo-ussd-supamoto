@@ -64,13 +64,20 @@ export async function submitLeadCreationClaim(
 
       try {
         // Submit Lead Creation Claim via SDK with timeout
+        const timeoutMs = config.CLAIMS_SUBMISSION.TIMEOUT_MS;
+        const timeoutSeconds = Math.round(timeoutMs / 1000);
+
         const claimResult = await Promise.race([
           submitClaimToBot(params),
           new Promise<never>((_, reject) =>
             setTimeout(
               () =>
-                reject(new Error("Claim submission timeout after 15 seconds")),
-              15000
+                reject(
+                  new Error(
+                    `Claim submission timeout after ${timeoutSeconds} seconds`
+                  )
+                ),
+              timeoutMs
             )
           ),
         ]);

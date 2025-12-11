@@ -256,9 +256,20 @@ export const config = {
     RETRY_DELAYS_MINUTES: [5, 30, 120], // 5min, 30min, 2hr
     BATCH_SIZE: parseInt(process.env.CLAIMS_RETRY_BATCH_SIZE || "10", 10),
   },
+  CLAIMS_SUBMISSION: {
+    TIMEOUT_MS: parseInt(
+      process.env.CLAIMS_SUBMISSION_TIMEOUT_MS || "30000",
+      10
+    ),
+  },
   BEAN_DISTRIBUTION: {
     COLLECTION_ID: process.env.BEAN_DISTRIBUTION_COLLECTION_ID || "120",
+    // DEPRECATED: LG_WALLET_MNEMONIC is no longer used for bean distribution
+    // Each Lead Generator now uses their own mnemonic retrieved from Claims Bot Database
+    // This is kept for backward compatibility only
     LG_WALLET_MNEMONIC: process.env.LG_WALLET_MNEMONIC || "",
+    // EVALUATOR_WALLET_MNEMONIC may still be used if there's a single evaluator service
+    // If evaluators are individual users, they should also use their own mnemonics from the database
     EVALUATOR_WALLET_MNEMONIC: process.env.EVALUATOR_WALLET_MNEMONIC || "",
   },
   SUBSCRIPTIONS: {
