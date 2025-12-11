@@ -67,7 +67,7 @@ export function getSupamotoDbClient() {
         host: config.CLAIMS_BOT_DB.host,
         database: config.CLAIMS_BOT_DB.database,
         port: config.CLAIMS_BOT_DB.port,
-        ssl: false,
+        ssl: config.CLAIMS_BOT_DB.ssl ? { rejectUnauthorized: false } : false,
         // Connection pool configuration
         max: 20, // Maximum number of clients in pool
         min: 5, // Minimum number of clients in pool

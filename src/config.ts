@@ -250,6 +250,7 @@ export const config = {
     user: process.env.CLAIMS_BOT_DB_USER || "supamoto_user",
     password: process.env.CLAIMS_BOT_DB_PASSWORD || "",
     database: process.env.CLAIMS_BOT_DB_NAME || "supamoto_db",
+    ssl: process.env.CLAIMS_BOT_DB_SSL === "true",
   },
   CLAIMS_RETRY: {
     MAX_RETRIES: parseInt(process.env.CLAIMS_MAX_RETRIES || "3", 10),

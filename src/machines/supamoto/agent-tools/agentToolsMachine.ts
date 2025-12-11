@@ -273,6 +273,23 @@ const submitBeanClaimIntentService = fromPromise(
       // Convert Buffer to string (SDK already decrypted the mnemonic)
       const lgMnemonic = lgIxoAccount.encryptedMnemonic.toString("utf-8");
 
+      // Validate mnemonic format before attempting to create wallet
+      // A valid BIP39 mnemonic should be 12, 15, 18, 21, or 24 words separated by spaces
+      const mnemonicWords = lgMnemonic.trim().split(/\s+/);
+      if (![12, 15, 18, 21, 24].includes(mnemonicWords.length)) {
+        logger.error(
+          {
+            lgCustomerId: input.lgCustomerId.slice(-4),
+            wordCount: mnemonicWords.length,
+            firstChars: lgMnemonic.substring(0, 20),
+          },
+          "Invalid mnemonic format - likely decryption failed. Check CLAIMS_BOT_DB_ENCRYPTION_KEY."
+        );
+        throw new Error(
+          "Failed to retrieve Lead Generator's blockchain account. The encryption key may be incorrect. Please contact support."
+        );
+      }
+
       // Create wallet from LG's mnemonic
       const lgWallet = await getSecpClient(lgMnemonic);
       const lgAddress = lgWallet.baseAccount.address;
@@ -613,6 +630,23 @@ const submitBeanClaimService = fromPromise(
 
     // Convert Buffer to string (SDK already decrypted the mnemonic)
     const lgMnemonic = lgIxoAccount.encryptedMnemonic.toString("utf-8");
+
+    // Validate mnemonic format before attempting to create wallet
+    // A valid BIP39 mnemonic should be 12, 15, 18, 21, or 24 words separated by spaces
+    const mnemonicWords = lgMnemonic.trim().split(/\s+/);
+    if (![12, 15, 18, 21, 24].includes(mnemonicWords.length)) {
+      logger.error(
+        {
+          lgCustomerId: input.lgCustomerId.slice(-4),
+          wordCount: mnemonicWords.length,
+          firstChars: lgMnemonic.substring(0, 20),
+        },
+        "Invalid mnemonic format - likely decryption failed. Check CLAIMS_BOT_DB_ENCRYPTION_KEY."
+      );
+      throw new Error(
+        "Failed to retrieve Lead Generator's blockchain account. The encryption key may be incorrect. Please contact support."
+      );
+    }
 
     // Create wallet from LG's mnemonic
     const lgWallet = await getSecpClient(lgMnemonic);
