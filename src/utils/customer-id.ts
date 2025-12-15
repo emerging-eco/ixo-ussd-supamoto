@@ -5,10 +5,11 @@ const logger = createModuleLogger("customer-id");
 
 /**
  * Customer ID format validation pattern
- * Format: C followed by 8 hexadecimal characters (0-9, A-F, uppercase)
- * Examples: C1F53E2F7, CDDA2FB60, C21009802
+ * Format: C followed by 8-19 alphanumeric characters (0-9, A-F, uppercase)
+ * Examples: C1F53E2F7, CDDA2FB60, C21009802, C3283000017
+ * Note: System-generated IDs use 8 hex chars, but imported IDs can be up to 19 chars (VARCHAR(20) total)
  */
-export const CUSTOMER_ID_PATTERN = /^C[A-F0-9]{8}$/;
+export const CUSTOMER_ID_PATTERN = /^C[A-F0-9]{8,19}$/;
 
 /**
  * Generates a unique Customer ID in the format C21009802

@@ -11,9 +11,16 @@
  * 2. LG submits customer's OTP → blockchain MsgSubmitClaim (useIntent=true)
  * 3. Customer confirms receipt → blockchain MsgEvaluateClaim (APPROVED)
  * 4. LG confirms delivery → record logged
+ *
+ * Architecture:
+ * - Each Lead Generator signs blockchain transactions with their own mnemonic
+ * - Mnemonics are retrieved from the Claims Bot Database (supamoto_db)
+ * - This ensures proper accountability and traceability on the blockchain
+ * - No shared wallet credentials are used
  */
 
 import { setup, assign, fromPromise } from "xstate";
+// import { ixo } from "@ixo/impactxclient-sdk";
 import { dataService } from "../../../services/database-storage.js";
 import { databaseManager } from "../../../services/database-manager.js";
 import { createModuleLogger } from "../../../services/logger.js";
@@ -33,6 +40,8 @@ import {
   lgValidOTPSMS,
 } from "../../../templates/sms/otp.js";
 import { getSecpClient } from "../../../utils/secp.js";
+import { getCustomerIxoAccount } from "../../../services/ixo-account-service.js";
+import { getCustomerCollectionId } from "../../../services/claims-bot-api-client.js";
 
 const logger = createModuleLogger("agentTools");
 
@@ -109,32 +118,69 @@ const fetchCustomerDataService = fromPromise(
       "Fetching customer data"
     );
 
-    const customer = await dataService.getCustomerByCustomerId(
-      input.customerId
-    );
-    if (!customer) {
-      throw new Error(`Customer ${input.customerId} not found`);
+    try {
+      const customer = await dataService.getCustomerByCustomerId(
+        input.customerId
+      );
+      if (!customer) {
+        logger.warn(
+          { customerId: input.customerId },
+          "Customer not found in database"
+        );
+        throw new Error(`Customer ${input.customerId} not found`);
+      }
+
+      logger.debug(
+        { customerId: input.customerId.slice(-4) },
+        "Found customer by customer ID"
+      );
+
+      // Get customer's phone number by querying customer_phones and phones tables
+      const db = databaseManager.getKysely();
+      const phoneResult = await db
+        .selectFrom("customer_phones")
+        .innerJoin("phones", "customer_phones.phone_id", "phones.id")
+        .innerJoin("customers", "customer_phones.customer_id", "customers.id")
+        .select("phones.phone_number")
+        .where("customers.customer_id", "=", input.customerId)
+        .where("customer_phones.is_primary", "=", true)
+        .executeTakeFirst();
+
+      if (!phoneResult) {
+        logger.warn(
+          { customerId: input.customerId },
+          "No primary phone number found for customer"
+        );
+        throw new Error(
+          `No phone number found for customer ${input.customerId}`
+        );
+      }
+
+      logger.info(
+        {
+          customerId: input.customerId.slice(-4),
+          phoneNumber: phoneResult.phone_number.slice(0, 6) + "...",
+        },
+        "Customer data fetched successfully"
+      );
+
+      return {
+        customerId: customer.customerId,
+        customerPhone: phoneResult.phone_number,
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      logger.error(
+        {
+          customerId: input.customerId.slice(-4),
+          error: errorMessage,
+          errorStack: error instanceof Error ? error.stack : undefined,
+        },
+        "Failed to fetch customer data"
+      );
+      throw error;
     }
-
-    // Get customer's phone number by querying customer_phones and phones tables
-    const db = databaseManager.getKysely();
-    const phoneResult = await db
-      .selectFrom("customer_phones")
-      .innerJoin("phones", "customer_phones.phone_id", "phones.id")
-      .innerJoin("customers", "customer_phones.customer_id", "customers.id")
-      .select("phones.phone_number")
-      .where("customers.customer_id", "=", input.customerId)
-      .where("customer_phones.is_primary", "=", true)
-      .executeTakeFirst();
-
-    if (!phoneResult) {
-      throw new Error(`No phone number found for customer ${input.customerId}`);
-    }
-
-    return {
-      customerId: customer.customerId,
-      customerPhone: phoneResult.phone_number,
-    };
   }
 );
 
@@ -145,22 +191,44 @@ const checkVoucherService = fromPromise(
       "Checking bean voucher eligibility"
     );
 
-    // TODO: Implement actual voucher check via Matrix or blockchain
-    // For now, stub with a simple check
-    // In production, this would call getVouchersFromRoom() or similar
+    try {
+      // TODO: Implement actual voucher check via Matrix or blockchain
+      // For now, stub with a simple check
+      // In production, this would call getVouchersFromRoom() or similar
 
-    // Placeholder: Check if customer has completed 1000-day survey
-    // This is a simplified check - real implementation would verify blockchain vouchers
-    const hasBeanVoucher = true; // Stub: assume customer has voucher
+      // Placeholder: Check if customer has completed 1000-day survey
+      // This is a simplified check - real implementation would verify blockchain vouchers
+      const hasBeanVoucher = true; // Stub: assume customer has voucher
 
-    return {
-      hasBeanVoucher,
-      voucherStatus: hasBeanVoucher ? "HAS_VOUCHER" : "NO_VOUCHER",
-      voucherCheckResponse: {
-        checked: true,
-        timestamp: new Date().toISOString(),
-      },
-    };
+      logger.info(
+        {
+          customerId: input.customerId.slice(-4),
+          hasBeanVoucher,
+          voucherStatus: hasBeanVoucher ? "HAS_VOUCHER" : "NO_VOUCHER",
+        },
+        "Bean voucher eligibility check completed"
+      );
+
+      return {
+        hasBeanVoucher,
+        voucherStatus: hasBeanVoucher ? "HAS_VOUCHER" : "NO_VOUCHER",
+        voucherCheckResponse: {
+          checked: true,
+          timestamp: new Date().toISOString(),
+        },
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      logger.error(
+        {
+          customerId: input.customerId.slice(-4),
+          error: errorMessage,
+        },
+        "Failed to check bean voucher eligibility"
+      );
+      throw error;
+    }
   }
 );
 
@@ -182,51 +250,242 @@ const submitBeanClaimIntentService = fromPromise(
       "Submitting bean claim intent to blockchain"
     );
 
-    // Get LG wallet details
-    const lgWallet = await getSecpClient(
-      config.BEAN_DISTRIBUTION.LG_WALLET_MNEMONIC
-    );
-    const lgAddress = lgWallet.baseAccount.address;
-    const lgDid = `did:ixo:${lgAddress}`;
+    try {
+      // Get LG's IXO account from Claims Bot Database
+      logger.debug(
+        {
+          customerId: input.customerId.slice(-4),
+          lgCustomerId: input.lgCustomerId.slice(-4),
+        },
+        "Fetching LG's IXO account from Claims Bot Database"
+      );
 
-    // Get customer's claim collection ID (default to 120 for bean distribution)
-    const collectionId = config.BEAN_DISTRIBUTION.COLLECTION_ID;
+      const lgIxoAccount = await getCustomerIxoAccount(input.lgCustomerId);
 
-    // Submit claim intent to blockchain
-    const result = await submitClaimIntent({
-      mnemonic: config.BEAN_DISTRIBUTION.LG_WALLET_MNEMONIC,
-      chainRpcUrl: CHAIN_RPC_URL,
-      intent: {
-        collectionId,
-        agentDid: lgDid,
-        agentAddress: lgAddress,
-      },
-      memo: `Bean delivery intent for customer ${input.customerId}`,
-    });
+      if (!lgIxoAccount) {
+        logger.error(
+          { lgCustomerId: input.lgCustomerId.slice(-4) },
+          "Lead Generator does not have an IXO account"
+        );
+        throw new Error(
+          "Lead Generator does not have an IXO account. Please contact support."
+        );
+      }
 
-    // Extract claim intent ID from transaction events
-    const claimIntentId = result.events
-      .find(e => e.type === "ixo.claims.v1beta1.ClaimIntentCreated")
-      ?.attributes.find(a => a.key === "claim_intent_id")?.value;
+      // Convert Buffer to string (SDK already decrypted the mnemonic)
+      const lgMnemonic = lgIxoAccount.encryptedMnemonic.toString("utf-8");
+      // Fallback to test mnemonic for development/testing
+      // const lgMnemonic = config.LEAD_GENERATOR.TEST_MNEMONIC;
 
-    if (!claimIntentId) {
-      throw new Error("Failed to extract claim intent ID from transaction");
-    }
+      // Validate mnemonic format before attempting to create wallet
+      // A valid BIP39 mnemonic should be 12, 15, 18, 21, or 24 words separated by spaces
+      const mnemonicWords = lgMnemonic.trim().split(/\s+/);
+      if (![12, 15, 18, 21, 24].includes(mnemonicWords.length)) {
+        logger.error(
+          {
+            lgCustomerId: input.lgCustomerId.slice(-4),
+            wordCount: mnemonicWords.length,
+            firstChars: lgMnemonic.substring(0, 20),
+          },
+          "Invalid mnemonic format - likely decryption failed. Check CLAIMS_BOT_DB_ENCRYPTION_KEY."
+        );
+        throw new Error(
+          "Failed to retrieve Lead Generator's blockchain account. The encryption key may be incorrect. Please contact support."
+        );
+      }
 
-    logger.info(
-      {
+      // Create wallet from LG's mnemonic
+      const lgWallet = await getSecpClient(lgMnemonic);
+      const lgAddress = lgWallet.baseAccount.address;
+      const lgDid = lgWallet.did;
+
+      logger.debug(
+        {
+          customerId: input.customerId.slice(-4),
+          lgCustomerId: input.lgCustomerId.slice(-4),
+          lgAddress: lgAddress.slice(0, 10) + "...",
+          lgDid,
+        },
+        "LG wallet retrieved successfully from database"
+      );
+
+      // Get customer's claim collection ID from Claims Bot API
+      logger.info(
+        { customerId: input.customerId.slice(-4) },
+        "Fetching customer's collection ID from Claims Bot API"
+      );
+
+      const collectionId = await getCustomerCollectionId(input.customerId);
+
+      if (!collectionId) {
+        logger.error(
+          { customerId: input.customerId.slice(-4) },
+          "Customer does not have a collection ID. Cannot submit claim intent."
+        );
+        throw new Error(
+          `Customer ${input.customerId} does not have a collection ID. The customer may not have been onboarded to the Claims Bot system.`
+        );
+      }
+
+      logger.debug(
+        {
+          customerId: input.customerId.slice(-4),
+          collectionId,
+          chainRpcUrl: CHAIN_RPC_URL,
+        },
+        "Preparing to submit claim intent to blockchain"
+      );
+
+      // Submit claim intent to blockchain using LG's mnemonic
+      const result = await submitClaimIntent({
+        mnemonic: lgMnemonic,
+        chainRpcUrl: CHAIN_RPC_URL,
+        intent: {
+          collectionId,
+          agentDid: lgDid,
+          agentAddress: lgAddress,
+        },
+        memo: `Bean delivery intent for customer ${input.customerId}`,
+      });
+
+      logger.debug(
+        {
+          customerId: input.customerId.slice(-4),
+          txHash: result.transactionHash,
+          height: result.height,
+          eventsCount: result.events?.length || 0,
+          msgResponsesCount: result.msgResponses?.length || 0,
+          hasRawLog: !!result.rawLog,
+        },
+        "Blockchain transaction completed, extracting claim intent ID"
+      );
+
+      // Extract claim intent ID from rawLog (JSON format)
+      let claimIntentId: string | undefined;
+
+      // Try to parse rawLog which contains the transaction events in JSON format
+      if (result.rawLog) {
+        try {
+          const logs = JSON.parse(result.rawLog);
+
+          logger.debug(
+            {
+              customerId: input.customerId.slice(-4),
+              logsType: typeof logs,
+              logsIsArray: Array.isArray(logs),
+              logsLength: Array.isArray(logs) ? logs.length : 0,
+            },
+            "Parsed rawLog"
+          );
+
+          // rawLog is an array of log entries, each with events
+          if (Array.isArray(logs) && logs.length > 0) {
+            // Look through all events in all logs
+            for (const log of logs) {
+              if (log.events && Array.isArray(log.events)) {
+                for (const event of log.events) {
+                  // Look for the claim intent created event
+                  if (
+                    event.type === "ixo.claims.v1beta1.ClaimIntentCreated" ||
+                    event.type === "claim_intent_created"
+                  ) {
+                    // Find the claim_intent_id attribute
+                    const idAttr = event.attributes?.find(
+                      (attr: any) =>
+                        attr.key === "claim_intent_id" ||
+                        attr.key === "claimIntentId"
+                    );
+                    if (idAttr) {
+                      claimIntentId = idAttr.value;
+                      logger.info(
+                        {
+                          customerId: input.customerId.slice(-4),
+                          claimIntentId,
+                          eventType: event.type,
+                        },
+                        "Successfully extracted claim intent ID from rawLog"
+                      );
+                      break;
+                    }
+                  }
+                }
+              }
+              if (claimIntentId) break;
+            }
+          }
+
+          // If not found, log the full structure for debugging
+          if (!claimIntentId) {
+            logger.warn(
+              {
+                customerId: input.customerId.slice(-4),
+                logs: logs,
+              },
+              "Could not find claim intent ID in rawLog, logging full structure"
+            );
+          }
+        } catch (parseError) {
+          logger.error(
+            {
+              customerId: input.customerId.slice(-4),
+              error:
+                parseError instanceof Error
+                  ? parseError.message
+                  : String(parseError),
+              rawLog: result.rawLog.substring(0, 500),
+            },
+            "Failed to parse rawLog"
+          );
+        }
+      }
+
+      if (!claimIntentId) {
+        logger.error(
+          {
+            customerId: input.customerId.slice(-4),
+            txHash: result.transactionHash,
+            msgResponsesCount: result.msgResponses?.length || 0,
+            eventsCount: result.events?.length || 0,
+            hasRawLog: !!result.rawLog,
+          },
+          "Failed to extract claim intent ID from transaction"
+        );
+        throw new Error("Failed to extract claim intent ID from transaction");
+      }
+
+      logger.info(
+        {
+          claimIntentId,
+          txHash: result.transactionHash,
+          customerId: input.customerId.slice(-4),
+        },
+        "Claim intent submitted successfully"
+      );
+
+      return {
         claimIntentId,
-        txHash: result.transactionHash,
-        customerId: input.customerId.slice(-4),
-      },
-      "Claim intent submitted successfully"
-    );
+        claimIntentTxHash: result.transactionHash,
+        claimIntentResponse: result,
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
 
-    return {
-      claimIntentId,
-      claimIntentTxHash: result.transactionHash,
-      claimIntentResponse: result,
-    };
+      logger.error(
+        {
+          customerId: input.customerId.slice(-4),
+          lgCustomerId: input.lgCustomerId.slice(-4),
+          error: errorMessage,
+          errorStack,
+          errorType: error?.constructor?.name,
+        },
+        "Failed to submit bean claim intent to blockchain"
+      );
+
+      // Re-throw with more context
+      throw new Error(`Bean claim intent failed: ${errorMessage}`);
+    }
   }
 );
 
@@ -250,8 +509,74 @@ const generateAndSendOTPService = fromPromise(
       "Generating and sending OTP"
     );
 
-    if (!input.hasBeanVoucher) {
-      // Send "no voucher" SMS to LG - get LG phone number
+    try {
+      if (!input.hasBeanVoucher) {
+        logger.warn(
+          { customerId: input.customerId.slice(-4) },
+          "Customer does not have bean voucher, sending notification to LG"
+        );
+
+        // Send "no voucher" SMS to LG - get LG phone number
+        const db = databaseManager.getKysely();
+        const lgPhoneResult = await db
+          .selectFrom("customer_phones")
+          .innerJoin("phones", "customer_phones.phone_id", "phones.id")
+          .innerJoin("customers", "customer_phones.customer_id", "customers.id")
+          .select("phones.phone_number")
+          .where("customers.customer_id", "=", input.lgCustomerId)
+          .where("customer_phones.is_primary", "=", true)
+          .executeTakeFirst();
+
+        if (lgPhoneResult) {
+          await sendSMS({
+            to: lgPhoneResult.phone_number,
+            message: lgNoVoucherSMS(input.customerId),
+          });
+          logger.info(
+            { lgPhone: lgPhoneResult.phone_number.slice(0, 6) + "..." },
+            "No voucher SMS sent to LG"
+          );
+        }
+        throw new Error("Customer does not have a bean voucher");
+      }
+
+      // Generate 5-digit OTP
+      const otp = generatePin();
+      logger.debug(
+        { customerId: input.customerId.slice(-4) },
+        "OTP generated, saving to database"
+      );
+
+      // Save OTP to database
+      const otpRecord = await dataService.createOTP(
+        input.customerId,
+        input.lgCustomerId,
+        input.intentId,
+        otp,
+        config.USSD.OTP_VALIDITY_MINUTES
+      );
+
+      logger.debug(
+        {
+          customerId: input.customerId.slice(-4),
+          otpId: otpRecord.id,
+          customerPhone: input.customerPhone.slice(0, 6) + "...",
+        },
+        "OTP saved, sending to customer"
+      );
+
+      // Send OTP to customer
+      await sendSMS({
+        to: input.customerPhone,
+        message: customerOTPSMS(otp),
+      });
+
+      logger.debug(
+        { customerId: input.customerId.slice(-4) },
+        "OTP sent to customer, sending notification to LG"
+      );
+
+      // Send "has voucher" SMS to LG
       const db = databaseManager.getKysely();
       const lgPhoneResult = await db
         .selectFrom("customer_phones")
@@ -265,60 +590,40 @@ const generateAndSendOTPService = fromPromise(
       if (lgPhoneResult) {
         await sendSMS({
           to: lgPhoneResult.phone_number,
-          message: lgNoVoucherSMS(input.customerId),
+          message: lgHasVoucherSMS(input.customerId),
         });
+        logger.debug(
+          { lgPhone: lgPhoneResult.phone_number.slice(0, 6) + "..." },
+          "Has voucher SMS sent to LG"
+        );
       }
-      throw new Error("Customer does not have a bean voucher");
-    }
 
-    // Generate 5-digit OTP
-    const otp = generatePin();
+      logger.info(
+        {
+          customerId: input.customerId.slice(-4),
+          otpId: otpRecord.id,
+        },
+        "OTP generated and sent successfully"
+      );
 
-    // Save OTP to database
-    const otpRecord = await dataService.createOTP(
-      input.customerId,
-      input.lgCustomerId,
-      input.intentId,
-      otp,
-      config.USSD.OTP_VALIDITY_MINUTES
-    );
-
-    // Send OTP to customer
-    await sendSMS({
-      to: input.customerPhone,
-      message: customerOTPSMS(otp),
-    });
-
-    // Send "has voucher" SMS to LG
-    const db = databaseManager.getKysely();
-    const lgPhoneResult = await db
-      .selectFrom("customer_phones")
-      .innerJoin("phones", "customer_phones.phone_id", "phones.id")
-      .innerJoin("customers", "customer_phones.customer_id", "customers.id")
-      .select("phones.phone_number")
-      .where("customers.customer_id", "=", input.lgCustomerId)
-      .where("customer_phones.is_primary", "=", true)
-      .executeTakeFirst();
-
-    if (lgPhoneResult) {
-      await sendSMS({
-        to: lgPhoneResult.phone_number,
-        message: lgHasVoucherSMS(input.customerId),
-      });
-    }
-
-    logger.info(
-      {
-        customerId: input.customerId.slice(-4),
+      return {
+        otp,
         otpId: otpRecord.id,
-      },
-      "OTP generated and sent successfully"
-    );
-
-    return {
-      otp,
-      otpId: otpRecord.id,
-    };
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      logger.error(
+        {
+          customerId: input.customerId.slice(-4),
+          lgCustomerId: input.lgCustomerId.slice(-4),
+          error: errorMessage,
+          errorStack: error instanceof Error ? error.stack : undefined,
+        },
+        "Failed to generate and send OTP"
+      );
+      throw error;
+    }
   }
 );
 
@@ -393,19 +698,93 @@ const submitBeanClaimService = fromPromise(
       "Submitting bean claim to blockchain"
     );
 
-    // Get LG wallet details
-    const lgWallet = await getSecpClient(
-      config.BEAN_DISTRIBUTION.LG_WALLET_MNEMONIC
+    // Get LG's IXO account from Claims Bot Database
+    logger.debug(
+      {
+        customerId: input.customerId.slice(-4),
+        lgCustomerId: input.lgCustomerId.slice(-4),
+      },
+      "Fetching LG's IXO account from Claims Bot Database"
     );
+
+    const lgIxoAccount = await getCustomerIxoAccount(input.lgCustomerId);
+
+    if (!lgIxoAccount) {
+      logger.error(
+        { lgCustomerId: input.lgCustomerId.slice(-4) },
+        "Lead Generator does not have an IXO account"
+      );
+      throw new Error(
+        "Lead Generator does not have an IXO account. Please contact support."
+      );
+    }
+
+    // Convert Buffer to string (SDK already decrypted the mnemonic)
+    const lgMnemonic = lgIxoAccount.encryptedMnemonic.toString("utf-8");
+    // Fallback to test mnemonic for development/testing
+    // const lgMnemonic = config.LEAD_GENERATOR.TEST_MNEMONIC;
+
+    // Validate mnemonic format before attempting to create wallet
+    // A valid BIP39 mnemonic should be 12, 15, 18, 21, or 24 words separated by spaces
+    const mnemonicWords = lgMnemonic.trim().split(/\s+/);
+    if (![12, 15, 18, 21, 24].includes(mnemonicWords.length)) {
+      logger.error(
+        {
+          lgCustomerId: input.lgCustomerId.slice(-4),
+          wordCount: mnemonicWords.length,
+          firstChars: lgMnemonic.substring(0, 20),
+        },
+        "Invalid mnemonic format - likely decryption failed. Check CLAIMS_BOT_DB_ENCRYPTION_KEY."
+      );
+      throw new Error(
+        "Failed to retrieve Lead Generator's blockchain account. The encryption key may be incorrect. Please contact support."
+      );
+    }
+
+    // Create wallet from LG's mnemonic
+    const lgWallet = await getSecpClient(lgMnemonic);
     const lgAddress = lgWallet.baseAccount.address;
-    const lgDid = `did:ixo:${lgAddress}`;
+    const lgDid = lgWallet.did;
 
-    // Get customer's claim collection ID
-    const collectionId = config.BEAN_DISTRIBUTION.COLLECTION_ID;
+    logger.debug(
+      {
+        customerId: input.customerId.slice(-4),
+        lgCustomerId: input.lgCustomerId.slice(-4),
+        lgAddress: lgAddress.slice(0, 10) + "...",
+        lgDid,
+      },
+      "LG wallet retrieved successfully from database"
+    );
 
-    // Submit claim with useIntent=true to link to the claim intent
+    // Get customer's claim collection ID from Claims Bot API
+    logger.info(
+      { customerId: input.customerId.slice(-4) },
+      "Fetching customer's collection ID from Claims Bot API for claim submission"
+    );
+
+    const collectionId = await getCustomerCollectionId(input.customerId);
+
+    if (!collectionId) {
+      logger.error(
+        { customerId: input.customerId.slice(-4) },
+        "Customer does not have a collection ID. Cannot submit claim."
+      );
+      throw new Error(
+        `Customer ${input.customerId} does not have a collection ID. The customer may not have been onboarded to the Claims Bot system.`
+      );
+    }
+
+    logger.debug(
+      {
+        customerId: input.customerId.slice(-4),
+        collectionId,
+      },
+      "Collection ID retrieved, preparing to submit claim"
+    );
+
+    // Submit claim with useIntent=true to link to the claim intent using LG's mnemonic
     const result = await submitClaim({
-      mnemonic: config.BEAN_DISTRIBUTION.LG_WALLET_MNEMONIC,
+      mnemonic: lgMnemonic,
       chainRpcUrl: CHAIN_RPC_URL,
       claim: {
         collectionId,
@@ -416,12 +795,88 @@ const submitBeanClaimService = fromPromise(
       memo: `Bean delivery claim for customer ${input.customerId}`,
     });
 
-    // Extract claim ID from transaction events
-    const claimId = result.events
-      .find(e => e.type === "ixo.claims.v1beta1.ClaimSubmitted")
-      ?.attributes.find(a => a.key === "claim_id")?.value;
+    // Extract claim ID from rawLog (JSON format)
+    let claimId: string | undefined;
+
+    if (result.rawLog) {
+      try {
+        const logs = JSON.parse(result.rawLog);
+
+        logger.debug(
+          {
+            customerId: input.customerId.slice(-4),
+            logsType: typeof logs,
+            logsIsArray: Array.isArray(logs),
+          },
+          "Parsed rawLog for claim submission"
+        );
+
+        // Look through all events in all logs
+        if (Array.isArray(logs) && logs.length > 0) {
+          for (const log of logs) {
+            if (log.events && Array.isArray(log.events)) {
+              for (const event of log.events) {
+                // Look for the claim submitted event
+                if (
+                  event.type === "ixo.claims.v1beta1.ClaimSubmitted" ||
+                  event.type === "claim_submitted"
+                ) {
+                  const idAttr = event.attributes?.find(
+                    (attr: any) =>
+                      attr.key === "claim_id" || attr.key === "claimId"
+                  );
+                  if (idAttr) {
+                    claimId = idAttr.value;
+                    logger.info(
+                      {
+                        customerId: input.customerId.slice(-4),
+                        claimId,
+                        eventType: event.type,
+                      },
+                      "Successfully extracted claim ID from rawLog"
+                    );
+                    break;
+                  }
+                }
+              }
+            }
+            if (claimId) break;
+          }
+        }
+
+        if (!claimId) {
+          logger.warn(
+            {
+              customerId: input.customerId.slice(-4),
+              logs: logs,
+            },
+            "Could not find claim ID in rawLog, logging full structure"
+          );
+        }
+      } catch (parseError) {
+        logger.error(
+          {
+            customerId: input.customerId.slice(-4),
+            error:
+              parseError instanceof Error
+                ? parseError.message
+                : String(parseError),
+            rawLog: result.rawLog.substring(0, 500),
+          },
+          "Failed to parse rawLog for claim submission"
+        );
+      }
+    }
 
     if (!claimId) {
+      logger.error(
+        {
+          customerId: input.customerId.slice(-4),
+          txHash: result.transactionHash,
+          hasRawLog: !!result.rawLog,
+        },
+        "Failed to extract claim ID from transaction"
+      );
       throw new Error("Failed to extract claim ID from transaction");
     }
 
@@ -580,37 +1035,63 @@ const storeIntentInDatabaseService = fromPromise(
       "Storing intent in database"
     );
 
-    const intent = await dataService.createLGIntent(
-      input.customerId,
-      input.lgCustomerId,
-      input.hasBeanVoucher,
-      input.voucherStatus,
-      input.voucherCheckResponse
-    );
+    try {
+      const intent = await dataService.createLGIntent(
+        input.customerId,
+        input.lgCustomerId,
+        input.hasBeanVoucher,
+        input.voucherStatus,
+        input.voucherCheckResponse
+      );
 
-    // Update intent with blockchain claim tracking
-    const db = databaseManager.getKysely();
-    await db
-      .updateTable("lg_delivery_intents")
-      .set({
-        claim_intent_id: input.claimIntentId,
-        claim_intent_tx_hash: input.claimIntentTxHash,
-        customer_claim_collection_id: config.BEAN_DISTRIBUTION.COLLECTION_ID,
-      })
-      .where("id", "=", intent.id)
-      .execute();
+      logger.debug(
+        {
+          intentId: intent.id,
+          customerId: input.customerId.slice(-4),
+        },
+        "Intent created in database, updating with blockchain data"
+      );
 
-    logger.info(
-      {
+      // Update intent with blockchain claim tracking
+      const db = databaseManager.getKysely();
+      await db
+        .updateTable("lg_delivery_intents")
+        .set({
+          claim_intent_id: input.claimIntentId,
+          claim_intent_tx_hash: input.claimIntentTxHash,
+          customer_claim_collection_id: config.BEAN_DISTRIBUTION.COLLECTION_ID,
+        })
+        .where("id", "=", intent.id)
+        .execute();
+
+      logger.info(
+        {
+          intentId: intent.id,
+          customerId: input.customerId.slice(-4),
+          claimIntentId: input.claimIntentId,
+          claimIntentTxHash: input.claimIntentTxHash,
+        },
+        "Intent stored in database successfully"
+      );
+
+      return {
         intentId: intent.id,
-        customerId: input.customerId.slice(-4),
-      },
-      "Intent stored in database successfully"
-    );
-
-    return {
-      intentId: intent.id,
-    };
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      logger.error(
+        {
+          customerId: input.customerId.slice(-4),
+          lgCustomerId: input.lgCustomerId.slice(-4),
+          claimIntentId: input.claimIntentId,
+          error: errorMessage,
+          errorStack: error instanceof Error ? error.stack : undefined,
+        },
+        "Failed to store intent in database"
+      );
+      throw error;
+    }
   }
 );
 
@@ -682,8 +1163,48 @@ export const agentToolsMachine = setup({
       confirmationId: ({ event }) => (event as any).output.confirmationId,
     }),
     setError: assign({
-      error: ({ event }) =>
-        event.type === "ERROR" ? event.error : "An error occurred",
+      error: ({ event }) => {
+        // XState onError events have the error in event.error
+        if (event.type === "ERROR") {
+          return event.error;
+        }
+        // For invoke onError, the error is in event.error
+        if ("error" in event && event.error) {
+          const err = event.error as any;
+          // Extract message from Error object
+          if (err instanceof Error) {
+            logger.error(
+              {
+                errorMessage: err.message,
+                errorStack: err.stack,
+                errorType: err.constructor.name,
+              },
+              "State machine error captured"
+            );
+            return err.message;
+          }
+          // Handle string errors
+          if (typeof err === "string") {
+            logger.error(
+              { errorMessage: err },
+              "State machine string error captured"
+            );
+            return err;
+          }
+          // Handle other error types
+          logger.error(
+            { error: JSON.stringify(err) },
+            "State machine unknown error type captured"
+          );
+          return String(err);
+        }
+        // Fallback
+        logger.error(
+          { eventType: event.type, event: JSON.stringify(event) },
+          "State machine error with no error property"
+        );
+        return "An error occurred";
+      },
     }),
   },
 }).createMachine({

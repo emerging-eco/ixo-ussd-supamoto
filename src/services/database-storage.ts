@@ -28,6 +28,7 @@ export interface CustomerData {
 export interface CustomerRecord {
   id: number;
   customerId: string;
+  claimsBotCustomerId?: string; // SDK-compatible ID (C + 8 hex chars) for Claims Bot integration
   fullName: string;
   email?: string;
   nationalId?: string;
@@ -390,6 +391,7 @@ class DataService {
         .select([
           "customers.id",
           "customers.customer_id",
+          "customers.claims_bot_customer_id",
           "customers.full_name",
           "customers.email",
           "customers.encrypted_pin",
@@ -424,6 +426,7 @@ class DataService {
       return {
         id: result.id!,
         customerId: result.customer_id,
+        claimsBotCustomerId: result.claims_bot_customer_id || undefined,
         fullName: result.full_name || "",
         email: result.email || undefined,
         encryptedPin: result.encrypted_pin,
@@ -482,6 +485,7 @@ class DataService {
         .select([
           "customers.id",
           "customers.customer_id",
+          "customers.claims_bot_customer_id",
           "customers.full_name",
           "customers.email",
           "customers.encrypted_pin",
@@ -516,6 +520,7 @@ class DataService {
       return {
         id: result.id!,
         customerId: result.customer_id,
+        claimsBotCustomerId: result.claims_bot_customer_id || undefined,
         fullName: result.full_name || "",
         email: result.email || undefined,
         encryptedPin: result.encrypted_pin,
@@ -824,7 +829,10 @@ class DataService {
     // Normalize customer ID to uppercase for case-insensitive comparison
     const normalizedCustomerId = customerId.toUpperCase();
 
-    logger.info({ customerId: normalizedCustomerId.slice(-4) }, "Updating customer PIN");
+    logger.info(
+      { customerId: normalizedCustomerId.slice(-4) },
+      "Updating customer PIN"
+    );
 
     try {
       await db
@@ -1068,7 +1076,10 @@ class DataService {
       // Check if expired
       const now = new Date();
       if (now > result.expires_at) {
-        logger.warn({ customerId: normalizedCustomerId.slice(-4) }, "OTP has expired");
+        logger.warn(
+          { customerId: normalizedCustomerId.slice(-4) },
+          "OTP has expired"
+        );
         // Mark as invalid
         await db
           .updateTable("bean_distribution_otps")

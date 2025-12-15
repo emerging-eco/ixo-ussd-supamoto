@@ -38,13 +38,33 @@ const logger = createModuleLogger("ixo-claim-signing");
  * Decrypt mnemonic from Buffer to string
  *
  * The SDK automatically decrypts the mnemonic when querying the database,
- * but returns it as a Buffer. This function converts it to a UTF-8 string.
+ * but returns it as a Buffer. This function converts it to a UTF-8 string
+ * and validates that it's a proper BIP39 mnemonic format.
  *
  * @param encryptedMnemonicBuffer - Encrypted mnemonic as Buffer (already decrypted by SDK)
  * @returns Mnemonic as string
+ * @throws Error if the mnemonic format is invalid (likely due to decryption failure)
  */
 export function decryptMnemonic(encryptedMnemonicBuffer: Buffer): string {
-  return encryptedMnemonicBuffer.toString("utf-8");
+  const mnemonic = encryptedMnemonicBuffer.toString("utf-8");
+
+  // Validate mnemonic format
+  // A valid BIP39 mnemonic should be 12, 15, 18, 21, or 24 words separated by spaces
+  const mnemonicWords = mnemonic.trim().split(/\s+/);
+  if (![12, 15, 18, 21, 24].includes(mnemonicWords.length)) {
+    logger.error(
+      {
+        wordCount: mnemonicWords.length,
+        firstChars: mnemonic.substring(0, 20),
+      },
+      "Invalid mnemonic format - likely decryption failed. Check CLAIMS_BOT_DB_ENCRYPTION_KEY."
+    );
+    throw new Error(
+      "Failed to decrypt mnemonic. The encryption key may be incorrect."
+    );
+  }
+
+  return mnemonic;
 }
 
 /**

@@ -49,20 +49,39 @@ describe("IXO Claim Signing Service", () => {
   });
 
   describe("decryptMnemonic", () => {
-    it("should convert Buffer to UTF-8 string", () => {
-      const buffer = Buffer.from("test mnemonic phrase");
+    it("should convert Buffer to UTF-8 string for valid 12-word mnemonic", () => {
+      const validMnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+      const buffer = Buffer.from(validMnemonic);
       const result = decryptMnemonic(buffer);
 
-      expect(result).toBe("test mnemonic phrase");
+      expect(result).toBe(validMnemonic);
+    });
+
+    it("should throw error for invalid mnemonic format", () => {
+      const invalidMnemonic = "test mnemonic phrase"; // Only 3 words
+      const buffer = Buffer.from(invalidMnemonic);
+
+      expect(() => decryptMnemonic(buffer)).toThrow(
+        "Failed to decrypt mnemonic"
+      );
+    });
+
+    it("should accept valid 24-word mnemonic", () => {
+      const validMnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art";
+      const buffer = Buffer.from(validMnemonic);
+      const result = decryptMnemonic(buffer);
+
+      expect(result).toBe(validMnemonic);
     });
   });
 
   describe("submitCustomerClaimIntent", () => {
     it("should submit claim intent successfully", async () => {
+      const validMnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
       const mockIxoAccount = {
         address: "ixo1abc123def456",
         did: "did:ixo:abc123",
-        encryptedMnemonic: Buffer.from("test mnemonic phrase"),
+        encryptedMnemonic: Buffer.from(validMnemonic),
         isPrimary: true,
       };
 
@@ -73,7 +92,7 @@ describe("IXO Claim Signing Service", () => {
           pubkey: new Uint8Array(33),
         },
         did: "did:ixo:abc123",
-        mnemonic: "test mnemonic phrase",
+        mnemonic: validMnemonic,
         getAccounts: vi.fn(),
         signDirect: vi.fn(),
         sign: vi.fn(),
@@ -109,9 +128,9 @@ describe("IXO Claim Signing Service", () => {
       });
 
       expect(mockGetCustomerIxoAccount).toHaveBeenCalledWith("C12345678");
-      expect(mockGetSecpClient).toHaveBeenCalledWith("test mnemonic phrase");
+      expect(mockGetSecpClient).toHaveBeenCalledWith(validMnemonic);
       expect(mockSubmitClaimIntent).toHaveBeenCalledWith({
-        mnemonic: "test mnemonic phrase",
+        mnemonic: validMnemonic,
         chainRpcUrl: "https://devnet.ixo.earth/rpc/",
         intent: {
           collectionId: "120",
@@ -140,10 +159,11 @@ describe("IXO Claim Signing Service", () => {
     });
 
     it("should throw error when derived address does not match stored address", async () => {
+      const validMnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
       const mockIxoAccount = {
         address: "ixo1abc123def456",
         did: "did:ixo:abc123",
-        encryptedMnemonic: Buffer.from("test mnemonic phrase"),
+        encryptedMnemonic: Buffer.from(validMnemonic),
         isPrimary: true,
       };
 
@@ -154,7 +174,7 @@ describe("IXO Claim Signing Service", () => {
           pubkey: new Uint8Array(33),
         },
         did: "did:ixo:different",
-        mnemonic: "test mnemonic phrase",
+        mnemonic: validMnemonic,
         getAccounts: vi.fn(),
         signDirect: vi.fn(),
         sign: vi.fn(),

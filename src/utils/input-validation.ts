@@ -262,7 +262,8 @@ export function validatePhoneNumber(input: string): ValidationResult<string> {
 }
 
 /**
- * Validate Customer ID (C followed by 8+ alphanumeric)
+ * Validate Customer ID (C followed by 8-19 alphanumeric characters)
+ * Updated to support VARCHAR(20) database constraint
  */
 export function validateCustomerId(input: string): ValidationResult<string> {
   const sanitized = sanitizeInput(input).toUpperCase();
@@ -271,68 +272,16 @@ export function validateCustomerId(input: string): ValidationResult<string> {
     return { isValid: false, error: "Wallet ID cannot be empty" };
   }
 
-  if (!/^C\d{8}$/.test(sanitized)) {
+  // Allow C followed by 8-19 characters (total max 20 chars for VARCHAR(20))
+  if (!/^C[A-Z0-9]{8,19}$/.test(sanitized)) {
     return {
       isValid: false,
-      error: "Wallet ID must be C followed by 8 digits (e.g., C12345678)",
+      error:
+        "Wallet ID must be C followed by 8-19 characters (e.g., C12345678)",
     };
   }
 
   return { isValid: true, value: sanitized, sanitized };
-}
-
-/**
- * Calculate Zambian NRC check digit
- *
- * NOTE: The official Zambian government algorithm for check digit calculation
- * is not publicly documented. This is an approximation based on common
- * check digit algorithms (modulo 10).
- *
- * If the exact algorithm becomes available, this function should be updated.
- *
- * @param registrationNumber - 6-digit registration number
- * @param provinceCode - 2-digit province code
- * @returns Calculated check digit (0-9) or null if algorithm unavailable
- */
-function calculateZambianNRCCheckDigit(
-  registrationNumber: string,
-  provinceCode: string
-): string | null {
-  // WARNING: This is an approximation. The actual algorithm is not publicly documented.
-  // Common check digit algorithms include:
-  // 1. Modulo 10 (Luhn algorithm variant)
-  // 2. Modulo 11
-  // 3. Weighted sum modulo 10
-
-  // Using a simple weighted sum modulo 10 as approximation
-  try {
-    const digits = (registrationNumber + provinceCode).split("").map(Number);
-
-    // Apply weights (alternating 2 and 1, or other pattern)
-    let sum = 0;
-    for (let i = 0; i < digits.length; i++) {
-      const weight = i % 2 === 0 ? 2 : 1;
-      let product = digits[i] * weight;
-
-      // If product is two digits, add them together (Luhn-style)
-      if (product > 9) {
-        product = Math.floor(product / 10) + (product % 10);
-      }
-
-      sum += product;
-    }
-
-    // Calculate check digit
-    const checkDigit = (10 - (sum % 10)) % 10;
-
-    return checkDigit.toString();
-  } catch (error) {
-    logger.error(
-      { error: error instanceof Error ? error.message : String(error) },
-      "Failed to calculate NRC check digit"
-    );
-    return null;
-  }
 }
 
 /**

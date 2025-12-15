@@ -90,7 +90,7 @@ export function getClaimsBotDbClient() {
         host: config.CLAIMS_BOT_DB.host,
         database: config.CLAIMS_BOT_DB.database,
         port: config.CLAIMS_BOT_DB.port,
-        ssl: false,
+        ssl: config.CLAIMS_BOT_DB.ssl ? { rejectUnauthorized: false } : false,
         // Connection pool configuration (read-only access, lower limits)
         max: 10, // Maximum number of clients in pool
         min: 2, // Minimum number of clients in pool

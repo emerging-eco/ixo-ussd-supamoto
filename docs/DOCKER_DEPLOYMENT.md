@@ -207,7 +207,7 @@ The `CHAIN_NETWORK` variable automatically selects the appropriate RPC URLs:
 
 URLs are defined in `src/constants/ixo-blockchain.ts` and selected automatically.
 
-**Gas Fees**: Blockchain transactions use self-funded wallets (LG_WALLET_MNEMONIC, EVALUATOR_WALLET_MNEMONIC). Ensure these wallets have sufficient IXO tokens for gas fees.
+**Gas Fees**: Blockchain transactions use self-funded wallets. Each Lead Generator uses their own mnemonic from the Claims Bot Database. If using a single evaluator service, ensure the EVALUATOR_WALLET_MNEMONIC wallet has sufficient IXO tokens for gas fees.
 
 ---
 

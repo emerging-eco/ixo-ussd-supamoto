@@ -250,16 +250,28 @@ export const config = {
     user: process.env.CLAIMS_BOT_DB_USER || "supamoto_user",
     password: process.env.CLAIMS_BOT_DB_PASSWORD || "",
     database: process.env.CLAIMS_BOT_DB_NAME || "supamoto_db",
+    ssl: process.env.CLAIMS_BOT_DB_SSL === "true",
   },
   CLAIMS_RETRY: {
     MAX_RETRIES: parseInt(process.env.CLAIMS_MAX_RETRIES || "3", 10),
     RETRY_DELAYS_MINUTES: [5, 30, 120], // 5min, 30min, 2hr
     BATCH_SIZE: parseInt(process.env.CLAIMS_RETRY_BATCH_SIZE || "10", 10),
   },
+  CLAIMS_SUBMISSION: {
+    TIMEOUT_MS: parseInt(
+      process.env.CLAIMS_SUBMISSION_TIMEOUT_MS || "30000",
+      10
+    ),
+  },
   BEAN_DISTRIBUTION: {
     COLLECTION_ID: process.env.BEAN_DISTRIBUTION_COLLECTION_ID || "120",
-    LG_WALLET_MNEMONIC: process.env.LG_WALLET_MNEMONIC || "",
+    // EVALUATOR_WALLET_MNEMONIC may still be used if there's a single evaluator service
+    // If evaluators are individual users, they should also use their own mnemonics from the database
     EVALUATOR_WALLET_MNEMONIC: process.env.EVALUATOR_WALLET_MNEMONIC || "",
+  },
+  LEAD_GENERATOR: {
+    // Test mnemonic for development/testing when LG mnemonic cannot be decrypted from database
+    TEST_MNEMONIC: process.env.LG_TEST_MNEMONIC || "",
   },
   SUBSCRIPTIONS: {
     API_BASE_URL:
