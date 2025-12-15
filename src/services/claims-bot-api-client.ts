@@ -95,7 +95,8 @@ export async function getCustomerCollectionId(
     const api = getClaimsBotApiClient();
 
     // Get customer's claims to find their collection ID
-    const claims = await api.claims.v1.getCustomerClaims({ customerId });
+    const response = await api.claims.v1.getCustomerClaims({ customerId });
+    const claims = response.data;
 
     if (!claims || claims.length === 0) {
       logger.warn(
@@ -107,7 +108,7 @@ export async function getCustomerCollectionId(
 
     // Find the most recent bean distribution claim or any claim with a collection ID
     // Assuming all claims for a customer use the same collection ID
-    const claimWithCollection = claims.find(claim => claim.collection_id);
+    const claimWithCollection = claims.find(claim => claim.collectionId);
 
     if (!claimWithCollection) {
       logger.warn(
@@ -117,7 +118,7 @@ export async function getCustomerCollectionId(
       return null;
     }
 
-    const collectionId = claimWithCollection.collection_id;
+    const collectionId = claimWithCollection.collectionId;
 
     logger.info(
       {
@@ -140,4 +141,3 @@ export async function getCustomerCollectionId(
     throw error;
   }
 }
-

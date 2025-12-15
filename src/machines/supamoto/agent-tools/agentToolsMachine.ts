@@ -385,11 +385,15 @@ const submitBeanClaimIntentService = fromPromise(
               if (log.events && Array.isArray(log.events)) {
                 for (const event of log.events) {
                   // Look for the claim intent created event
-                  if (event.type === "ixo.claims.v1beta1.ClaimIntentCreated" ||
-                      event.type === "claim_intent_created") {
+                  if (
+                    event.type === "ixo.claims.v1beta1.ClaimIntentCreated" ||
+                    event.type === "claim_intent_created"
+                  ) {
                     // Find the claim_intent_id attribute
                     const idAttr = event.attributes?.find(
-                      (attr: any) => attr.key === "claim_intent_id" || attr.key === "claimIntentId"
+                      (attr: any) =>
+                        attr.key === "claim_intent_id" ||
+                        attr.key === "claimIntentId"
                     );
                     if (idAttr) {
                       claimIntentId = idAttr.value;
@@ -424,7 +428,10 @@ const submitBeanClaimIntentService = fromPromise(
           logger.error(
             {
               customerId: input.customerId.slice(-4),
-              error: parseError instanceof Error ? parseError.message : String(parseError),
+              error:
+                parseError instanceof Error
+                  ? parseError.message
+                  : String(parseError),
               rawLog: result.rawLog.substring(0, 500),
             },
             "Failed to parse rawLog"
@@ -810,10 +817,13 @@ const submitBeanClaimService = fromPromise(
             if (log.events && Array.isArray(log.events)) {
               for (const event of log.events) {
                 // Look for the claim submitted event
-                if (event.type === "ixo.claims.v1beta1.ClaimSubmitted" ||
-                    event.type === "claim_submitted") {
+                if (
+                  event.type === "ixo.claims.v1beta1.ClaimSubmitted" ||
+                  event.type === "claim_submitted"
+                ) {
                   const idAttr = event.attributes?.find(
-                    (attr: any) => attr.key === "claim_id" || attr.key === "claimId"
+                    (attr: any) =>
+                      attr.key === "claim_id" || attr.key === "claimId"
                   );
                   if (idAttr) {
                     claimId = idAttr.value;
@@ -847,7 +857,10 @@ const submitBeanClaimService = fromPromise(
         logger.error(
           {
             customerId: input.customerId.slice(-4),
-            error: parseError instanceof Error ? parseError.message : String(parseError),
+            error:
+              parseError instanceof Error
+                ? parseError.message
+                : String(parseError),
             rawLog: result.rawLog.substring(0, 500),
           },
           "Failed to parse rawLog for claim submission"
