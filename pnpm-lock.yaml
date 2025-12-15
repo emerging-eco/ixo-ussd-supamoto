@@ -48,8 +48,8 @@ importers:
         specifier: ^0.3.4
         version: 0.3.4(debug@4.4.3)
       '@ixo/supamoto-bot-sdk':
-        specifier: 0.1.0
-        version: 0.1.0
+        specifier: 0.1.1
+        version: 0.1.1
       '@types/blocked-at':
         specifier: ^1.0.4
         version: 1.0.4
@@ -948,8 +948,8 @@ packages:
   '@ixo/matrixclient-sdk@0.3.4':
     resolution: {integrity: sha512-HDk6ok8uo+/v1dECP2bjdUhN6kBPD3qnUQwd4+h5cNyZF6qiu1wAaVyysIUc9yZZ6UyhqTp4o6ZmXGfYXCwjPg==}
 
-  '@ixo/supamoto-bot-sdk@0.1.0':
-    resolution: {integrity: sha512-pnAMizD2ZFcIDoFcFuROu3/42OduiVaKF3OayhNmqhS7v2Yir9H/KKpovIqHy9RNDSPgtxCO/O/mcBLPjwTpFw==}
+  '@ixo/supamoto-bot-sdk@0.1.1':
+    resolution: {integrity: sha512-0I8UA02wDJg9tHsqyS0kYDFHfNKs9IaQONqsxIhR8Z1h/hoblboCb33QGVa+fHl5Gv2WFVL2tSuYDnM8HmSZWg==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -1424,8 +1424,8 @@ packages:
   '@types/node@18.19.130':
     resolution: {integrity: sha512-GRaXQx6jGfL8sKfaIDD6OupbIHBr9jv7Jnaml9tB7l4v068PAOXqfcujMMo5PhbIs6ggR1XODELqahT2R8v0fg==}
 
-  '@types/node@20.19.24':
-    resolution: {integrity: sha512-FE5u0ezmi6y9OZEzlJfg37mqqf6ZDSF2V/NLjUyGrR9uTZ7Sb9F7bLNZ03S4XVUNRWGA7Ck4c1kK+YnuWjl+DA==}
+  '@types/node@20.19.27':
+    resolution: {integrity: sha512-N2clP5pJhB2YnZJ3PIHFk5RkygRX5WO/5f0WC08tp0wd+sv0rsJk3MqWn3CbNmT2J505a5336jaQj4ph1AdMug==}
 
   '@types/node@24.9.1':
     resolution: {integrity: sha512-QoiaXANRkSXK6p0Duvt56W208du4P9Uye9hWLWgGMDTEoKPhuenzNcC4vGUmrNkiOKTlIrBoyNQYNpSwfEZXSg==}
@@ -2451,8 +2451,8 @@ packages:
   css.escape@1.5.1:
     resolution: {integrity: sha512-YUifsXXuknHlUsmlgyY0PKzgPOr7/FjCePfHNt0jxm83wHZi44VDMQ7/fGNkjY3/jV1MC+1CmZbaHzugyeRtpg==}
 
-  csstype@3.1.3:
-    resolution: {integrity: sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==}
+  csstype@3.2.3:
+    resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
   csv-parse@4.16.3:
     resolution: {integrity: sha512-cO1I/zmz4w2dcKHVvpCr7JVRu8/FymG5OEpmvsZYlccYolPBLoVGKUHgNoc4ZGkFeFlWGEDmMyBM+TTqRdW/wg==}
@@ -7035,7 +7035,7 @@ snapshots:
       - encoding
       - utf-8-validate
 
-  '@ixo/supamoto-bot-sdk@0.1.0':
+  '@ixo/supamoto-bot-sdk@0.1.1':
     dependencies:
       '@babel/runtime': 7.19.4
       node-fetch: 3.3.2
@@ -7532,7 +7532,7 @@ snapshots:
     dependencies:
       undici-types: 5.26.5
 
-  '@types/node@20.19.24':
+  '@types/node@20.19.27':
     dependencies:
       undici-types: 6.21.0
 
@@ -7558,7 +7558,7 @@ snapshots:
 
   '@types/react@19.2.2':
     dependencies:
-      csstype: 3.1.3
+      csstype: 3.2.3
 
   '@types/retry@0.12.0': {}
 
@@ -8794,7 +8794,7 @@ snapshots:
 
   css.escape@1.5.1: {}
 
-  csstype@3.1.3: {}
+  csstype@3.2.3: {}
 
   csv-parse@4.16.3: {}
 
@@ -12412,7 +12412,7 @@ snapshots:
 
   super-fast-md5@1.0.3:
     dependencies:
-      '@types/node': 20.19.24
+      '@types/node': 20.19.27
 
   supports-color@5.5.0:
     dependencies:
