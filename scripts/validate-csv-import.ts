@@ -16,12 +16,13 @@ import path from "path";
 import { parse } from "csv-parse/sync";
 import { parsePhoneNumber } from "libphonenumber-js";
 
-const CSV_FILE_PATH = "specs/Beans Distribution Tracker - Sheet1.csv";
+// const CSV_FILE_PATH = "specs/Beans Distribution Tracker - Sheet1.csv";
+const CSV_FILE_PATH = "specs/existing-customer.csv";
 
 interface CSVRow {
   UniqueID: string;
   "Contract Reference": string;
-  "Customer Name ": string;
+  "Customer Name": string;
   "Phone Numbers": string;
   Area: string;
   "Collection Name": string;
@@ -115,7 +116,7 @@ function validateCSV(): ValidationReport {
     }
     
     // Validate Customer Name
-    const customerName = row["Customer Name "]?.trim();
+    const customerName = row["Customer Name"]?.trim();
     if (!customerName || customerName.length < 2) {
       report.issues.push({
         row: rowNumber,

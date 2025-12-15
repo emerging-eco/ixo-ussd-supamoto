@@ -273,9 +273,9 @@ const submitBeanClaimIntentService = fromPromise(
       }
 
       // Convert Buffer to string (SDK already decrypted the mnemonic)
-      // const lgMnemonic = lgIxoAccount.encryptedMnemonic.toString("utf-8");
+      const lgMnemonic = lgIxoAccount.encryptedMnemonic.toString("utf-8");
       // Fallback to test mnemonic for development/testing
-      const lgMnemonic = config.LEAD_GENERATOR.TEST_MNEMONIC;
+      // const lgMnemonic = config.LEAD_GENERATOR.TEST_MNEMONIC;
 
       // Validate mnemonic format before attempting to create wallet
       // A valid BIP39 mnemonic should be 12, 15, 18, 21, or 24 words separated by spaces
@@ -720,9 +720,9 @@ const submitBeanClaimService = fromPromise(
     }
 
     // Convert Buffer to string (SDK already decrypted the mnemonic)
-    // const lgMnemonic = lgIxoAccount.encryptedMnemonic.toString("utf-8");
+    const lgMnemonic = lgIxoAccount.encryptedMnemonic.toString("utf-8");
     // Fallback to test mnemonic for development/testing
-    const lgMnemonic = config.LEAD_GENERATOR.TEST_MNEMONIC;
+    // const lgMnemonic = config.LEAD_GENERATOR.TEST_MNEMONIC;
 
     // Validate mnemonic format before attempting to create wallet
     // A valid BIP39 mnemonic should be 12, 15, 18, 21, or 24 words separated by spaces
