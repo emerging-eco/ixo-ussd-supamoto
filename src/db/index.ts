@@ -97,6 +97,7 @@ export interface Database {
   customers: {
     id?: number;
     customer_id: string;
+    claims_bot_customer_id: string | null; // SDK-compatible ID (C + 8 hex chars) for Claims Bot integration
     full_name: string | null;
     email: string | null;
     national_id: string | null;

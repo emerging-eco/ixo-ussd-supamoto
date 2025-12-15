@@ -420,10 +420,41 @@ const submitClaimService = fromPromise(
     );
 
     try {
+      // Get customer and LG records to retrieve Claims Bot customer IDs
+      const customer = await dataService.getCustomerByCustomerId(
+        input.customerId
+      );
+      const lgCustomer = await dataService.getCustomerByCustomerId(
+        input.lgCustomerId
+      );
+
+      if (!customer) {
+        throw new Error(`Customer ${input.customerId} not found`);
+      }
+      if (!lgCustomer) {
+        throw new Error(`Lead Generator ${input.lgCustomerId} not found`);
+      }
+
+      // Use Claims Bot customer IDs if available, otherwise fall back to regular customer IDs
+      const claimsBotCustomerId =
+        customer.claimsBotCustomerId || customer.customerId;
+      const claimsBotLgId =
+        lgCustomer.claimsBotCustomerId || lgCustomer.customerId;
+
+      logger.info(
+        {
+          customerId: input.customerId.slice(-4),
+          claimsBotCustomerId: claimsBotCustomerId.slice(-4),
+          lgCustomerId: input.lgCustomerId.slice(-4),
+          claimsBotLgId: claimsBotLgId.slice(-4),
+        },
+        "Resolved Claims Bot customer IDs for claim submission"
+      );
+
       // Submit claim to claims bot
       const response = await submit1000DayHouseholdClaim({
-        leadGeneratorId: input.lgCustomerId,
-        customerId: input.customerId,
+        leadGeneratorId: claimsBotLgId,
+        customerId: claimsBotCustomerId,
         beneficiaryCategory: input.beneficiaryCategory,
         childMaxAge: input.childAge,
         beanIntakeFrequency: input.beanIntakeFrequency,

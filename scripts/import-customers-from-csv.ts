@@ -28,7 +28,7 @@ const logger = createModuleLogger("csv-import");
 // Configuration
 // const CSV_FILE_PATH = "specs/Beans Distribution Tracker - Sheet1.csv";
 const CSV_FILE_PATH = "specs/existing-customer.csv";
-const DEFAULT_PIN = "1234"; // Default PIN for imported customers
+const DEFAULT_PIN = "10101"; // Default PIN for imported customers
 const DEFAULT_LANGUAGE = "eng";
 const BATCH_SIZE = 50; // Process records in batches
 
@@ -100,6 +100,19 @@ function normalizePhoneNumber(phoneNumber: string): string | null {
 function validateCustomerName(name: string): boolean {
   const trimmed = name.trim();
   return trimmed.length >= 2 && trimmed.length <= 255;
+}
+
+/**
+ * Generate a Claims Bot-compatible customer ID (C + 8 hexadecimal characters)
+ * This is used for CSV-imported customers to ensure compatibility with the Claims Bot SDK
+ * which requires customer IDs in the format C + 8 hex digits.
+ */
+function generateClaimsBotCustomerId(): string {
+  // Generate 8 random hexadecimal characters (uppercase)
+  const hex = Array.from({ length: 8 }, () =>
+    Math.floor(Math.random() * 16).toString(16).toUpperCase()
+  ).join("");
+  return `C${hex}`;
 }
 
 /**
@@ -253,10 +266,14 @@ async function importCustomer(
       // 2. Create customer record
       const encryptedPin = encryptPin(DEFAULT_PIN);
 
+      // Generate a Claims Bot-compatible customer ID for SDK integration
+      const claimsBotCustomerId = generateClaimsBotCustomerId();
+
       const customer = await trx
         .insertInto("customers")
         .values({
           customer_id: contractRef, // Use Contract Reference as customer_id
+          claims_bot_customer_id: claimsBotCustomerId, // SDK-compatible ID for Claims Bot
           full_name: customerName,
           email: null,
           national_id: formattedNationalId, // Map formatted UniqueID to national_id field
@@ -286,6 +303,7 @@ async function importCustomer(
       logger.info(
         {
           customerId: customer.customer_id,
+          claimsBotCustomerId: customer.claims_bot_customer_id,
           rawUniqueId,
           formattedNationalId: customer.national_id,
           phoneNumber: phoneNumber.slice(-4),
