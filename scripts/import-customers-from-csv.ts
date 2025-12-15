@@ -26,7 +26,8 @@ import { parsePhoneNumber } from "libphonenumber-js";
 const logger = createModuleLogger("csv-import");
 
 // Configuration
-const CSV_FILE_PATH = "specs/Beans Distribution Tracker - Sheet1.csv";
+// const CSV_FILE_PATH = "specs/Beans Distribution Tracker - Sheet1.csv";
+const CSV_FILE_PATH = "specs/existing-customer.csv";
 const DEFAULT_PIN = "1234"; // Default PIN for imported customers
 const DEFAULT_LANGUAGE = "eng";
 const BATCH_SIZE = 50; // Process records in batches
@@ -44,7 +45,7 @@ interface ImportStats {
 interface CSVRow {
   UniqueID: string;
   "Contract Reference": string;
-  "Customer Name ": string; // Note: has trailing space in CSV
+  "Customer Name": string;
   "Phone Numbers": string;
   Area: string;
   "Collection Name": string;
@@ -108,6 +109,7 @@ function readCSVFile(filePath: string): CSVRow[] {
   logger.info({ filePath }, "Reading CSV file");
   
   const fileContent = fs.readFileSync(filePath, "utf-8");
+  logger.info({fileContent}, "fileContent = ");
   
   const records = parse(fileContent, {
     columns: true,
@@ -149,8 +151,14 @@ async function importCustomer(
 
   try {
     // Extract and validate data
-    const customerName = row["Customer Name "].trim();
+    logger.info({ row }, "row[] = ");
+    const customerName = row["Customer Name"].trim();
+    logger.info({ customerName }, "customerName = ");
     const contractRef = row["Contract Reference"].trim();
+    logger.info({ contractRef }, "contractRef = ");
+    const uniqueId = row.UniqueID?.trim() || null;
+    logger.info({ uniqueId }, "uniqueId = ");
+
     const phoneNumber = normalizePhoneNumber(row["Phone Numbers"]);
     const area = row.Area?.trim() || "";
     const collectionName = row["Collection Name"]?.trim() || "";
@@ -211,7 +219,7 @@ async function importCustomer(
           customer_id: contractRef, // Use Contract Reference as customer_id
           full_name: customerName,
           email: null,
-          national_id: null,
+          national_id: uniqueId, // Map UniqueID from CSV to national_id field
           encrypted_pin: encryptedPin,
           preferred_language: DEFAULT_LANGUAGE,
           date_added: new Date(),
@@ -238,6 +246,7 @@ async function importCustomer(
       logger.info(
         {
           customerId: customer.customer_id,
+          nationalId: customer.national_id,
           phoneNumber: phoneNumber.slice(-4),
           fullName: customerName,
           area,
@@ -301,6 +310,10 @@ async function importCustomers(): Promise<ImportStats> {
       // Process batch sequentially to avoid overwhelming the database
       for (let j = 0; j < batch.length; j++) {
         const row = batch[j];
+        logger.info(
+          { row },
+          "row = "
+        );
         const rowNumber = i + j + 2; // +2 because CSV is 1-indexed and has header
 
         const result = await importCustomer(row, rowNumber);
@@ -316,7 +329,7 @@ async function importCustomers(): Promise<ImportStats> {
             error: result.error || "Unknown error",
             data: {
               contractRef: row["Contract Reference"],
-              name: row["Customer Name "],
+              name: row["Customer Name"],
               phone: row["Phone Numbers"],
             },
           });
