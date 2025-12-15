@@ -103,6 +103,37 @@ function validateCustomerName(name: string): boolean {
 }
 
 /**
+ * Format National ID to Zambian NRC format (XXXXXX/XX/X)
+ * Converts "123456789" to "123456/78/9"
+ * Returns null if the input is not a valid National ID format
+ *
+ * This matches the logic used in src/services/database-storage.ts
+ */
+function formatNationalId(nationalId: string): string | null {
+  // Remove whitespace
+  const cleaned = nationalId.trim();
+
+  if (!cleaned) {
+    return null;
+  }
+
+  // Check if it already has slashes (format: XXXXXX/XX/X)
+  if (/^\d{6}\/\d{2}\/\d$/.test(cleaned)) {
+    return cleaned;
+  }
+
+  // Check if it's 9 digits without slashes (format: XXXXXXXXX)
+  if (/^\d{9}$/.test(cleaned)) {
+    // Convert to format with slashes: XXXXXX/XX/X
+    return `${cleaned.slice(0, 6)}/${cleaned.slice(6, 8)}/${cleaned.slice(8)}`;
+  }
+
+  // Invalid format
+  logger.warn({ nationalId: cleaned }, "Invalid national ID format - expected 9 digits");
+  return null;
+}
+
+/**
  * Read and parse CSV file
  */
 function readCSVFile(filePath: string): CSVRow[] {
@@ -156,8 +187,17 @@ async function importCustomer(
     logger.info({ customerName }, "customerName = ");
     const contractRef = row["Contract Reference"].trim();
     logger.info({ contractRef }, "contractRef = ");
-    const uniqueId = row.UniqueID?.trim() || null;
-    logger.info({ uniqueId }, "uniqueId = ");
+
+    // Format UniqueID to Zambian NRC format (XXXXXX/XX/X)
+    const rawUniqueId = row.UniqueID?.trim() || "";
+    const formattedNationalId = rawUniqueId ? formatNationalId(rawUniqueId) : null;
+    logger.info(
+      {
+        rawUniqueId,
+        formattedNationalId
+      },
+      "National ID formatting"
+    );
 
     const phoneNumber = normalizePhoneNumber(row["Phone Numbers"]);
     const area = row.Area?.trim() || "";
@@ -219,7 +259,7 @@ async function importCustomer(
           customer_id: contractRef, // Use Contract Reference as customer_id
           full_name: customerName,
           email: null,
-          national_id: uniqueId, // Map UniqueID from CSV to national_id field
+          national_id: formattedNationalId, // Map formatted UniqueID to national_id field
           encrypted_pin: encryptedPin,
           preferred_language: DEFAULT_LANGUAGE,
           date_added: new Date(),
@@ -246,7 +286,8 @@ async function importCustomer(
       logger.info(
         {
           customerId: customer.customer_id,
-          nationalId: customer.national_id,
+          rawUniqueId,
+          formattedNationalId: customer.national_id,
           phoneNumber: phoneNumber.slice(-4),
           fullName: customerName,
           area,
