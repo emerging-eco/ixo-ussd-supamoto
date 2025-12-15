@@ -269,6 +269,10 @@ export const config = {
     // If evaluators are individual users, they should also use their own mnemonics from the database
     EVALUATOR_WALLET_MNEMONIC: process.env.EVALUATOR_WALLET_MNEMONIC || "",
   },
+  LEAD_GENERATOR: {
+    // Test mnemonic for development/testing when LG mnemonic cannot be decrypted from database
+    TEST_MNEMONIC: process.env.LG_TEST_MNEMONIC || "",
+  },
   SUBSCRIPTIONS: {
     API_BASE_URL:
       process.env.SUBSCRIPTIONS_API_BASE_URL ||
