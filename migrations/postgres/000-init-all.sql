@@ -79,6 +79,12 @@ DROP INDEX IF EXISTS idx_ixo_accounts_profile_id;
 DROP INDEX IF EXISTS idx_ixo_profiles_did;
 DROP INDEX IF EXISTS idx_ixo_profiles_household_id;
 DROP INDEX IF EXISTS idx_ixo_profiles_customer_id;
+DROP INDEX IF EXISTS idx_matrix_vaults_profile_id;
+DROP INDEX IF EXISTS idx_ixo_accounts_address;
+DROP INDEX IF EXISTS idx_ixo_accounts_profile_id;
+DROP INDEX IF EXISTS idx_ixo_profiles_did;
+DROP INDEX IF EXISTS idx_ixo_profiles_household_id;
+DROP INDEX IF EXISTS idx_ixo_profiles_customer_id;
 
 -- -- Drop tables in reverse dependency order
 DROP TABLE IF EXISTS audit_log;
@@ -88,7 +94,21 @@ DROP TABLE IF EXISTS household_survey_responses;  -- Legacy table from before JS
 DROP TABLE IF EXISTS bean_delivery_confirmations;
 DROP TABLE IF EXISTS bean_distribution_otps;
 DROP TABLE IF EXISTS lg_delivery_intents;
+DROP TABLE IF EXISTS audit_log;
+DROP TABLE IF EXISTS failed_claims_queue;
+DROP TABLE IF EXISTS household_claims;
+DROP TABLE IF EXISTS household_survey_responses;  -- Legacy table from before JSON refactor
+DROP TABLE IF EXISTS bean_delivery_confirmations;
+DROP TABLE IF EXISTS bean_distribution_otps;
+DROP TABLE IF EXISTS lg_delivery_intents;
 -- -- Obsolete tables (removed - delegated to Claims Bot)
+DROP TABLE IF EXISTS matrix_vaults;
+DROP TABLE IF EXISTS ixo_accounts;
+DROP TABLE IF EXISTS ixo_profiles;
+DROP TABLE IF EXISTS customer_phones;
+DROP TABLE IF EXISTS customers;
+DROP TABLE IF EXISTS households;
+DROP TABLE IF EXISTS phones;
 DROP TABLE IF EXISTS matrix_vaults;
 DROP TABLE IF EXISTS ixo_accounts;
 DROP TABLE IF EXISTS ixo_profiles;
