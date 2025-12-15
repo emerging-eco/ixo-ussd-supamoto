@@ -124,7 +124,7 @@ CREATE TABLE IF NOT EXISTS households (
 -- 1.3 Customer details (needs phone, may have household)
 CREATE TABLE IF NOT EXISTS customers (
   id SERIAL PRIMARY KEY,
-  customer_id VARCHAR(10) NOT NULL UNIQUE,
+  customer_id VARCHAR(20) NOT NULL UNIQUE,
   full_name VARCHAR(255),
   email VARCHAR(255),
   national_id VARCHAR(20),
@@ -161,8 +161,8 @@ CREATE TABLE IF NOT EXISTS customer_phones (
 -- 2.1 LG Intent Registration Table (with blockchain claim tracking)
 CREATE TABLE IF NOT EXISTS lg_delivery_intents (
   id SERIAL PRIMARY KEY,
-  customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
-  lg_customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
+  customer_id VARCHAR(20) NOT NULL REFERENCES customers(customer_id),
+  lg_customer_id VARCHAR(20) NOT NULL REFERENCES customers(customer_id),
   intent_registered_at TIMESTAMP NOT NULL DEFAULT NOW(),
   has_bean_voucher BOOLEAN NOT NULL,
   voucher_status VARCHAR(50),
@@ -176,8 +176,8 @@ CREATE TABLE IF NOT EXISTS lg_delivery_intents (
 -- 2.2 OTP tracking table for bean distribution
 CREATE TABLE IF NOT EXISTS bean_distribution_otps (
   id SERIAL PRIMARY KEY,
-  customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
-  lg_customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
+  customer_id VARCHAR(20) NOT NULL REFERENCES customers(customer_id),
+  lg_customer_id VARCHAR(20) NOT NULL REFERENCES customers(customer_id),
   intent_id INTEGER REFERENCES lg_delivery_intents(id),
   otp VARCHAR(6) NOT NULL,
   generated_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -190,8 +190,8 @@ CREATE TABLE IF NOT EXISTS bean_distribution_otps (
 -- 2.3 Delivery confirmations table (with blockchain claim tracking)
 CREATE TABLE IF NOT EXISTS bean_delivery_confirmations (
   id SERIAL PRIMARY KEY,
-  customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
-  lg_customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
+  customer_id VARCHAR(20) NOT NULL REFERENCES customers(customer_id),
+  lg_customer_id VARCHAR(20) NOT NULL REFERENCES customers(customer_id),
   otp_id INTEGER REFERENCES bean_distribution_otps(id),
   lg_confirmed_at TIMESTAMP NULL,
   customer_confirmed_at TIMESTAMP NULL,
@@ -212,8 +212,8 @@ CREATE TABLE IF NOT EXISTS bean_delivery_confirmations (
 -- Includes embedded survey responses in survey_form TEXT field (encrypted)
 CREATE TABLE IF NOT EXISTS household_claims (
   id SERIAL PRIMARY KEY,
-  lg_customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
-  customer_id VARCHAR(10) NOT NULL REFERENCES customers(customer_id),
+  lg_customer_id VARCHAR(20) NOT NULL REFERENCES customers(customer_id),
+  customer_id VARCHAR(20) NOT NULL REFERENCES customers(customer_id),
   is_1000_day_household BOOLEAN NOT NULL,
   claim_submitted_at TIMESTAMP NOT NULL DEFAULT NOW(),
   claim_processed_at TIMESTAMP NULL,
@@ -234,7 +234,7 @@ CREATE TABLE IF NOT EXISTS household_claims (
 CREATE TABLE IF NOT EXISTS failed_claims_queue (
   id SERIAL PRIMARY KEY,
   claim_type VARCHAR(50) NOT NULL CHECK (claim_type IN ('lead_creation', '1000_day_household')),
-  customer_id VARCHAR(10) NOT NULL,
+  customer_id VARCHAR(20) NOT NULL,
   claim_data JSONB NOT NULL,
   error_message TEXT,
   http_status_code INTEGER,
@@ -255,8 +255,8 @@ CREATE TABLE IF NOT EXISTS failed_claims_queue (
 CREATE TABLE IF NOT EXISTS audit_log (
   id SERIAL PRIMARY KEY,
   event_type VARCHAR(50) NOT NULL,
-  customer_id VARCHAR(10),
-  lg_customer_id VARCHAR(10),
+  customer_id VARCHAR(20),
+  lg_customer_id VARCHAR(20),
   details JSONB,
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );

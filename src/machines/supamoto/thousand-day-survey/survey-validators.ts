@@ -5,7 +5,7 @@
 /**
  * Validate customer identifier (Customer ID or National ID)
  * Accepts:
- * - Customer ID: C[A-Za-z0-9]{8,} (e.g., CA6A546EF, ca6a546ef)
+ * - Customer ID: C[A-Za-z0-9]{8,19} (e.g., CA6A546EF, C3283000017) - max 20 chars total
  * - National ID: XXXXXX/XX/X or XXXXXXXXX (e.g., 123456/05/1, 123456051)
  */
 export function validateCustomerId(input: string): {
@@ -25,8 +25,8 @@ export function validateCustomerId(input: string): {
     };
   }
 
-  // Check if it's a Customer ID (case-insensitive)
-  const customerIdPattern = /^C[A-Za-z0-9]{8,}$/i;
+  // Check if it's a Customer ID (case-insensitive, max 20 chars total)
+  const customerIdPattern = /^C[A-Za-z0-9]{8,19}$/i;
   if (customerIdPattern.test(sanitized)) {
     return { valid: true };
   }

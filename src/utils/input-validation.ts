@@ -262,7 +262,8 @@ export function validatePhoneNumber(input: string): ValidationResult<string> {
 }
 
 /**
- * Validate Customer ID (C followed by 8+ alphanumeric)
+ * Validate Customer ID (C followed by 8-19 alphanumeric characters)
+ * Updated to support VARCHAR(20) database constraint
  */
 export function validateCustomerId(input: string): ValidationResult<string> {
   const sanitized = sanitizeInput(input).toUpperCase();
@@ -271,10 +272,12 @@ export function validateCustomerId(input: string): ValidationResult<string> {
     return { isValid: false, error: "Wallet ID cannot be empty" };
   }
 
-  if (!/^C\d{8}$/.test(sanitized)) {
+  // Allow C followed by 8-19 characters (total max 20 chars for VARCHAR(20))
+  if (!/^C[A-Z0-9]{8,19}$/.test(sanitized)) {
     return {
       isValid: false,
-      error: "Wallet ID must be C followed by 8 digits (e.g., C12345678)",
+      error:
+        "Wallet ID must be C followed by 8-19 characters (e.g., C12345678)",
     };
   }
 
