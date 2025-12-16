@@ -5,11 +5,6 @@
 -- for fresh database deployments. All tables, indexes, and constraints are
 -- created in a single idempotent script.
 --
--- CONSOLIDATION HISTORY:
--- - Merged migrations/postgres/000-init-all.sql (base schema)
--- - Merged migrations/postgres/001-add-bean-distribution-claim-tracking.sql
--- - Merged migrations/postgres/002-remove-obsolete-ixo-tables.sql
---
 -- REMOVED TABLES (delegated to Claims Bot service):
 -- - ixo_profiles: IXO blockchain profiles (now managed by Claims Bot)
 -- - ixo_accounts: IXO blockchain accounts (now managed by Claims Bot)
@@ -24,7 +19,6 @@
 --
 -- Note: This script includes the survey JSON storage refactor, consolidating
 -- survey responses directly into the household_claims table as TEXT (encrypted).
--- Note: households table is kept for future shared household wallet feature.
 -- ============================================================================
 
 -- -- ============================================================================
@@ -68,17 +62,9 @@ DROP INDEX IF EXISTS idx_failed_claims_status;
 DROP INDEX IF EXISTS idx_customers_national_id;
 DROP INDEX IF EXISTS idx_customer_phones_phone_id;
 DROP INDEX IF EXISTS idx_customer_phones_customer_id;
-DROP INDEX IF EXISTS idx_customers_claims_bot_customer_id;
 DROP INDEX IF EXISTS idx_customers_role;
 DROP INDEX IF EXISTS idx_customers_customer_id;
 DROP INDEX IF EXISTS idx_phones_phone_number;
--- -- Obsolete indexes (tables removed - delegated to Claims Bot)
-DROP INDEX IF EXISTS idx_matrix_vaults_profile_id;
-DROP INDEX IF EXISTS idx_ixo_accounts_address;
-DROP INDEX IF EXISTS idx_ixo_accounts_profile_id;
-DROP INDEX IF EXISTS idx_ixo_profiles_did;
-DROP INDEX IF EXISTS idx_ixo_profiles_household_id;
-DROP INDEX IF EXISTS idx_ixo_profiles_customer_id;
 DROP INDEX IF EXISTS idx_matrix_vaults_profile_id;
 DROP INDEX IF EXISTS idx_ixo_accounts_address;
 DROP INDEX IF EXISTS idx_ixo_accounts_profile_id;
@@ -94,21 +80,6 @@ DROP TABLE IF EXISTS household_survey_responses;  -- Legacy table from before JS
 DROP TABLE IF EXISTS bean_delivery_confirmations;
 DROP TABLE IF EXISTS bean_distribution_otps;
 DROP TABLE IF EXISTS lg_delivery_intents;
-DROP TABLE IF EXISTS audit_log;
-DROP TABLE IF EXISTS failed_claims_queue;
-DROP TABLE IF EXISTS household_claims;
-DROP TABLE IF EXISTS household_survey_responses;  -- Legacy table from before JSON refactor
-DROP TABLE IF EXISTS bean_delivery_confirmations;
-DROP TABLE IF EXISTS bean_distribution_otps;
-DROP TABLE IF EXISTS lg_delivery_intents;
--- -- Obsolete tables (removed - delegated to Claims Bot)
-DROP TABLE IF EXISTS matrix_vaults;
-DROP TABLE IF EXISTS ixo_accounts;
-DROP TABLE IF EXISTS ixo_profiles;
-DROP TABLE IF EXISTS customer_phones;
-DROP TABLE IF EXISTS customers;
-DROP TABLE IF EXISTS households;
-DROP TABLE IF EXISTS phones;
 DROP TABLE IF EXISTS matrix_vaults;
 DROP TABLE IF EXISTS ixo_accounts;
 DROP TABLE IF EXISTS ixo_profiles;
@@ -144,7 +115,6 @@ CREATE TABLE IF NOT EXISTS households (
 CREATE TABLE IF NOT EXISTS customers (
   id SERIAL PRIMARY KEY,
   customer_id VARCHAR(20) NOT NULL UNIQUE,
-  claims_bot_customer_id VARCHAR(9) UNIQUE, -- SDK-compatible ID (C + 8 hex chars) for Claims Bot integration
   full_name VARCHAR(255),
   email VARCHAR(255),
   national_id VARCHAR(20),
@@ -282,11 +252,12 @@ CREATE TABLE IF NOT EXISTS audit_log (
 -- Core table indexes
 CREATE INDEX IF NOT EXISTS idx_phones_phone_number ON phones(phone_number);
 CREATE INDEX IF NOT EXISTS idx_customers_customer_id ON customers(customer_id);
-CREATE INDEX IF NOT EXISTS idx_customers_claims_bot_customer_id ON customers(claims_bot_customer_id) WHERE claims_bot_customer_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_customers_role ON customers(role);
 CREATE INDEX IF NOT EXISTS idx_customers_national_id ON customers(national_id) WHERE national_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_customer_phones_customer_id ON customer_phones(customer_id);
 CREATE INDEX IF NOT EXISTS idx_customer_phones_phone_id ON customer_phones(phone_id);
+
+-- Note: Obsolete indexes removed (ixo_profiles, ixo_accounts, matrix_vaults tables removed)
 
 -- Failed claims queue indexes
 CREATE INDEX IF NOT EXISTS idx_failed_claims_status ON failed_claims_queue(status);
