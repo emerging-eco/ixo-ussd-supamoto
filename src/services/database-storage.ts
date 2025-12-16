@@ -1146,7 +1146,9 @@ class DataService {
     customerId: string,
     lgCustomerId: string,
     otpId: number,
-    deadlineDays: number
+    deadlineDays: number,
+    claimId?: string,
+    claimTxHash?: string
   ): Promise<BeanDeliveryConfirmationRecord> {
     const db = databaseManager.getKysely();
 
@@ -1160,6 +1162,8 @@ class DataService {
         customerId: customerId.slice(-4),
         lgCustomerId: lgCustomerId.slice(-4),
         deadlineDays,
+        hasClaimId: !!claimId,
+        hasClaimTxHash: !!claimTxHash,
       },
       "Creating delivery confirmation record"
     );
@@ -1176,6 +1180,8 @@ class DataService {
           customer_confirmed_receipt: null,
           token_transferred_at: null,
           confirmation_deadline: deadline,
+          claim_id: claimId || null,
+          claim_tx_hash: claimTxHash || null,
           created_at: now,
           updated_at: now,
         })

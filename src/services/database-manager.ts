@@ -220,18 +220,19 @@ class DatabaseManager {
     logger.info("Starting database connection cleanup");
 
     try {
-      // Close Kysely first (this should close gracefully)
+      // Close Kysely first (this will also close the underlying pool)
       if (this.kysely) {
         await this.kysely.destroy();
         this.kysely = null;
         logger.debug("Kysely instance destroyed");
       }
 
-      // Close PostgreSQL pool
+      // Note: We don't call pool.end() here because Kysely.destroy() already closed the pool
+      // Calling pool.end() again would cause "Called end on pool more than once" error
+      // Just set pool to null to clean up the reference
       if (this.pool) {
-        await this.pool.end();
         this.pool = null;
-        logger.debug("PostgreSQL pool ended");
+        logger.debug("PostgreSQL pool reference cleared");
       }
 
       this.hasEnded = true;

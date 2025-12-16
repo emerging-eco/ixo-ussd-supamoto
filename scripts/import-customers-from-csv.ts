@@ -26,9 +26,9 @@ import { parsePhoneNumber } from "libphonenumber-js";
 const logger = createModuleLogger("csv-import");
 
 // Configuration
-// const CSV_FILE_PATH = "specs/Beans Distribution Tracker - Sheet1.csv";
-const CSV_FILE_PATH = "specs/existing-customer.csv";
-const DEFAULT_PIN = "1234"; // Default PIN for imported customers
+const CSV_FILE_PATH = "specs/Beans Distribution Tracker - Sheet1.csv";
+// const CSV_FILE_PATH = "specs/existing-customer.csv";
+const DEFAULT_PIN = "10101"; // Default PIN for imported customers
 const DEFAULT_LANGUAGE = "eng";
 const BATCH_SIZE = 50; // Process records in batches
 

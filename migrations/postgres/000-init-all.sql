@@ -190,8 +190,11 @@ CREATE TABLE IF NOT EXISTS bean_delivery_confirmations (
   customer_confirmed_receipt BOOLEAN NULL,
   token_transferred_at TIMESTAMP NULL,
   confirmation_deadline TIMESTAMP NOT NULL,
-  -- Blockchain claim tracking column (added in migration 001)
+  -- Blockchain claim tracking columns
   claim_id VARCHAR(255),
+  claim_tx_hash VARCHAR(255),
+  claim_evaluation_tx_hash VARCHAR(255),
+  fuel_delivery_claim_id VARCHAR(255),
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );

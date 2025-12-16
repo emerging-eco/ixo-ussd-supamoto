@@ -420,8 +420,33 @@ const submitClaimService = fromPromise(
     );
 
     try {
+      // Get customer and LG records to validate they exist
+      const customer = await dataService.getCustomerByCustomerId(
+        input.customerId
+      );
+      const lgCustomer = await dataService.getCustomerByCustomerId(
+        input.lgCustomerId
+      );
+
+      if (!customer) {
+        throw new Error(`Customer ${input.customerId} not found`);
+      }
+      if (!lgCustomer) {
+        throw new Error(`Lead Generator ${input.lgCustomerId} not found`);
+      }
+
+      logger.info(
+        {
+          customerId: input.customerId.slice(-4),
+          lgCustomerId: input.lgCustomerId.slice(-4),
+        },
+        "Submitting 1000 Day Household claim to Claims Bot"
+      );
+
       // Submit claim to claims bot
       const response = await submit1000DayHouseholdClaim({
+        leadGeneratorId: input.lgCustomerId,
+        customerId: input.customerId,
         leadGeneratorId: input.lgCustomerId,
         customerId: input.customerId,
         beneficiaryCategory: input.beneficiaryCategory,

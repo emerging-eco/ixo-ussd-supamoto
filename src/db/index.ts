@@ -128,9 +128,7 @@ export interface Database {
     voucher_status: string | null;
     voucher_check_response: any; // JSONB
     claim_intent_id: string | null;
-    claim_intent_tx_hash: string | null;
-    claim_intent_response: any; // JSONB
-    customer_claim_collection_id: string | null;
+    claim_collection_id: string | null;
     created_at: Date;
   };
   bean_distribution_otps: {
