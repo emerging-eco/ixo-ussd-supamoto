@@ -27,8 +27,8 @@ The `@ixo/supamoto-bot-sdk` provides three distinct clients for interacting with
 ### Current Usage in Codebase
 
 - **Claims Bot Client**: Used in `src/services/claims-bot.ts` and `src/services/ixo/background-ixo-creation.ts`
-- **API Client**: Not currently used (documented here for future implementation)
-- **Database Client**: Not currently used (documented here for future implementation)
+- **API Client**: Previously used for `getCustomerCollectionId()`, migrated to Database Client for better performance and to bypass validation issues
+- **Database Client**: Used in `src/services/claims-bot-db-client.ts` for retrieving IXO accounts and customer claims data
 
 ### SDK Version
 
