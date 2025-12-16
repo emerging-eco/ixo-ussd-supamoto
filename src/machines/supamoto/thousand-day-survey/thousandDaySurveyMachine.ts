@@ -447,8 +447,6 @@ const submitClaimService = fromPromise(
       const response = await submit1000DayHouseholdClaim({
         leadGeneratorId: input.lgCustomerId,
         customerId: input.customerId,
-        leadGeneratorId: input.lgCustomerId,
-        customerId: input.customerId,
         beneficiaryCategory: input.beneficiaryCategory,
         childMaxAge: input.childAge,
         beanIntakeFrequency: input.beanIntakeFrequency,
