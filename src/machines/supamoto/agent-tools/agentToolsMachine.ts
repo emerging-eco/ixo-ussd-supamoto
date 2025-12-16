@@ -59,7 +59,6 @@ export interface AgentToolsContext {
   customerPhone?: string;
   intentId?: number;
   claimIntentId?: string;
-  claimIntentTxHash?: string;
   otp?: string;
   otpId?: number;
   claimId?: string;
@@ -244,8 +243,8 @@ const submitBeanClaimIntentService = fromPromise(
   }) => {
     logger.info(
       {
-        customerId: input.customerId.slice(-4),
-        lgCustomerId: input.lgCustomerId.slice(-4),
+        customerId: input.customerId,
+        lgCustomerId: input.lgCustomerId,
       },
       "Submitting bean claim intent to blockchain"
     );
@@ -254,8 +253,8 @@ const submitBeanClaimIntentService = fromPromise(
       // Get LG's IXO account from Claims Bot Database
       logger.debug(
         {
-          customerId: input.customerId.slice(-4),
-          lgCustomerId: input.lgCustomerId.slice(-4),
+          customerId: input.customerId,
+          lgCustomerId: input.lgCustomerId,
         },
         "Fetching LG's IXO account from Claims Bot Database"
       );
@@ -264,13 +263,19 @@ const submitBeanClaimIntentService = fromPromise(
 
       if (!lgIxoAccount) {
         logger.error(
-          { lgCustomerId: input.lgCustomerId.slice(-4) },
+          { lgCustomerId: input.lgCustomerId },
           "Lead Generator does not have an IXO account"
         );
         throw new Error(
           "Lead Generator does not have an IXO account. Please contact support."
         );
       }
+      logger.debug(
+        {
+          lgIxoAccount,
+        },
+        "LG's IXO account"
+      );
 
       // Convert Buffer to string (SDK already decrypted the mnemonic)
       const lgMnemonic = lgIxoAccount.encryptedMnemonic.toString("utf-8");
@@ -283,7 +288,7 @@ const submitBeanClaimIntentService = fromPromise(
       if (![12, 15, 18, 21, 24].includes(mnemonicWords.length)) {
         logger.error(
           {
-            lgCustomerId: input.lgCustomerId.slice(-4),
+            lgCustomerId: input.lgCustomerId,
             wordCount: mnemonicWords.length,
             firstChars: lgMnemonic.substring(0, 20),
           },
@@ -293,6 +298,12 @@ const submitBeanClaimIntentService = fromPromise(
           "Failed to retrieve Lead Generator's blockchain account. The encryption key may be incorrect. Please contact support."
         );
       }
+      logger.debug(
+        {
+          lgMnemonic,
+        },
+        "LG's Mnemonic"
+      );
 
       // Create wallet from LG's mnemonic
       const lgWallet = await getSecpClient(lgMnemonic);
@@ -301,9 +312,9 @@ const submitBeanClaimIntentService = fromPromise(
 
       logger.debug(
         {
-          customerId: input.customerId.slice(-4),
-          lgCustomerId: input.lgCustomerId.slice(-4),
-          lgAddress: lgAddress.slice(0, 10) + "...",
+          customerId: input.customerId,
+          lgCustomerId: input.lgCustomerId,
+          lgAddress: lgAddress,
           lgDid,
         },
         "LG wallet retrieved successfully from database"
@@ -311,7 +322,7 @@ const submitBeanClaimIntentService = fromPromise(
 
       // Get customer's claim collection ID from Claims Bot API
       logger.info(
-        { customerId: input.customerId.slice(-4) },
+        { customerId: input.customerId },
         "Fetching customer's collection ID from Claims Bot API"
       );
 
@@ -319,7 +330,7 @@ const submitBeanClaimIntentService = fromPromise(
 
       if (!collectionId) {
         logger.error(
-          { customerId: input.customerId.slice(-4) },
+          { customerId: input.customerId },
           "Customer does not have a collection ID. Cannot submit claim intent."
         );
         throw new Error(
@@ -327,9 +338,11 @@ const submitBeanClaimIntentService = fromPromise(
         );
       }
 
+      // TODO: Add AuthZ MsgSubmitClaimIntent permission to Lead Generator using Customer mnemonic
+
       logger.debug(
         {
-          customerId: input.customerId.slice(-4),
+          customerId: input.customerId,
           collectionId,
           chainRpcUrl: CHAIN_RPC_URL,
         },
@@ -350,7 +363,7 @@ const submitBeanClaimIntentService = fromPromise(
 
       logger.debug(
         {
-          customerId: input.customerId.slice(-4),
+          customerId: input.customerId,
           txHash: result.transactionHash,
           height: result.height,
           eventsCount: result.events?.length || 0,
@@ -370,7 +383,7 @@ const submitBeanClaimIntentService = fromPromise(
 
           logger.debug(
             {
-              customerId: input.customerId.slice(-4),
+              customerId: input.customerId,
               logsType: typeof logs,
               logsIsArray: Array.isArray(logs),
               logsLength: Array.isArray(logs) ? logs.length : 0,
@@ -399,7 +412,7 @@ const submitBeanClaimIntentService = fromPromise(
                       claimIntentId = idAttr.value;
                       logger.info(
                         {
-                          customerId: input.customerId.slice(-4),
+                          customerId: input.customerId,
                           claimIntentId,
                           eventType: event.type,
                         },
@@ -418,7 +431,7 @@ const submitBeanClaimIntentService = fromPromise(
           if (!claimIntentId) {
             logger.warn(
               {
-                customerId: input.customerId.slice(-4),
+                customerId: input.customerId,
                 logs: logs,
               },
               "Could not find claim intent ID in rawLog, logging full structure"
@@ -427,7 +440,7 @@ const submitBeanClaimIntentService = fromPromise(
         } catch (parseError) {
           logger.error(
             {
-              customerId: input.customerId.slice(-4),
+              customerId: input.customerId,
               error:
                 parseError instanceof Error
                   ? parseError.message
@@ -442,7 +455,7 @@ const submitBeanClaimIntentService = fromPromise(
       if (!claimIntentId) {
         logger.error(
           {
-            customerId: input.customerId.slice(-4),
+            customerId: input.customerId,
             txHash: result.transactionHash,
             msgResponsesCount: result.msgResponses?.length || 0,
             eventsCount: result.events?.length || 0,
@@ -450,21 +463,21 @@ const submitBeanClaimIntentService = fromPromise(
           },
           "Failed to extract claim intent ID from transaction"
         );
-        throw new Error("Failed to extract claim intent ID from transaction");
+        // throw new Error("Failed to extract claim intent ID from transaction");
+        claimIntentId = result.transactionHash;
       }
 
       logger.info(
         {
           claimIntentId,
           txHash: result.transactionHash,
-          customerId: input.customerId.slice(-4),
+          customerId: input.customerId,
         },
         "Claim intent submitted successfully"
       );
 
       return {
         claimIntentId,
-        claimIntentTxHash: result.transactionHash,
         claimIntentResponse: result,
       };
     } catch (error) {
@@ -474,8 +487,8 @@ const submitBeanClaimIntentService = fromPromise(
 
       logger.error(
         {
-          customerId: input.customerId.slice(-4),
-          lgCustomerId: input.lgCustomerId.slice(-4),
+          customerId: input.customerId,
+          lgCustomerId: input.lgCustomerId,
           error: errorMessage,
           errorStack,
           errorType: error?.constructor?.name,
@@ -503,7 +516,7 @@ const generateAndSendOTPService = fromPromise(
   }) => {
     logger.info(
       {
-        customerId: input.customerId.slice(-4),
+        customerId: input.customerId,
         hasBeanVoucher: input.hasBeanVoucher,
       },
       "Generating and sending OTP"
@@ -512,7 +525,7 @@ const generateAndSendOTPService = fromPromise(
     try {
       if (!input.hasBeanVoucher) {
         logger.warn(
-          { customerId: input.customerId.slice(-4) },
+          { customerId: input.customerId },
           "Customer does not have bean voucher, sending notification to LG"
         );
 
@@ -1024,7 +1037,6 @@ const storeIntentInDatabaseService = fromPromise(
       voucherStatus: string;
       voucherCheckResponse: any;
       claimIntentId: string;
-      claimIntentTxHash: string;
     };
   }) => {
     logger.info(
@@ -1058,8 +1070,7 @@ const storeIntentInDatabaseService = fromPromise(
         .updateTable("lg_delivery_intents")
         .set({
           claim_intent_id: input.claimIntentId,
-          claim_intent_tx_hash: input.claimIntentTxHash,
-          customer_claim_collection_id: config.BEAN_DISTRIBUTION.COLLECTION_ID,
+          claim_collection_id: config.BEAN_DISTRIBUTION.COLLECTION_ID,
         })
         .where("id", "=", intent.id)
         .execute();
@@ -1069,7 +1080,6 @@ const storeIntentInDatabaseService = fromPromise(
           intentId: intent.id,
           customerId: input.customerId.slice(-4),
           claimIntentId: input.claimIntentId,
-          claimIntentTxHash: input.claimIntentTxHash,
         },
         "Intent stored in database successfully"
       );
@@ -1142,7 +1152,6 @@ export const agentToolsMachine = setup({
     }),
     setClaimIntentData: assign({
       claimIntentId: ({ event }) => (event as any).output.claimIntentId,
-      claimIntentTxHash: ({ event }) => (event as any).output.claimIntentTxHash,
     }),
     setIntentId: assign({
       intentId: ({ event }) => (event as any).output.intentId,
@@ -1347,7 +1356,6 @@ export const agentToolsMachine = setup({
                 : "NO_VOUCHER",
               voucherCheckResponse: {},
               claimIntentId: context.claimIntentId!,
-              claimIntentTxHash: context.claimIntentTxHash!,
             }),
             onDone: {
               target: "generatingOTP",

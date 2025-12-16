@@ -47,57 +47,62 @@ const logger = createModuleLogger("claims-bot-collection");
 export async function getCustomerCollectionId(
   customerId: string
 ): Promise<string | null> {
-  try {
     logger.info(
       { customerId: customerId },
-      "Fetching customer's bean distribution collection ID from Claims Bot Database"
+      "supamoto-bot-sdk doesn't yet have the SUBSCRIPTIONS and CUSTOMER_SUBSCRIPTIONS tables - returning harcoded value 632"
     );
+  return "632";
+  // try {
+  //   logger.info(
+  //     { customerId: customerId },
+  //     "Fetching customer's bean distribution collection ID from Claims Bot Database"
+  //   );
 
-    const db = getClaimsBotDbClient();
+  //   const db = getClaimsBotDbClient();
 
-    // Get customer's claims to find their collection ID
-    const claims = await db.claims.v1.selectClaimsByCustomerId({ customerId });
+  //   // Get customer's claims to find their collection ID
+  //   const claims = await db.claims.v1.selectClaimsByCustomerId({ customerId });
 
-    if (!claims || claims.length === 0) {
-      logger.warn(
-        { customerId: customerId },
-        "Customer has no claims, cannot determine collection ID"
-      );
-      return null;
-    }
+  //   if (!claims || claims.length === 0) {
+  //     logger.warn(
+  //       { customerId: customerId },
+  //       "Customer has no claims, cannot determine collection ID"
+  //     );
+  //     return null;
+  //   }
 
-    // Find the most recent bean distribution claim or any claim with a collection ID
-    // Assuming all claims for a customer use the same collection ID
-    const claimWithCollection = claims.find(claim => claim.collection_id);
+  //   // Find the most recent bean distribution claim or any claim with a collection ID
+  //   // Assuming all claims for a customer use the same collection ID
+  //   const claimWithCollection = claims.find(claim => claim.collection_id);
 
-    if (!claimWithCollection) {
-      logger.warn(
-        { customerId: customerId, claimsCount: claims.length },
-        "Customer has claims but no collection ID found"
-      );
-      return null;
-    }
+  //   if (!claimWithCollection) {
+  //     logger.warn(
+  //       { customerId: customerId, claimsCount: claims.length },
+  //       "Customer has claims but no collection ID found"
+  //     );
+  //     return null;
+  //   }
 
-    const collectionId = claimWithCollection.collection_id;
+  //   const collectionId = claimWithCollection.collection_id;
 
-    logger.info(
-      {
-        customerId: customerId,
-        collectionId,
-        totalClaims: claims.length,
-      },
-      "Successfully retrieved customer's collection ID"
-    );
+  //   logger.info(
+  //     {
+  //       customerId: customerId,
+  //       collectionId,
+  //       totalClaims: claims.length,
+  //     },
+  //     "Successfully retrieved customer's collection ID"
+  //   );
 
-    return collectionId;
-  } catch (error) {
-    logger.error(
-      {
-        error: error instanceof Error ? error.message : String(error),
-        customerId: customerId,
-      },
-      "Failed to fetch customer's collection ID"
-    );
-    throw error;
-  }
+  //   return collectionId;
+  // } catch (error) {
+  //   logger.error(
+  //     {
+  //       error: error instanceof Error ? error.message : String(error),
+  //       customerId: customerId,
+  //     },
+  //     "Failed to fetch customer's collection ID"
+  //   );
+  //   throw error;
+  // }
 }
