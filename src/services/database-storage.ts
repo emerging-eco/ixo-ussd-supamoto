@@ -28,7 +28,6 @@ export interface CustomerData {
 export interface CustomerRecord {
   id: number;
   customerId: string;
-  claimsBotCustomerId?: string; // SDK-compatible ID (C + 8 hex chars) for Claims Bot integration
   fullName: string;
   email?: string;
   nationalId?: string;
@@ -391,7 +390,6 @@ class DataService {
         .select([
           "customers.id",
           "customers.customer_id",
-          "customers.claims_bot_customer_id",
           "customers.full_name",
           "customers.email",
           "customers.encrypted_pin",
@@ -426,7 +424,6 @@ class DataService {
       return {
         id: result.id!,
         customerId: result.customer_id,
-        claimsBotCustomerId: result.claims_bot_customer_id || undefined,
         fullName: result.full_name || "",
         email: result.email || undefined,
         encryptedPin: result.encrypted_pin,
@@ -485,7 +482,6 @@ class DataService {
         .select([
           "customers.id",
           "customers.customer_id",
-          "customers.claims_bot_customer_id",
           "customers.full_name",
           "customers.email",
           "customers.encrypted_pin",
@@ -520,7 +516,6 @@ class DataService {
       return {
         id: result.id!,
         customerId: result.customer_id,
-        claimsBotCustomerId: result.claims_bot_customer_id || undefined,
         fullName: result.full_name || "",
         email: result.email || undefined,
         encryptedPin: result.encrypted_pin,
