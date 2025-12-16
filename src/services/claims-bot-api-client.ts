@@ -88,7 +88,7 @@ export async function getCustomerCollectionId(
 ): Promise<string | null> {
   try {
     logger.info(
-      { customerId: customerId.slice(-4) },
+      { customerId: customerId },
       "Fetching customer's bean distribution collection ID from Claims Bot API"
     );
 
@@ -100,7 +100,7 @@ export async function getCustomerCollectionId(
 
     if (!claims || claims.length === 0) {
       logger.warn(
-        { customerId: customerId.slice(-4) },
+        { customerId: customerId },
         "Customer has no claims, cannot determine collection ID"
       );
       return null;
@@ -112,7 +112,7 @@ export async function getCustomerCollectionId(
 
     if (!claimWithCollection) {
       logger.warn(
-        { customerId: customerId.slice(-4), claimsCount: claims.length },
+        { customerId: customerId, claimsCount: claims.length },
         "Customer has claims but no collection ID found"
       );
       return null;
@@ -122,7 +122,7 @@ export async function getCustomerCollectionId(
 
     logger.info(
       {
-        customerId: customerId.slice(-4),
+        customerId: customerId,
         collectionId,
         totalClaims: claims.length,
       },
@@ -134,7 +134,7 @@ export async function getCustomerCollectionId(
     logger.error(
       {
         error: error instanceof Error ? error.message : String(error),
-        customerId: customerId.slice(-4),
+        customerId: customerId,
       },
       "Failed to fetch customer's collection ID"
     );
