@@ -27,66 +27,66 @@
 -- -- Drop tables in reverse dependency order to avoid foreign key constraint errors
 
 -- -- Drop indexes first (if they exist)
--- DROP INDEX IF EXISTS idx_household_claims_survey_form;
--- DROP INDEX IF EXISTS idx_household_claims_survey_updated;
--- DROP INDEX IF EXISTS idx_household_claims_lg_customer_composite;
--- DROP INDEX IF EXISTS idx_household_survey_lg_customer_unique;
--- DROP INDEX IF EXISTS idx_household_survey_customer;
--- DROP INDEX IF EXISTS idx_household_survey_lg;
--- DROP INDEX IF EXISTS idx_household_survey_completion;
--- DROP INDEX IF EXISTS idx_household_survey_created;
--- DROP INDEX IF EXISTS idx_audit_log_pin_reset;
--- DROP INDEX IF EXISTS idx_audit_log_created;
--- DROP INDEX IF EXISTS idx_audit_log_customer;
--- DROP INDEX IF EXISTS idx_audit_log_event_type;
--- DROP INDEX IF EXISTS idx_household_claims_status;
--- DROP INDEX IF EXISTS idx_household_claims_lg_customer;
--- DROP INDEX IF EXISTS idx_household_claims_lg;
--- DROP INDEX IF EXISTS idx_household_claims_customer;
--- DROP INDEX IF EXISTS idx_bean_confirmations_claim_id;
--- DROP INDEX IF EXISTS idx_bean_confirmations_deadline;
--- DROP INDEX IF EXISTS idx_bean_confirmations_lg;
--- DROP INDEX IF EXISTS idx_bean_confirmations_customer;
--- DROP INDEX IF EXISTS idx_bean_otps_valid;
--- DROP INDEX IF EXISTS idx_bean_otps_intent;
--- DROP INDEX IF EXISTS idx_bean_otps_lg;
--- DROP INDEX IF EXISTS idx_bean_otps_customer;
--- DROP INDEX IF EXISTS idx_lg_intents_claim_collection;
--- DROP INDEX IF EXISTS idx_lg_intents_claim_intent_id;
--- DROP INDEX IF EXISTS idx_lg_intents_status;
--- DROP INDEX IF EXISTS idx_lg_intents_lg;
--- DROP INDEX IF EXISTS idx_lg_intents_customer;
--- DROP INDEX IF EXISTS idx_failed_claims_customer;
--- DROP INDEX IF EXISTS idx_failed_claims_next_retry;
--- DROP INDEX IF EXISTS idx_failed_claims_status;
--- DROP INDEX IF EXISTS idx_customers_national_id;
--- DROP INDEX IF EXISTS idx_customer_phones_phone_id;
--- DROP INDEX IF EXISTS idx_customer_phones_customer_id;
--- DROP INDEX IF EXISTS idx_customers_role;
--- DROP INDEX IF EXISTS idx_customers_customer_id;
--- DROP INDEX IF EXISTS idx_phones_phone_number;
--- DROP INDEX IF EXISTS idx_matrix_vaults_profile_id;
--- DROP INDEX IF EXISTS idx_ixo_accounts_address;
--- DROP INDEX IF EXISTS idx_ixo_accounts_profile_id;
--- DROP INDEX IF EXISTS idx_ixo_profiles_did;
--- DROP INDEX IF EXISTS idx_ixo_profiles_household_id;
--- DROP INDEX IF EXISTS idx_ixo_profiles_customer_id;
+DROP INDEX IF EXISTS idx_household_claims_survey_form;
+DROP INDEX IF EXISTS idx_household_claims_survey_updated;
+DROP INDEX IF EXISTS idx_household_claims_lg_customer_composite;
+DROP INDEX IF EXISTS idx_household_survey_lg_customer_unique;
+DROP INDEX IF EXISTS idx_household_survey_customer;
+DROP INDEX IF EXISTS idx_household_survey_lg;
+DROP INDEX IF EXISTS idx_household_survey_completion;
+DROP INDEX IF EXISTS idx_household_survey_created;
+DROP INDEX IF EXISTS idx_audit_log_pin_reset;
+DROP INDEX IF EXISTS idx_audit_log_created;
+DROP INDEX IF EXISTS idx_audit_log_customer;
+DROP INDEX IF EXISTS idx_audit_log_event_type;
+DROP INDEX IF EXISTS idx_household_claims_status;
+DROP INDEX IF EXISTS idx_household_claims_lg_customer;
+DROP INDEX IF EXISTS idx_household_claims_lg;
+DROP INDEX IF EXISTS idx_household_claims_customer;
+DROP INDEX IF EXISTS idx_bean_confirmations_claim_id;
+DROP INDEX IF EXISTS idx_bean_confirmations_deadline;
+DROP INDEX IF EXISTS idx_bean_confirmations_lg;
+DROP INDEX IF EXISTS idx_bean_confirmations_customer;
+DROP INDEX IF EXISTS idx_bean_otps_valid;
+DROP INDEX IF EXISTS idx_bean_otps_intent;
+DROP INDEX IF EXISTS idx_bean_otps_lg;
+DROP INDEX IF EXISTS idx_bean_otps_customer;
+DROP INDEX IF EXISTS idx_lg_intents_claim_collection;
+DROP INDEX IF EXISTS idx_lg_intents_claim_intent_id;
+DROP INDEX IF EXISTS idx_lg_intents_status;
+DROP INDEX IF EXISTS idx_lg_intents_lg;
+DROP INDEX IF EXISTS idx_lg_intents_customer;
+DROP INDEX IF EXISTS idx_failed_claims_customer;
+DROP INDEX IF EXISTS idx_failed_claims_next_retry;
+DROP INDEX IF EXISTS idx_failed_claims_status;
+DROP INDEX IF EXISTS idx_customers_national_id;
+DROP INDEX IF EXISTS idx_customer_phones_phone_id;
+DROP INDEX IF EXISTS idx_customer_phones_customer_id;
+DROP INDEX IF EXISTS idx_customers_role;
+DROP INDEX IF EXISTS idx_customers_customer_id;
+DROP INDEX IF EXISTS idx_phones_phone_number;
+DROP INDEX IF EXISTS idx_matrix_vaults_profile_id;
+DROP INDEX IF EXISTS idx_ixo_accounts_address;
+DROP INDEX IF EXISTS idx_ixo_accounts_profile_id;
+DROP INDEX IF EXISTS idx_ixo_profiles_did;
+DROP INDEX IF EXISTS idx_ixo_profiles_household_id;
+DROP INDEX IF EXISTS idx_ixo_profiles_customer_id;
 
 -- -- Drop tables in reverse dependency order
--- DROP TABLE IF EXISTS audit_log;
--- DROP TABLE IF EXISTS failed_claims_queue;
--- DROP TABLE IF EXISTS household_claims;
--- DROP TABLE IF EXISTS household_survey_responses;  -- Legacy table from before JSON refactor
--- DROP TABLE IF EXISTS bean_delivery_confirmations;
--- DROP TABLE IF EXISTS bean_distribution_otps;
--- DROP TABLE IF EXISTS lg_delivery_intents;
--- DROP TABLE IF EXISTS matrix_vaults;
--- DROP TABLE IF EXISTS ixo_accounts;
--- DROP TABLE IF EXISTS ixo_profiles;
--- DROP TABLE IF EXISTS customer_phones;
--- DROP TABLE IF EXISTS customers;
--- DROP TABLE IF EXISTS households;
--- DROP TABLE IF EXISTS phones;
+DROP TABLE IF EXISTS audit_log;
+DROP TABLE IF EXISTS failed_claims_queue;
+DROP TABLE IF EXISTS household_claims;
+DROP TABLE IF EXISTS household_survey_responses;  -- Legacy table from before JSON refactor
+DROP TABLE IF EXISTS bean_delivery_confirmations;
+DROP TABLE IF EXISTS bean_distribution_otps;
+DROP TABLE IF EXISTS lg_delivery_intents;
+DROP TABLE IF EXISTS matrix_vaults;
+DROP TABLE IF EXISTS ixo_accounts;
+DROP TABLE IF EXISTS ixo_profiles;
+DROP TABLE IF EXISTS customer_phones;
+DROP TABLE IF EXISTS customers;
+DROP TABLE IF EXISTS households;
+DROP TABLE IF EXISTS phones;
 
 -- ============================================================================
 -- SECTION 1: CORE TABLES
@@ -182,8 +182,11 @@ CREATE TABLE IF NOT EXISTS bean_delivery_confirmations (
   customer_confirmed_receipt BOOLEAN NULL,
   token_transferred_at TIMESTAMP NULL,
   confirmation_deadline TIMESTAMP NOT NULL,
-  -- Blockchain claim tracking column (added in migration 001)
+  -- Blockchain claim tracking columns
   claim_id VARCHAR(255),
+  claim_tx_hash VARCHAR(255),
+  claim_evaluation_tx_hash VARCHAR(255),
+  fuel_delivery_claim_id VARCHAR(255),
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );

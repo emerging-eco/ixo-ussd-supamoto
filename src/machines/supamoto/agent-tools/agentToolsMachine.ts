@@ -25,11 +25,12 @@ import { dataService } from "../../../services/database-storage.js";
 import { databaseManager } from "../../../services/database-manager.js";
 import { createModuleLogger } from "../../../services/logger.js";
 import { config } from "../../../config.js";
-import { CHAIN_RPC_URL } from "../../../constants/ixo-blockchain.js";
-import {
-  submitClaimIntent,
-  submitClaim,
-} from "../../../services/ixo/ixo-claims.js";
+// DEMO MODE: Blockchain imports commented out - using hardcoded values
+// import { CHAIN_RPC_URL } from "../../../constants/ixo-blockchain.js";
+// import {
+//   submitClaimIntent,
+//   submitClaim,
+// } from "../../../services/ixo/ixo-claims.js";
 import { logBeanDeliveryConfirmation } from "../../../services/claims-bot.js";
 import { sendSMS, generatePin } from "../../../services/sms.js";
 import {
@@ -339,146 +340,33 @@ const submitBeanClaimIntentService = fromPromise(
       }
 
       // TODO: Add AuthZ MsgSubmitClaimIntent permission to Lead Generator using Customer mnemonic
+      // DEMO MODE: Hardcoded claim intent ID to bypass blockchain AuthZ issues
+      // This will be replaced with actual blockchain call once SDK supports subscriptions
 
-      logger.debug(
+      logger.info(
         {
           customerId: input.customerId,
           collectionId,
-          chainRpcUrl: CHAIN_RPC_URL,
         },
-        "Preparing to submit claim intent to blockchain"
+        "DEMO MODE: Generating hardcoded claim intent ID (blockchain call bypassed)"
       );
 
-      // Submit claim intent to blockchain using LG's mnemonic
-      const result = await submitClaimIntent({
-        mnemonic: lgMnemonic,
-        chainRpcUrl: CHAIN_RPC_URL,
-        intent: {
-          collectionId,
-          agentDid: lgDid,
-          agentAddress: lgAddress,
-        },
-        memo: `Bean delivery intent for customer ${input.customerId}`,
-      });
-
-      logger.debug(
-        {
-          customerId: input.customerId,
-          txHash: result.transactionHash,
-          height: result.height,
-          eventsCount: result.events?.length || 0,
-          msgResponsesCount: result.msgResponses?.length || 0,
-          hasRawLog: !!result.rawLog,
-        },
-        "Blockchain transaction completed, extracting claim intent ID"
-      );
-
-      // Extract claim intent ID from rawLog (JSON format)
-      let claimIntentId: string | undefined;
-
-      // Try to parse rawLog which contains the transaction events in JSON format
-      if (result.rawLog) {
-        try {
-          const logs = JSON.parse(result.rawLog);
-
-          logger.debug(
-            {
-              customerId: input.customerId,
-              logsType: typeof logs,
-              logsIsArray: Array.isArray(logs),
-              logsLength: Array.isArray(logs) ? logs.length : 0,
-            },
-            "Parsed rawLog"
-          );
-
-          // rawLog is an array of log entries, each with events
-          if (Array.isArray(logs) && logs.length > 0) {
-            // Look through all events in all logs
-            for (const log of logs) {
-              if (log.events && Array.isArray(log.events)) {
-                for (const event of log.events) {
-                  // Look for the claim intent created event
-                  if (
-                    event.type === "ixo.claims.v1beta1.ClaimIntentCreated" ||
-                    event.type === "claim_intent_created"
-                  ) {
-                    // Find the claim_intent_id attribute
-                    const idAttr = event.attributes?.find(
-                      (attr: any) =>
-                        attr.key === "claim_intent_id" ||
-                        attr.key === "claimIntentId"
-                    );
-                    if (idAttr) {
-                      claimIntentId = idAttr.value;
-                      logger.info(
-                        {
-                          customerId: input.customerId,
-                          claimIntentId,
-                          eventType: event.type,
-                        },
-                        "Successfully extracted claim intent ID from rawLog"
-                      );
-                      break;
-                    }
-                  }
-                }
-              }
-              if (claimIntentId) break;
-            }
-          }
-
-          // If not found, log the full structure for debugging
-          if (!claimIntentId) {
-            logger.warn(
-              {
-                customerId: input.customerId,
-                logs: logs,
-              },
-              "Could not find claim intent ID in rawLog, logging full structure"
-            );
-          }
-        } catch (parseError) {
-          logger.error(
-            {
-              customerId: input.customerId,
-              error:
-                parseError instanceof Error
-                  ? parseError.message
-                  : String(parseError),
-              rawLog: result.rawLog.substring(0, 500),
-            },
-            "Failed to parse rawLog"
-          );
-        }
-      }
-
-      if (!claimIntentId) {
-        logger.error(
-          {
-            customerId: input.customerId,
-            txHash: result.transactionHash,
-            msgResponsesCount: result.msgResponses?.length || 0,
-            eventsCount: result.events?.length || 0,
-            hasRawLog: !!result.rawLog,
-          },
-          "Failed to extract claim intent ID from transaction"
-        );
-        // throw new Error("Failed to extract claim intent ID from transaction");
-        claimIntentId = result.transactionHash;
-      }
+      // Generate hardcoded claim intent ID with timestamp for uniqueness
+      const claimIntentId = `DEMO_INTENT_${Date.now()}`;
+      const transactionHash = claimIntentId;
 
       logger.info(
         {
           claimIntentId,
-          txHash: result.transactionHash,
+          txHash: transactionHash,
           customerId: input.customerId,
         },
-        "Claim intent submitted successfully"
+        "Claim intent submitted successfully (DEMO MODE)"
       );
 
       return {
         claimIntentId,
-        claimIntentResponse: result,
+        claimIntentResponse: { transactionHash },
       };
     } catch (error) {
       const errorMessage =
@@ -787,124 +675,33 @@ const submitBeanClaimService = fromPromise(
       );
     }
 
-    logger.debug(
+    // DEMO MODE: Hardcoded claim ID and transaction hash to bypass blockchain AuthZ issues
+    // This will be replaced with actual blockchain call once SDK supports subscriptions
+
+    logger.info(
       {
         customerId: input.customerId.slice(-4),
         collectionId,
       },
-      "Collection ID retrieved, preparing to submit claim"
+      "DEMO MODE: Generating hardcoded claim ID and transaction hash (blockchain call bypassed)"
     );
 
-    // Submit claim with useIntent=true to link to the claim intent using LG's mnemonic
-    const result = await submitClaim({
-      mnemonic: lgMnemonic,
-      chainRpcUrl: CHAIN_RPC_URL,
-      claim: {
-        collectionId,
-        agentDid: lgDid,
-        agentAddress: lgAddress,
-        useIntent: true, // Link to existing claim intent
-      },
-      memo: `Bean delivery claim for customer ${input.customerId}`,
-    });
-
-    // Extract claim ID from rawLog (JSON format)
-    let claimId: string | undefined;
-
-    if (result.rawLog) {
-      try {
-        const logs = JSON.parse(result.rawLog);
-
-        logger.debug(
-          {
-            customerId: input.customerId.slice(-4),
-            logsType: typeof logs,
-            logsIsArray: Array.isArray(logs),
-          },
-          "Parsed rawLog for claim submission"
-        );
-
-        // Look through all events in all logs
-        if (Array.isArray(logs) && logs.length > 0) {
-          for (const log of logs) {
-            if (log.events && Array.isArray(log.events)) {
-              for (const event of log.events) {
-                // Look for the claim submitted event
-                if (
-                  event.type === "ixo.claims.v1beta1.ClaimSubmitted" ||
-                  event.type === "claim_submitted"
-                ) {
-                  const idAttr = event.attributes?.find(
-                    (attr: any) =>
-                      attr.key === "claim_id" || attr.key === "claimId"
-                  );
-                  if (idAttr) {
-                    claimId = idAttr.value;
-                    logger.info(
-                      {
-                        customerId: input.customerId.slice(-4),
-                        claimId,
-                        eventType: event.type,
-                      },
-                      "Successfully extracted claim ID from rawLog"
-                    );
-                    break;
-                  }
-                }
-              }
-            }
-            if (claimId) break;
-          }
-        }
-
-        if (!claimId) {
-          logger.warn(
-            {
-              customerId: input.customerId.slice(-4),
-              logs: logs,
-            },
-            "Could not find claim ID in rawLog, logging full structure"
-          );
-        }
-      } catch (parseError) {
-        logger.error(
-          {
-            customerId: input.customerId.slice(-4),
-            error:
-              parseError instanceof Error
-                ? parseError.message
-                : String(parseError),
-            rawLog: result.rawLog.substring(0, 500),
-          },
-          "Failed to parse rawLog for claim submission"
-        );
-      }
-    }
-
-    if (!claimId) {
-      logger.error(
-        {
-          customerId: input.customerId.slice(-4),
-          txHash: result.transactionHash,
-          hasRawLog: !!result.rawLog,
-        },
-        "Failed to extract claim ID from transaction"
-      );
-      throw new Error("Failed to extract claim ID from transaction");
-    }
+    // Generate hardcoded values with timestamp for uniqueness
+    const claimId = `${collectionId}-DEMO-CLAIM-${Date.now()}`;
+    const claimTxHash = `DEMO_TX_HASH_${Date.now()}`;
 
     logger.info(
       {
         claimId,
-        txHash: result.transactionHash,
+        txHash: claimTxHash,
         customerId: input.customerId.slice(-4),
       },
-      "Claim submitted successfully"
+      "Claim submitted successfully (DEMO MODE)"
     );
 
     return {
       claimId,
-      claimTxHash: result.transactionHash,
+      claimTxHash,
     };
   }
 );
@@ -917,12 +714,16 @@ const createDeliveryConfirmationService = fromPromise(
       customerId: string;
       lgCustomerId: string;
       otpId: number;
+      claimId?: string;
+      claimTxHash?: string;
     };
   }) => {
     logger.info(
       {
         customerId: input.customerId.slice(-4),
         lgCustomerId: input.lgCustomerId.slice(-4),
+        hasClaimId: !!input.claimId,
+        hasClaimTxHash: !!input.claimTxHash,
       },
       "Creating delivery confirmation record"
     );
@@ -935,7 +736,9 @@ const createDeliveryConfirmationService = fromPromise(
       input.customerId,
       input.lgCustomerId,
       input.otpId,
-      config.USSD.DELIVERY_CONFIRMATION_DAYS
+      config.USSD.DELIVERY_CONFIRMATION_DAYS,
+      input.claimId,
+      input.claimTxHash
     );
 
     // Send "valid OTP" SMS to LG - get LG phone number
@@ -1533,6 +1336,8 @@ export const agentToolsMachine = setup({
               customerId: context.customerId!,
               lgCustomerId: context.lgCustomerId,
               otpId: context.otpId!,
+              claimId: context.claimId,
+              claimTxHash: context.claimTxHash,
             }),
             onDone: {
               target: "complete",

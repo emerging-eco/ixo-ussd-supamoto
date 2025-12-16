@@ -17,7 +17,8 @@
  * ```
  */
 
-import { getClaimsBotDbClient } from "./claims-bot-db-client.js";
+// DEMO MODE: Database client import commented out - using hardcoded collection ID
+// import { getClaimsBotDbClient } from "./claims-bot-db-client.js";
 import { createModuleLogger } from "./logger.js";
 
 const logger = createModuleLogger("claims-bot-collection");

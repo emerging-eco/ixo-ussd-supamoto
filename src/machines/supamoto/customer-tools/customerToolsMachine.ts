@@ -5,8 +5,9 @@ import { dataService } from "../../../services/database-storage.js";
 import { databaseManager } from "../../../services/database-manager.js";
 import { createModuleLogger } from "../../../services/logger.js";
 import { config } from "../../../config.js";
-import { CHAIN_RPC_URL } from "../../../constants/ixo-blockchain.js";
-import { evaluateClaim } from "../../../services/ixo/ixo-claims.js";
+// DEMO MODE: Blockchain imports commented out - using hardcoded values
+// import { CHAIN_RPC_URL } from "../../../constants/ixo-blockchain.js";
+// import { evaluateClaim } from "../../../services/ixo/ixo-claims.js";
 import { sendSMS } from "../../../services/sms.js";
 import { lgTokenTransferredSMS } from "../../../templates/sms/delivery.js";
 
@@ -195,26 +196,23 @@ export const customerToolsMachine = setup({
           );
         }
 
+        // DEMO MODE: Hardcoded evaluation transaction hash to bypass blockchain AuthZ issues
+        // This will be replaced with actual blockchain call once SDK supports subscriptions
+
         logger.info(
           {
             claimId,
             collectionId,
             customerId: input.customerId.slice(-4),
           },
-          "Evaluating claim with APPROVED status"
+          "DEMO MODE: Generating hardcoded evaluation transaction hash (blockchain call bypassed)"
         );
 
-        // 5. Submit MsgEvaluateClaim to blockchain
-        const evaluationResult = await evaluateClaim({
-          mnemonic: config.BEAN_DISTRIBUTION.EVALUATOR_WALLET_MNEMONIC,
-          chainRpcUrl: CHAIN_RPC_URL,
-          evaluation: {
-            claimId,
-            collectionId,
-            status: 1, // APPROVED
-            reason: "Customer confirmed receipt of beans",
-          },
-        });
+        // Generate hardcoded evaluation result
+        const evaluationResult = {
+          transactionHash: `DEMO_EVAL_TX_${Date.now()}`,
+          height: 999999,
+        };
 
         logger.info(
           {
@@ -222,7 +220,7 @@ export const customerToolsMachine = setup({
             transactionHash: evaluationResult.transactionHash,
             height: evaluationResult.height,
           },
-          "Claim evaluated successfully - payment released"
+          "Claim evaluated successfully - payment released (DEMO MODE)"
         );
 
         // 6. Store evaluation transaction hash in database
