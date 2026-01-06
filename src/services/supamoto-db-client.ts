@@ -70,9 +70,10 @@ export function getSupamotoDbClient() {
         ssl: config.CLAIMS_BOT_DB.ssl ? { rejectUnauthorized: false } : false,
         // Connection pool configuration
         max: 20, // Maximum number of clients in pool
-        min: 5, // Minimum number of clients in pool
+        min: 0, // Minimum number of clients (lazy connection - only connect when needed)
         idleTimeoutMillis: 30000, // Idle timeout
-        connectionTimeoutMillis: 2000, // Connection timeout
+        connectionTimeoutMillis: 10000, // Connection timeout (10 seconds)
+        query_timeout: 30000, // Query timeout (30 seconds)
       },
       encryptionKey // Base64-encoded encryption key
     );
