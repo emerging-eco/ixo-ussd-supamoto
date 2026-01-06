@@ -47,9 +47,10 @@ let dbClient: ReturnType<typeof createDatabaseClient> | null = null;
  *
  * Connection pool configuration:
  * - Max connections: 10 (lower than USSD DB since this is read-only)
- * - Min connections: 2
+ * - Min connections: 0 (lazy connection - only connect when needed)
  * - Idle timeout: 30 seconds
- * - Connection timeout: 2 seconds
+ * - Connection timeout: 10 seconds
+ * - Query timeout: 30 seconds
  *
  * @returns Database client instance
  * @throws Error if CLAIMS_BOT_DB_ENCRYPTION_KEY is not configured
@@ -93,9 +94,10 @@ export function getClaimsBotDbClient() {
         ssl: config.CLAIMS_BOT_DB.ssl ? { rejectUnauthorized: false } : false,
         // Connection pool configuration (read-only access, lower limits)
         max: 10, // Maximum number of clients in pool
-        min: 2, // Minimum number of clients in pool
+        min: 0, // Minimum number of clients (lazy connection - only connect when needed)
         idleTimeoutMillis: 30000, // Idle timeout (30 seconds)
-        connectionTimeoutMillis: 2000, // Connection timeout (2 seconds)
+        connectionTimeoutMillis: 10000, // Connection timeout (10 seconds)
+        query_timeout: 30000, // Query timeout (30 seconds)
       },
       encryptionKey // Base64-encoded encryption key
     );

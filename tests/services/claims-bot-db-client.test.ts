@@ -98,9 +98,10 @@ describe("Claims Bot Database Client", () => {
         database: "supamoto_db",
         ssl: false,
         max: 10,
-        min: 2,
+        min: 0,
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 2000,
+        connectionTimeoutMillis: 10000,
+        query_timeout: 30000,
       }),
       "test-encryption-key-base64"
     );
