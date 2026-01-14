@@ -26,7 +26,7 @@ import { withNavigation } from "../utils/navigation-mixin.js";
 import { NavigationPatterns } from "../utils/navigation-patterns.js";
 import { sendSMSWithRetry } from "../../../../src/services/sms.js";
 import { accountLockedSMS } from "../../../../src/templates/sms/index.js";
-import { getDecryptedCustomerData } from "../../../../src/services/supamoto-db-client.js";
+import { getDecryptedCustomerData } from "../../../../src/services/claims-bot-db-client.js";
 
 const logger = createModuleLogger("loginMachine");
 

@@ -40,7 +40,7 @@ vi.mock("../../../../src/services/logger.js", () => ({
 vi.mock("../../../../src/services/sms.js", () => ({
   sendSMSWithRetry: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("../../../../src/services/supamoto-db-client.js", () => ({
+vi.mock("../../../../src/services/claims-bot-db-client.js", () => ({
   getDecryptedCustomerData: vi.fn(),
 }));
 

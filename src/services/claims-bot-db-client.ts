@@ -107,3 +107,71 @@ export function getClaimsBotDbClient() {
 
   return dbClient;
 }
+
+/**
+ * Get decrypted customer data by customer ID
+ *
+ * Fetches customer data from the database and automatically decrypts all
+ * sensitive fields. Returns ICustomerDecrypted with all fields as strings
+ * (not Buffers).
+ *
+ * @param customerId - Customer ID (e.g., "C12345678")
+ * @returns Decrypted customer data or null if not found
+ * @throws Error if database query fails
+ *
+ * @example
+ * ```typescript
+ * const customer = await getDecryptedCustomerData('C12345678');
+ * if (customer) {
+ *   console.log(customer.full_name);    // string (decrypted)
+ *   console.log(customer.email);        // string (decrypted)
+ *   console.log(customer.national_id);  // string (decrypted)
+ *   console.log(customer.status);       // 'active' | 'inactive' | etc.
+ * }
+ * ```
+ */
+export async function getDecryptedCustomerData(
+  customerId: string
+): Promise<ICustomerDecrypted | null> {
+  const db = getClaimsBotDbClient();
+
+  try {
+    logger.info(
+      { customerId: customerId.slice(-4) },
+      "Fetching decrypted customer data from SDK"
+    );
+
+    const customer = await db.customers.v1.selectCustomer({ customerId });
+
+    if (!customer) {
+      logger.warn(
+        { customerId: customerId.slice(-4) },
+        "Customer not found in database"
+      );
+      return null;
+    }
+
+    logger.info(
+      {
+        customerId: customer.customer_id,
+        status: customer.status,
+        hasFullName: !!customer.full_name,
+        hasEmail: !!customer.email,
+        hasNationalId: !!customer.national_id,
+        hasAddress: !!customer.address,
+      },
+      "Customer data retrieved and decrypted successfully"
+    );
+
+    return customer;
+  } catch (error) {
+    logger.error(
+      {
+        error: error instanceof Error ? error.message : String(error),
+        customerId: customerId.slice(-4),
+      },
+      "Failed to fetch decrypted customer data"
+    );
+    throw error;
+  }
+}
