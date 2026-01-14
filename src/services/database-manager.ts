@@ -19,6 +19,7 @@ interface DatabaseConnectionConfig {
   host?: string;
   port?: number;
   maxConnections?: number;
+  ssl?: boolean;
 }
 
 class DatabaseManager {
@@ -89,10 +90,8 @@ class DatabaseManager {
       "🔌 Initializing database connections"
     );
 
-    const ssl =
-      process.env.NODE_ENV === "production"
-        ? { rejectUnauthorized: false }
-        : false;
+    // Use SSL from config, converting boolean to proper SSL config object
+    const ssl = dbConfig.ssl ? { rejectUnauthorized: false } : false;
 
     try {
       // Create PostgreSQL pool

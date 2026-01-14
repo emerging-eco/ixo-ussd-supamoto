@@ -146,10 +146,21 @@ function parseDatabaseUrl(databaseUrl: string): {
  * Get database configuration from DATABASE_URL or individual env vars
  */
 function getDatabaseConfig() {
+  // Determine SSL setting:
+  // - If PG_SSL is explicitly set, use that value
+  // - Otherwise, fall back to NODE_ENV-based default (production = true)
+  const sslEnabled =
+    process.env.PG_SSL !== undefined
+      ? process.env.PG_SSL === "true"
+      : process.env.NODE_ENV === "production";
+
   // Try DATABASE_URL first
   if (process.env.DATABASE_URL) {
     try {
-      return parseDatabaseUrl(process.env.DATABASE_URL);
+      return {
+        ...parseDatabaseUrl(process.env.DATABASE_URL),
+        ssl: sslEnabled,
+      };
     } catch (error) {
       logger.warn(
         {
@@ -167,6 +178,7 @@ function getDatabaseConfig() {
     password: process.env.PG_PASSWORD || "",
     host: process.env.PG_HOST || "localhost",
     port: process.env.PG_PORT ? parseInt(process.env.PG_PORT, 10) : 5432,
+    ssl: sslEnabled,
   };
 }
 
