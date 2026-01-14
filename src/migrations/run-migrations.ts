@@ -34,6 +34,7 @@ const dbConfig = {
   database: config.DATABASE.PG.database,
   host: config.DATABASE.PG.host,
   port: config.DATABASE.PG.port,
+  ssl: config.DATABASE.PG.ssl ? { rejectUnauthorized: false } : false,
 };
 
 async function runMigrations() {
