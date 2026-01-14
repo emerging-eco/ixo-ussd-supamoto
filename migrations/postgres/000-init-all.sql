@@ -92,6 +92,8 @@
 -- SECTION 1: CORE TABLES
 -- ============================================================================
 -- Data Storage: Phone → Customer (with optional household reference)
+-- Note: IXO blockchain integration (ixo_profiles, ixo_accounts, matrix_vaults)
+--       has been removed. IXO account creation is now delegated to the Claims Bot service.
 
 -- 1.1 Phone details (independent - can exist without any other data)
 CREATE TABLE IF NOT EXISTS phones (
@@ -141,6 +143,12 @@ CREATE TABLE IF NOT EXISTS customer_phones (
 -- ============================================================================
 -- SECTION 2: BEAN DISTRIBUTION & DELIVERY (with blockchain claim tracking)
 -- ============================================================================
+-- Note: eligibility_verifications table not included - replaced by
+--       household_claims + survey_form JSONB system
+-- Note: distribution_otps table not included - superseded by bean_distribution_otps
+--       which provides comprehensive tracking with foreign keys and LG tracking
+-- Note: household_survey_responses table not included - replaced by survey_form
+--       JSONB column in household_claims table for flexible schema
 
 -- 2.1 LG Intent Registration Table (with blockchain claim tracking)
 CREATE TABLE IF NOT EXISTS lg_delivery_intents (
@@ -259,8 +267,6 @@ CREATE INDEX IF NOT EXISTS idx_customers_role ON customers(role);
 CREATE INDEX IF NOT EXISTS idx_customers_national_id ON customers(national_id) WHERE national_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_customer_phones_customer_id ON customer_phones(customer_id);
 CREATE INDEX IF NOT EXISTS idx_customer_phones_phone_id ON customer_phones(phone_id);
-
--- Note: Obsolete indexes removed (ixo_profiles, ixo_accounts, matrix_vaults tables removed)
 
 -- Failed claims queue indexes
 CREATE INDEX IF NOT EXISTS idx_failed_claims_status ON failed_claims_queue(status);
