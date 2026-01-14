@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Kysely } from "kysely";
 import { databaseManager } from "../services/database-manager.js";
-import { ENV } from "../config.js";
+import { config, ENV } from "../config.js";
 
 // Initialize database manager
 if (!ENV.IS_TEST) {
   // In production/development, initialize immediately
-  databaseManager.initialize().catch(error => {
+  databaseManager.initialize(config.DATABASE.PG).catch(error => {
     // Use process.stderr for logging during initialization
     process.stderr.write(`Failed to initialize database: ${error}\n`);
     process.exit(1);

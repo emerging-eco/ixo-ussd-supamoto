@@ -75,6 +75,7 @@ class DatabaseManager {
         config?.port ||
         (process.env.PG_PORT ? parseInt(process.env.PG_PORT, 10) : 5432),
       maxConnections: config?.maxConnections || 5,
+      ssl: config?.ssl,
     };
 
     this.connectionConfig = dbConfig;

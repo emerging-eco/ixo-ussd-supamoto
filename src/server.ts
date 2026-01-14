@@ -102,7 +102,7 @@ export async function createServer(): Promise<FastifyInstance> {
     );
 
     try {
-      await databaseManager.initialize();
+      await databaseManager.initialize(config.DATABASE.PG);
       logger.info("✅ Database connection successful");
 
       // Test the connection
