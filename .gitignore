@@ -22,6 +22,7 @@ specs
 # env files
 *.env
 *.env.local
+*.env.dev
 *.env.stage
 *.env.prod
 
