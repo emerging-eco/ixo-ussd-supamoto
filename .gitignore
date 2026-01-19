@@ -25,6 +25,7 @@ specs
 *.env.dev
 *.env.stage
 *.env.prod
+*.env.k8s.json
 
 #logs
 logs
