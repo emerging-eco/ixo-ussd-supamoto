@@ -112,8 +112,8 @@ function parseDatabaseUrl(databaseUrl: string): {
     if (!database) {
       throw new Error("Invalid format: missing database name");
     }
-    const user = url.username;
-    const password = url.password;
+    const user = decodeURIComponent(url.username);
+    const password = decodeURIComponent(url.password);
     const host = url.hostname;
     const port = url.port ? parseInt(url.port, 10) : 5432;
     if (!user) {
