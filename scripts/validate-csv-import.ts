@@ -242,4 +242,3 @@ printReport(report);
 process.exit(report.validRows === report.totalRows && 
              report.duplicatePhones.size === 0 && 
              report.duplicateContracts.size === 0 ? 0 : 1);
-

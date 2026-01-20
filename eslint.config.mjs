@@ -18,7 +18,7 @@ const compat = new FlatCompat({
 export default defineConfig([
     globalIgnores(["**/dist/", "**/node_modules/", "**/coverage/", "**/*.d.ts"]),
     {
-        files: ["src/**/*.{ts,tsx,js,jsx}", "tests/**/*.{ts,tsx,js,jsx}"],
+        files: ["src/**/*.{ts,tsx,js,jsx}", "tests/**/*.{ts,tsx,js,jsx}", "scripts/**/*.{ts,tsx,js,jsx}"],
         extends: compat.extends("eslint:recommended"),
 
         plugins: {
@@ -72,6 +72,13 @@ export default defineConfig([
             "**/test/**/*",
             "**/tests/**/*",
         ],
+
+        rules: {
+            "no-console": "off",
+        },
+    },
+    {
+        files: ["scripts/**/*.{ts,tsx,js,jsx}"],
 
         rules: {
             "no-console": "off",

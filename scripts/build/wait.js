@@ -25,4 +25,3 @@ setTimeout(() => {
   console.log('✅ Wait complete');
   process.exit(0);
 }, seconds * 1000);
-

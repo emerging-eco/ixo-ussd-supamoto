@@ -85,4 +85,3 @@ migrations.on('close', (code) => {
 
   }, 2000);
 });
-

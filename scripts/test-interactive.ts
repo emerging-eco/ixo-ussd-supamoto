@@ -1,5 +1,3 @@
-/* eslint-disable no-console */
-
 /**
  * Interactive USSD Test for State Machine Architecture
  *
@@ -203,7 +201,8 @@ const SERVER_URL =
   // "http://127.0.0.1:3000/api/ussd"; //localhost
   // "https://ixo-ussd-supamoto-development.up.railway.app/api/ussd"; //development
   // "https://ixo-ussd-supamoto-stage.up.railway.app/api/ussd";       //stage
-  "https://ussd-supamoto.devnet.ixo.earth/api/ussd";       //k8s-dev
+  // "https://ussd-supamoto.devnet.ixo.earth/api/ussd";       //k8s-dev
+  "https://ussd-supamoto.testnet.ixo.earth/api/ussd"; //k8s-stage
 const sessionId = `interactive-test-${Date.now()}`;
 const phoneNumber = "+260971232222"; // Zambian number
 const serviceCode = "*2233#"; //*384*46361#	// Zambia

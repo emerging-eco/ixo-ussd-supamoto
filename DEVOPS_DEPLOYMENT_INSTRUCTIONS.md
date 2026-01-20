@@ -91,18 +91,21 @@ The fix (commit `db315b4`) addressed the following:
 If the error persists after clearing cache:
 
 1. **Verify the latest code is pulled:**
+
    ```bash
    git log --oneline -1
    # Should show: db315b4 fix: Docker build error - exclude dev-only utilities from production build
    ```
 
 2. **Check if tsconfig.build.json exists:**
+
    ```bash
    ls -la tsconfig.build.json
    # Should exist in the repository root
    ```
 
 3. **Manually test the build stage:**
+
    ```bash
    docker build --target build -t test-build .
    docker run --rm test-build ls -la /app/dist/migrations/
@@ -116,7 +119,7 @@ If the error persists after clearing cache:
 ## Contact
 
 If issues persist after following these steps, please provide:
+
 - Full build logs
 - Output of `git log --oneline -5`
 - Output of `docker build --no-cache .` (full output)
-

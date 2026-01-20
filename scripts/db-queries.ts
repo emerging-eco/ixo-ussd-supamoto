@@ -124,8 +124,6 @@ async function queryPhones(phoneNumber?: string) {
   }
 }
 
-
-
 // Parse command line arguments
 const args = process.argv.slice(2);
 

@@ -48,10 +48,10 @@ const logger = createModuleLogger("claims-bot-collection");
 export async function getCustomerCollectionId(
   customerId: string
 ): Promise<string | null> {
-    logger.info(
-      { customerId: customerId },
-      "supamoto-bot-sdk doesn't yet have the SUBSCRIPTIONS and CUSTOMER_SUBSCRIPTIONS tables - returning harcoded value 632"
-    );
+  logger.info(
+    { customerId: customerId },
+    "supamoto-bot-sdk doesn't yet have the SUBSCRIPTIONS and CUSTOMER_SUBSCRIPTIONS tables - returning harcoded value 632"
+  );
   return "632";
   // try {
   //   logger.info(
