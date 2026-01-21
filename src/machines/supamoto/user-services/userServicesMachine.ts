@@ -178,21 +178,23 @@ export const userServicesMachine = setup({
       entry: assign(() => ({
         message:
           "Agent Tools\n" +
-          "1. Activate a Customer\n" +
-          "2. 1,000 Day Survey\n" +
-          "3. Register Intent to Deliver Beans\n" +
-          "4. Submit Customer OTP\n" +
-          "5. Confirm Bean Delivery\n" +
+          "1. Confirm Receival of Beans\n" +
+          "2. Activate a Customer\n" +
+          "3. 1,000 Day Survey\n" +
+          "4. Register Intent to Deliver Beans\n" +
+          "5. Submit Customer OTP\n" +
+          "6. Confirm Bean Delivery\n" +
           "0. Back",
       })),
       on: {
         INPUT: withNavigation(
           [
-            { target: "agentActivateCustomer", guard: "isInput1" },
-            { target: "agentSurvey", guard: "isInput2" },
-            { target: "agentRegisterIntent", guard: "isInput3" },
-            { target: "agentSubmitOTP", guard: "isInput4" },
-            { target: "agentConfirmDelivery", guard: "isInput5" },
+            { target: "agentConfirmBeans", guard: "isInput1" },
+            { target: "agentActivateCustomer", guard: "isInput2" },
+            { target: "agentSurvey", guard: "isInput3" },
+            { target: "agentRegisterIntent", guard: "isInput4" },
+            { target: "agentSubmitOTP", guard: "isInput5" },
+            { target: "agentConfirmDelivery", guard: "isInput6" },
           ],
           {
             backTarget: "routeToMain",
@@ -203,6 +205,41 @@ export const userServicesMachine = setup({
         ),
       },
     },
+
+    // Agent: Confirm Receival of Beans (invokes customerToolsMachine)
+    agentConfirmBeans: {
+      on: {
+        INPUT: {
+          actions: sendTo("agentCustomerToolsChild", ({ event }) => event),
+        },
+      },
+      invoke: {
+        id: "agentCustomerToolsChild",
+        src: "customerToolsMachine",
+        input: ({ context }) => ({
+          sessionId: context.sessionId,
+          phoneNumber: context.phoneNumber,
+          serviceCode: context.serviceCode,
+          customerId: context.customerId || "",
+          pin: context.pin || "",
+        }),
+        onDone: {
+          target: "agent",
+        },
+        onError: {
+          target: "error",
+          actions: assign({
+            error: "Customer Tools error. Please try again.",
+          }),
+        },
+        onSnapshot: {
+          actions: assign(({ event }) => ({
+            message: event.snapshot.context.message,
+          })),
+        },
+      },
+    },
+
     agentActivateCustomer: {
       on: {
         INPUT: {
