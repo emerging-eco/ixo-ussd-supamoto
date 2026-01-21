@@ -1,4 +1,4 @@
-import { config, ENV } from "../../src/config.js";
+// Config is loaded lazily to avoid requiring DATABASE_URL before test setup runs
 
 export type TestEnvironment = "real" | "mocked";
 
@@ -228,19 +228,20 @@ export class EnvironmentSetup {
     }
 
     // Skip validation in test environment unless explicitly requested
-    const isTestEnv = ENV.IS_ANY_TEST;
+    const isTestEnv =
+      process.env.NODE_ENV === "test" || process.env.VITEST === "true";
     const skipValidation = isTestEnv && !process.env.FORCE_ENV_VALIDATION;
 
     // Check for required environment variables in real mode (skip in test environment)
     if (this.currentConfig.environment === "real" && !skipValidation) {
       if (this.currentConfig.useRealDatabase) {
-        if (!config.DATABASE.URL && !config.DATABASE.PG.database) {
+        if (!process.env.DATABASE_URL && !process.env.PG_DATABASE) {
           errors.push("Real database requires DATABASE_URL or database config");
         }
       }
 
       if (this.currentConfig.useRealMatrix) {
-        if (!config.MATRIX?.homeServerUrl) {
+        if (!process.env.MATRIX_HOME_SERVER) {
           errors.push("Real Matrix requires homeserver URL configuration");
         }
       }
@@ -264,7 +265,7 @@ export class EnvironmentSetup {
    */
   getDatabaseUrl(): string {
     if (this.currentConfig.useRealDatabase) {
-      return config.DATABASE.URL || "";
+      return process.env.DATABASE_URL || "";
     } else {
       return (
         process.env.TEST_DATABASE_URL ||
