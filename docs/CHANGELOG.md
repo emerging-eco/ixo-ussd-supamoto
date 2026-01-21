@@ -75,5 +75,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `[IXO-XXX]` - Linear issue identifier
 - Links to Linear: https://linear.app/ixo-world/issue/IXO-XXX
 
-[Unreleased]: https://github.com/ixoworld/ixo-ussd-server/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/ixoworld/ixo-ussd-server/releases/tag/v1.0.0
+[Unreleased]: https://github.com/emerging-eco/ixo-ussd-supamoto/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/emerging-eco/ixo-ussd-supamoto/releases/tag/v1.0.0
