@@ -69,7 +69,7 @@ mutation ProjectUpdateCreate($input: ProjectUpdateCreateInput!) {
    - Set health status to "onTrack" (default) or user-specified
    - **This triggers the Slack integration notification**
    - If the issue is not associated with a project, skip this step and note it in the report
-9. Check if `CHANGELOG.md` exists in the repository
+9. Check if `docs/CHANGELOG.md` exists in the repository
 10. If changelog exists, add an entry with:
 
 - Date
