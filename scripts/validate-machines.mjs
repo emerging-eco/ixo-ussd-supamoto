@@ -33,6 +33,15 @@ console.log("🔍 Validating State Machines...\n");
 
 let hasErrors = false;
 
+/**
+ * Safely extract error output from execSync error
+ */
+function getErrorOutput(error) {
+  const stdout = error.stdout?.toString() || "";
+  const stderr = error.stderr?.toString() || "";
+  return stdout || stderr || error.message || "Unknown error";
+}
+
 // 1. TypeScript Compilation Check
 console.log("📝 Checking TypeScript compilation...");
 try {
@@ -40,7 +49,7 @@ try {
   console.log("✅ TypeScript compilation passed\n");
 } catch (error) {
   console.log("❌ TypeScript compilation failed:");
-  console.log(error.stdout.toString());
+  console.log(getErrorOutput(error));
   hasErrors = true;
 }
 
@@ -54,7 +63,7 @@ try {
   console.log("✅ ESLint checks passed\n");
 } catch (error) {
   console.log("❌ ESLint checks failed:");
-  console.log(error.stdout.toString());
+  console.log(getErrorOutput(error));
   hasErrors = true;
 }
 
