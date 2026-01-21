@@ -104,15 +104,43 @@ async function main(): Promise<void> {
     console.error("❌ Error running integration tests:", error);
     exitCode = 1;
   } finally {
-    if (server) {
+    if (server && server.pid) {
       console.log("\n🛑 Stopping server...");
-      server.kill("SIGTERM");
 
-      // Give it a moment to clean up
-      await delay(1000);
+      // Kill the entire process group to ensure child processes are terminated
+      // Using negative PID kills the process group on Unix systems
+      try {
+        process.kill(-server.pid, "SIGTERM");
+      } catch {
+        // Process group kill not supported or already dead, try direct kill
+        server.kill("SIGTERM");
+      }
 
-      if (!server.killed) {
-        server.kill("SIGKILL");
+      // Wait for graceful shutdown, then force kill if still running
+      const killTimeout = 3000;
+      const startTime = Date.now();
+
+      while (Date.now() - startTime < killTimeout) {
+        try {
+          // Check if process is still running (signal 0 doesn't kill, just checks)
+          process.kill(server.pid, 0);
+          await delay(100);
+        } catch {
+          // Process no longer exists
+          break;
+        }
+      }
+
+      // Force kill if still running
+      try {
+        process.kill(-server.pid, "SIGKILL");
+      } catch {
+        // Already dead or process group not supported
+        try {
+          server.kill("SIGKILL");
+        } catch {
+          // Already dead
+        }
       }
     }
   }
