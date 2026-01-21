@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-01-21
+
+- **[IXO-543]** Documentation cleanup and consolidation
+  - Removed 6 redundant root-level markdown files
+  - Consolidated CHANGELOG content into `docs/CHANGELOG.md`
+  - All documentation now centralized in `docs/` folder
+
 ### Added - 2025-11-04
 
 - **[IXO-284]** Complete 1000 Day Household Survey implementation
