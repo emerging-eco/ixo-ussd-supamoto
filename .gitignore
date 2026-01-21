@@ -16,7 +16,6 @@ tests/**/*.js.map
 npm-debug.log
 .DS_Store
 .vscode/
-specs
 # Claude Code config (track commands, ignore rest)
 .claude/*
 !.claude/commands/

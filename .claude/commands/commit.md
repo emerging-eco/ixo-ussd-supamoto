@@ -34,7 +34,7 @@
 5. Create a concise, descriptive commit message. If you can accurately express the change in just the subject line, don't include anything in the message body. Only use the body when it is providing *useful* information.
 6. Don't repeat information from the subject line in the message body.
 7. Stage all changes: `git add .`
-8. Commit with message: `git commit -m "[ISSUE-ID] type: description"`
+8. Commit with message: `git commit -m "type: [ISSUE-ID] description"`
 9. Follow good Git style:
 - Separate the subject from the body with a blank line
 - Try to limit the subject line to 50 characters

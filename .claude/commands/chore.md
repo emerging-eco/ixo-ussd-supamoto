@@ -5,7 +5,7 @@ Create a new plan in specs/\*.md to resolve the `Chore` using the exact specifie
 ## Instructions
 
 - You're writing a plan to resolve a chore, it should be simple but we need to be thorough and precise so we don't miss anything or waste time with any second round of changes.
-- Create the plan in the `specs/*.md` file. Name it appropriately based on the `Chore`.
+- Create the plan in the `specs/*.md` file. Name it appropriately based on the `Chore` in the format `[ISSUE-ID]-chorename.md`
 - Use the plan format below to create the plan.
 - Research the codebase and put together a plan to accomplish the chore.
 - IMPORTANT: Replace every <placeholder> in the `Plan Format` with the requested value. Add as much detail as needed to accomplish the chore.
