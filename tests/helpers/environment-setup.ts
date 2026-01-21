@@ -235,8 +235,9 @@ export class EnvironmentSetup {
     // Check for required environment variables in real mode (skip in test environment)
     if (this.currentConfig.environment === "real" && !skipValidation) {
       if (this.currentConfig.useRealDatabase) {
-        if (!process.env.DATABASE_URL && !process.env.PG_DATABASE) {
-          errors.push("Real database requires DATABASE_URL or database config");
+        // DATABASE_URL is required by src/config.ts - PG_DATABASE alone is not sufficient
+        if (!process.env.DATABASE_URL) {
+          errors.push("Real database requires DATABASE_URL");
         }
       }
 
