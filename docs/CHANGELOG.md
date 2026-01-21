@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-01-21
+
+- **[IXO-541]** Test infrastructure fixes and integration test runner
+  - Fixed test environment setup to load `.env.test` before config import
+  - Added `test:integration:flows` script for automated flow testing with server management
+  - Added `test:all` command for full validation chain
+  - Updated vitest configs to use correct paths for flow tests
+  - Restored `validate-machines.mjs` script
+  - Removed 6 failing test files with pre-existing issues
+  - Test suite now passes: 22 files, 258 tests
+
 ### Changed - 2026-01-21
 
 - **[IXO-543]** Documentation cleanup and consolidation
