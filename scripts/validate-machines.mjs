@@ -191,10 +191,34 @@ if (!existsSync(indexFile)) {
 } else {
   const indexContent = readFileSync(indexFile, "utf-8");
 
+  // Match export statements: export { name } from or export { name as alias } from
+  const exportPattern =
+    /export\s*\{\s*([^}]+)\s*\}\s*from\s*["'][^"']+["']/g;
+  const exportedNames = new Set();
+
+  let match;
+  while ((match = exportPattern.exec(indexContent)) !== null) {
+    // Parse exported names, handling "name as alias" syntax
+    const exports = match[1].split(",").map((e) => {
+      const parts = e.trim().split(/\s+as\s+/);
+      return parts[0].trim(); // Get the original name, not the alias
+    });
+    exports.forEach((name) => {
+      if (name && !name.startsWith("type ")) {
+        exportedNames.add(name);
+      }
+    });
+  }
+
   for (const machineFile of machineFiles) {
     const machineName = path.basename(machineFile, ".ts");
+    // Also check for the machine variable name (e.g., supamotoMachine from parentMachine.ts)
+    const machineVarName = machineName.replace("parent", "supamoto");
 
-    if (!indexContent.includes(machineName)) {
+    const isExported =
+      exportedNames.has(machineName) || exportedNames.has(machineVarName);
+
+    if (!isExported) {
       console.log(`❌ ${machineName} not exported in index.ts`);
       hasErrors = true;
     } else {
