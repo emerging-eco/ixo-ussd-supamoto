@@ -44,10 +44,13 @@ try {
   hasErrors = true;
 }
 
-// 2. ESLint Check
+// 2. ESLint Check (without --fix to avoid mutating files)
 console.log("🔧 Checking ESLint compliance...");
 try {
-  execSync("pnpm lint", { stdio: "pipe" });
+  execSync(
+    'eslint "src/**/*.{ts,tsx,js,jsx}" "tests/**/*.{ts,tsx,js,jsx}" "scripts/**/*.{ts,tsx,js,jsx}"',
+    { stdio: "pipe" }
+  );
   console.log("✅ ESLint checks passed\n");
 } catch (error) {
   console.log("❌ ESLint checks failed:");
