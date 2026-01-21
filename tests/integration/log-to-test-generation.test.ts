@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "fs";
 import path from "path";
 import { SessionLogParser } from "../../src/utils/session-log-parser.js";
-import { VitestGenerator } from "../../src/utils/vitest-generator.js";
+import { VitestGenerator } from "../utils/vitest-generator.js";
 
 describe("Log to Test Generation - End-to-End Workflow", () => {
   let tempDir: string;

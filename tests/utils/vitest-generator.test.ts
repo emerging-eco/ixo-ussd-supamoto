@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { VitestGenerator } from "../../src/utils/vitest-generator.js";
+import { VitestGenerator } from "./vitest-generator.js";
 import { SessionFixture } from "../helpers/session-recorder.js";
 
 describe("VitestGenerator", () => {

@@ -39,7 +39,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { CUSTOMER_ID_PATTERN } from "../../src/utils/customer-id.js";
+import { CUSTOMER_ID_PATTERN } from "../../../src/utils/customer-id.js";
 
 // Test Configuration
 const SERVER_URL =

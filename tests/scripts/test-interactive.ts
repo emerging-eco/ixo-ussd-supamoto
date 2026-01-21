@@ -44,10 +44,10 @@ class SessionLogger {
   private originalConsoleWarn: typeof console.warn;
 
   constructor(sessionId: string, phoneNumber: string, serviceCode: string) {
-    // Create logs/sessions directory
-    const logsDir = path.join(process.cwd(), "logs", "sessions");
-    if (!fs.existsSync(logsDir)) {
-      fs.mkdirSync(logsDir, { recursive: true });
+    // Create sessions directory
+    const sessionsDir = path.join(process.cwd(), "sessions");
+    if (!fs.existsSync(sessionsDir)) {
+      fs.mkdirSync(sessionsDir, { recursive: true });
     }
 
     // Generate timestamped filename: session-YYYY-MM-DD-HH-mm-ss.log
@@ -57,7 +57,7 @@ class SessionLogger {
       .replace(/:/g, "-")
       .slice(0, 19); // YYYY-MM-DD-HH-mm-ss
 
-    this.logFilePath = path.join(logsDir, `session-${timestamp}.log`);
+    this.logFilePath = path.join(sessionsDir, `session-${timestamp}.log`);
 
     // Create write stream
     this.logStream = fs.createWriteStream(this.logFilePath, {

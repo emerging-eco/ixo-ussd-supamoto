@@ -1,4 +1,4 @@
-import { SessionFixture } from "../../tests/helpers/session-recorder.js";
+import { SessionFixture } from "../helpers/session-recorder.js";
 
 /**
  * VitestGenerator generates Vitest test files from SessionFixture objects.
@@ -314,7 +314,6 @@ async function sendUssdRequest(text: string): Promise<string> {
 
       return true;
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error(
         "❌ Generated code validation failed:",
         error instanceof Error ? error.message : String(error)

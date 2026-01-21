@@ -118,8 +118,7 @@ export class SessionRecorder {
       // Ensure fixtures directory exists
       const fixturesDir = path.join(
         process.cwd(),
-        "src",
-        "test",
+        "tests",
         "fixtures",
         "flows"
       );
@@ -167,8 +166,7 @@ export class SessionRecorder {
     try {
       const fixturesDir = path.join(
         process.cwd(),
-        "src",
-        "test",
+        "tests",
         "fixtures",
         "flows"
       );

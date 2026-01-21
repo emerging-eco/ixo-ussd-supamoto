@@ -3,9 +3,9 @@
  * Tests getCustomerByCustomerId and clearCustomerPin functions
  */
 
-import { databaseManager } from "../src/services/database-manager.js";
-import { dataService } from "../src/services/database-storage.js";
-import { createModuleLogger } from "../src/services/logger.js";
+import { databaseManager } from "../../src/services/database-manager.js";
+import { dataService } from "../../src/services/database-storage.js";
+import { createModuleLogger } from "../../src/services/logger.js";
 
 const logger = createModuleLogger("test-login-db");
 

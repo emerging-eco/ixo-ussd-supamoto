@@ -16,8 +16,8 @@
 
 import fs from "fs";
 import path from "path";
-import { SessionLogParser } from "../src/utils/session-log-parser.js";
-import { VitestGenerator } from "../src/utils/vitest-generator.js";
+import { SessionLogParser } from "../../src/utils/session-log-parser.js";
+import { VitestGenerator } from "../utils/vitest-generator.js";
 
 // ============================================================================
 // ARGUMENT PARSING
