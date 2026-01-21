@@ -12,24 +12,18 @@ import { setTimeout as delay } from "timers/promises";
 
 const SERVER_URL =
   process.env.USSD_TEST_SERVER_URL || "http://127.0.0.1:3005/api/ussd";
+const HEALTH_URL = SERVER_URL.replace("/api/ussd", "/api/health");
 const MAX_STARTUP_WAIT_MS = 30000;
 const HEALTH_CHECK_INTERVAL_MS = 1000;
 
 async function waitForServer(): Promise<boolean> {
   const startTime = Date.now();
-  console.log(`⏳ Waiting for server at ${SERVER_URL}...`);
+  console.log(`⏳ Waiting for server at ${HEALTH_URL}...`);
 
   while (Date.now() - startTime < MAX_STARTUP_WAIT_MS) {
     try {
-      const response = await fetch(SERVER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: "health-check",
-          serviceCode: "*2233#",
-          phoneNumber: "+260000000000",
-          text: "",
-        }),
+      const response = await fetch(HEALTH_URL, {
+        method: "GET",
         signal: AbortSignal.timeout(5000),
       });
 
