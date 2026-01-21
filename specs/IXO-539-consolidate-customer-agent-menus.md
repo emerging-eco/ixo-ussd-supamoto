@@ -93,7 +93,9 @@ IMPORTANT: Execute every step in order, top to bottom.
 
 Execute every command to validate the chore is complete with zero regressions.
 
-- `pnpm install && pnpm format && pnpm lint && pnpm tsc --noEmit && pnpm build && pnpm validate:machines && pnpm test` - Run tests to validate the chore is complete with zero regressions.
+- `pnpm install && pnpm format && pnpm lint && pnpm tsc --noEmit && pnpm build && pnpm validate:machines` - Run tests to validate the chore is complete with zero regressions.
+- `pnpm test:flows:run` - Run all flow tests against a running server (start `pnpm dev` first in another terminal).
+- `pnpm test:integration:flows` - Run the new integration test runner that starts/stops the server automatically.
 
 ## Notes
 
@@ -101,4 +103,3 @@ Execute every command to validate the chore is complete with zero regressions.
 - The agent's `customerId` context property will be passed to the customerToolsMachine, allowing the agent to confirm their own bean receipts if needed.
 - No database changes are required for this chore.
 - No new libraries are required.
-

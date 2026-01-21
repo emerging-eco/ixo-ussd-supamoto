@@ -198,7 +198,7 @@ Execute every command to validate the chore is complete with zero regressions.
 
 Execute every command to validate the chore is complete with zero regressions.
 
-- `pnpm install && pnpm format && pnpm lint && pnpm tsc --noEmit && pnpm build && pnpm validate:machines && pnpm test` - Run base validation to ensure no regressions.
+- `pnpm install && pnpm format && pnpm lint && pnpm tsc --noEmit && pnpm build && pnpm validate:machines` - Run base validation to ensure no regressions.
 - `pnpm test:flows:run` - Run all flow tests against a running server (start `pnpm dev` first in another terminal).
 - `pnpm test:integration:flows` - Run the new integration test runner that starts/stops the server automatically.
 
@@ -247,4 +247,3 @@ USSD_TEST_SERVER_URL=http://127.0.0.1:3005/api/ussd pnpm test:flows:run
 - **OTP Verification**: Need to handle OTP generation in test environment
 
 Consider adding test fixtures or seed data for reproducible test runs.
-
