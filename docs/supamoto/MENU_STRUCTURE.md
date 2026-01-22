@@ -23,15 +23,16 @@ USSD Session Start (*2233#)
 │
 ├─ Services (Role-Based)
 │  ├─ Customer Tools (role = "customer")
-│  │  ├─ 1. 1,000 Day Household
-│  │  ├─ 2. Confirm Receival of Beans
+│  │  ├─ 1. Confirm Receival of Beans
 │  │  └─ 0. Back
 │  │
 │  └─ Agent Tools (role = "lead_generator", "call_center", "admin")
-│     ├─ 1. Activate a Customer
-│     ├─ 2. Register Intent to Deliver Beans
-│     ├─ 3. Submit Customer OTP
-│     ├─ 4. Confirm Bean Delivery
+│     ├─ 1. Confirm Receival of Beans (invokes Customer Tools)
+│     ├─ 2. Activate a Customer
+│     ├─ 3. 1,000 Day Survey
+│     ├─ 4. Register Intent to Deliver Beans
+│     ├─ 5. Submit Customer OTP
+│     ├─ 6. Confirm Bean Delivery
 │     └─ 0. Back
 │
 └─ Exit / Close Session
@@ -158,52 +159,17 @@ Account Menu
 
 ```
 Customer Tools
-1. 1,000 Day Household
-2. Confirm Receival of Beans
+1. Confirm Receival of Beans
 0. Back
 ```
 
 **Navigation**:
 
-- Input `1` → 1,000 Day Household Claim
-- Input `2` → Confirm Bean Receipt
+- Input `1` → Confirm Bean Receipt
 - Input `0` → Back to Services Menu
 - Input `*` → Exit
 
-##### 4.1.1 1,000 Day Household Claim
-
-**State**: `householdClaimQuestion`  
-**Message**:
-
-```
-A 1,000 Day Household is a family with a pregnant or breastfeeding mother,
-or a child younger than two years old.
-
-Do you have an eligible 1,000 Day Household?
-1. Yes
-2. No
-0. Back
-```
-
-**Process**:
-
-1. Display eligibility criteria
-2. Capture customer response (Yes/No)
-3. Submit claim to IXO blockchain
-4. Store in `household_claims` table
-5. Show confirmation message
-6. Return to Customer Tools menu
-
-**Database Insert**: `household_claims` table with:
-
-- `customer_id`: From session
-- `is_1000_day_household`: Boolean from input
-- `claim_submitted_at`: Current timestamp
-- `claim_status`: "PENDING" initially
-
-**Output**: Confirmation message, return to Customer Tools
-
-##### 4.1.2 Confirm Receival of Beans
+##### 4.1.1 Confirm Receival of Beans
 
 **State**: `confirmReceiptQuestion`  
 **Message**:
@@ -237,23 +203,36 @@ Did you receive a bag of beans from your Lead Generator?
 
 ```
 Agent Tools
-1. Activate a Customer
-2. Register Intent to Deliver Beans
-3. Submit Customer OTP
-4. Confirm Bean Delivery
+1. Confirm Receival of Beans
+2. Activate a Customer
+3. 1,000 Day Survey
+4. Register Intent to Deliver Beans
+5. Submit Customer OTP
+6. Confirm Bean Delivery
 0. Back
 ```
 
 **Navigation**:
 
-- Input `1` → Activate Customer
-- Input `2` → Register Intent (Stub)
-- Input `3` → Submit OTP (Stub)
-- Input `4` → Confirm Delivery (Stub)
+- Input `1` → Confirm Receival of Beans (invokes Customer Tools submenu)
+- Input `2` → Activate Customer
+- Input `3` → 1,000 Day Survey
+- Input `4` → Register Intent (Stub)
+- Input `5` → Submit OTP (Stub)
+- Input `6` → Confirm Delivery (Stub)
 - Input `0` → Back to Services Menu
 - Input `*` → Exit
 
-##### 4.2.1 Activate a Customer
+**Note**: Option 1 allows agents to access customer functions (Confirm Receival of Beans) using the same login, since agents are also SupaMoto customers.
+
+##### 4.2.1 Confirm Receival of Beans (Agent)
+
+**State**: `agentConfirmBeans`  
+**Process**: Invokes `customerToolsMachine` to allow agents to confirm their own bean receipts.
+
+**Output**: Returns to Agent Tools menu after completion.
+
+##### 4.2.2 Activate a Customer
 
 **State**: `agentActivateCustomer`  
 **Process**:
@@ -274,7 +253,14 @@ Agent Tools
 
 **Output**: Confirmation message, return to Agent Tools
 
-##### 4.2.2 Register Intent to Deliver Beans
+##### 4.2.3 1,000 Day Survey
+
+**State**: `agentSurvey`  
+**Process**: Invokes `thousandDaySurveyMachine` to collect 1,000 Day Household Survey data.
+
+**Output**: Returns to Agent Tools menu after completion.
+
+##### 4.2.4 Register Intent to Deliver Beans
 
 **State**: `agentRegisterIntent`  
 **Status**: Stub (not yet implemented)  
@@ -288,7 +274,7 @@ Agent Tools
 4. Store intent in `lg_delivery_intents` table
 5. Return to Agent Tools menu
 
-##### 4.2.3 Submit Customer OTP
+##### 4.2.5 Submit Customer OTP
 
 **State**: `agentSubmitOTP`  
 **Status**: Stub (not yet implemented)  
@@ -303,7 +289,7 @@ Agent Tools
 5. If invalid/expired: Send error SMS to LG
 6. Return to Agent Tools menu
 
-##### 4.2.4 Confirm Bean Delivery
+##### 4.2.6 Confirm Bean Delivery
 
 **State**: `agentConfirmDelivery`  
 **Status**: Stub (not yet implemented)  
@@ -372,7 +358,7 @@ Agent Tools
 ### User Services Machine (`userServicesMachine`)
 
 - **File**: `src/machines/supamoto/user-services/userServicesMachine.ts`
-- **States**: menu, customerTools, agent, agentActivateCustomer, agentRegisterIntent, agentSubmitOTP, agentConfirmDelivery, error, routeToMain
+- **States**: menu, customerTools, agent, agentConfirmBeans, agentActivateCustomer, agentSurvey, agentRegisterIntent, agentSubmitOTP, agentConfirmDelivery, error, routeToMain
 - **Role-Based Guards**: Determines which submenu to show based on `customerRole`
 
 ### Customer Tools Machine (`customerToolsMachine`)

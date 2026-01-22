@@ -78,9 +78,13 @@ export const userServicesMachine = setup({
   },
   actions: {
     setError: assign({
-      error: ({ event }) =>
-        event.type === "ERROR" ? event.error : "An error occurred",
-      message: "System error. Please try again.",
+      error: ({ context, event }) =>
+        // Preserve existing error if already set, otherwise use event error or default
+        context.error ||
+        (event.type === "ERROR" ? event.error : "An error occurred"),
+      message: ({ context }) =>
+        // Use existing error as message if set, otherwise use default
+        context.error || "System error. Please try again.",
     }),
     clearErrors: assign(() => ({ error: undefined })),
   },
@@ -105,6 +109,23 @@ export const userServicesMachine = setup({
     },
     isCustomer: ({ context }) => {
       return context.customerRole === "customer";
+    },
+    hasCustomerId: ({ context }) => {
+      return Boolean(context.customerId && context.customerId.trim() !== "");
+    },
+    isInput1WithCustomerId: ({ context, event }) => {
+      const isInput1 = navigationGuards.isInput("1")(null as any, event as any);
+      const hasId = Boolean(
+        context.customerId && context.customerId.trim() !== ""
+      );
+      return isInput1 && hasId;
+    },
+    isInput1WithoutCustomerId: ({ context, event }) => {
+      const isInput1 = navigationGuards.isInput("1")(null as any, event as any);
+      const hasId = Boolean(
+        context.customerId && context.customerId.trim() !== ""
+      );
+      return isInput1 && !hasId;
     },
     isBack: ({ event }) =>
       navigationGuards.isBackCommand(null as any, event as any),
@@ -178,21 +199,24 @@ export const userServicesMachine = setup({
       entry: assign(() => ({
         message:
           "Agent Tools\n" +
-          "1. Activate a Customer\n" +
-          "2. 1,000 Day Survey\n" +
-          "3. Register Intent to Deliver Beans\n" +
-          "4. Submit Customer OTP\n" +
-          "5. Confirm Bean Delivery\n" +
+          "1. Confirm Receival of Beans\n" +
+          "2. Activate a Customer\n" +
+          "3. 1,000 Day Survey\n" +
+          "4. Register Intent to Deliver Beans\n" +
+          "5. Submit Customer OTP\n" +
+          "6. Confirm Bean Delivery\n" +
           "0. Back",
       })),
       on: {
         INPUT: withNavigation(
           [
-            { target: "agentActivateCustomer", guard: "isInput1" },
-            { target: "agentSurvey", guard: "isInput2" },
-            { target: "agentRegisterIntent", guard: "isInput3" },
-            { target: "agentSubmitOTP", guard: "isInput4" },
-            { target: "agentConfirmDelivery", guard: "isInput5" },
+            { target: "agentConfirmBeans", guard: "isInput1WithCustomerId" },
+            { target: "missingCustomerId", guard: "isInput1WithoutCustomerId" },
+            { target: "agentActivateCustomer", guard: "isInput2" },
+            { target: "agentSurvey", guard: "isInput3" },
+            { target: "agentRegisterIntent", guard: "isInput4" },
+            { target: "agentSubmitOTP", guard: "isInput5" },
+            { target: "agentConfirmDelivery", guard: "isInput6" },
           ],
           {
             backTarget: "routeToMain",
@@ -203,6 +227,63 @@ export const userServicesMachine = setup({
         ),
       },
     },
+
+    // Error state when agent tries to confirm beans without a valid customerId
+    missingCustomerId: {
+      entry: assign(() => ({
+        message:
+          "Unable to access Customer Tools.\n" +
+          "Your account is not linked to a customer ID.\n\n" +
+          "1. Back",
+      })),
+      on: {
+        INPUT: withNavigation([{ target: "agent", guard: "isInput1" }], {
+          backTarget: "agent",
+          exitTarget: "routeToMain",
+          enableBack: true,
+          enableExit: true,
+        }),
+      },
+    },
+
+    // Agent: Confirm Receival of Beans (invokes customerToolsMachine)
+    // Note: onDone returns to "agent" menu intentionally - agents access this as a submenu
+    // and should return to Agent Tools after completion (including when pressing "*" to exit
+    // the submenu). This differs from the customer flow where exit goes to routeToMain.
+    agentConfirmBeans: {
+      on: {
+        INPUT: {
+          actions: sendTo("agentCustomerToolsChild", ({ event }) => event),
+        },
+      },
+      invoke: {
+        id: "agentCustomerToolsChild",
+        src: "customerToolsMachine",
+        input: ({ context }) => ({
+          sessionId: context.sessionId,
+          phoneNumber: context.phoneNumber,
+          serviceCode: context.serviceCode,
+          customerId: context.customerId || "",
+          pin: context.pin || "",
+        }),
+        onDone: {
+          // Returns to agent menu - this is intentional for submenu navigation
+          target: "agent",
+        },
+        onError: {
+          target: "error",
+          actions: assign({
+            error: "Customer Tools error. Please try again.",
+          }),
+        },
+        onSnapshot: {
+          actions: assign(({ event }) => ({
+            message: event.snapshot.context.message,
+          })),
+        },
+      },
+    },
+
     agentActivateCustomer: {
       on: {
         INPUT: {
