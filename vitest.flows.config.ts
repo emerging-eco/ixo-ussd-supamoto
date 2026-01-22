@@ -21,10 +21,10 @@ export default defineConfig({
     globals: true,
     environment: "node",
     // Use flow-specific setup that doesn't initialize mocks
-    setupFiles: ["./tests/flows/setup.ts"],
+    setupFiles: ["./tests/fixtures/flows/setup.ts"],
     testTimeout: 60_000, // 60s - longer timeout for real server requests
     // Only include flow tests
-    include: ["tests/flows/**/*.test.ts"],
+    include: ["tests/fixtures/flows/**/*.test.ts"],
     // Exclude example tests
     exclude: [
       "dist/**",

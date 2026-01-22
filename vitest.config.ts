@@ -44,6 +44,7 @@ export default defineConfig({
       "**/tests/integration/survey-refactor.test.ts", // Exclude Docker-dependent integration tests
       "**/tests/e2e/recorded-flows.test.ts", // Exclude recorded flows - run manually with test:replay
       "**/tests/flows/**/*.test.ts", // Exclude flow tests - run with pnpm test:flows (requires running server)
+      "**/tests/fixtures/flows/**/*.test.ts", // Exclude flow tests - run with pnpm test:flows (requires running server)
     ],
   },
   // Support for path aliases from tsconfig.json
