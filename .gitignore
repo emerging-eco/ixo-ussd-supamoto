@@ -35,6 +35,7 @@ console-output-*.*
 
 # exports (sensitive data)
 exports/
+data/
 
 # testing
 coverage/

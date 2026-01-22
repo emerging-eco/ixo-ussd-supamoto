@@ -29,7 +29,9 @@ Follow the `Instructions` to implement the `Plan`, then `Run` the commands and, 
   git branch --show-current
   ```
 
-- **After implementing**, commit changes but DO NOT push without permission
+- **Before committing**, READ but DO NOT execute .claude/commands/commit.md
+
+- **After implementing**, commit changes based on what you read in .claude/commands/commit.md but DO NOT push without permission
 
 ## Plan
 
