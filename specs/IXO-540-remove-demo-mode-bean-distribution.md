@@ -147,4 +147,3 @@ Execute every command to validate the chore is complete with zero regressions.
   - `SUBSCRIPTIONS_API_BASE_URL` (for voucher checks)
   - `CLAIMS_BOT_DB_*` (for database access)
   - `CLAIMS_BOT_DB_ENCRYPTION_KEY` (for decrypting mnemonics)
-
