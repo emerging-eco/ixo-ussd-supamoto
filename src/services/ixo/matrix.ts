@@ -522,6 +522,7 @@ export async function loginOrRegisterMatrixAccount({
       },
       "Matrix registration with secp256k1 successful"
     );
+    return res;
   }
   res = await mxLogin({
     homeServerUrl,
