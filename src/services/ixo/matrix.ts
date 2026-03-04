@@ -661,24 +661,12 @@ export async function createMatrixClient({
 
 export async function logoutMatrixClient({
   mxClient,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  baseUrl: _baseUrl,
 }: {
   mxClient?: MatrixClient;
-  baseUrl?: string;
 }) {
   const client = mxClient;
   if (!client) {
-    // const homeServerUrl = secret.baseUrl;
-    // const accessToken = secret.accessToken;
-    // const userId = secret.userId;
-    // const deviceId = secret.deviceId;
-    // client = createClient({
-    //   baseUrl: homeServerUrl ?? baseUrl,
-    //   accessToken,
-    //   userId,
-    //   deviceId,
-    // });
+    return;
   }
   if (client) {
     client.stopClient();
