@@ -237,7 +237,7 @@ if (hasErrors) {
   );
   console.log("  - Demo Files Guide: docs/development/DEMO_FILES_GUIDE.md");
   console.log("  - Machine README: src/machines/README.md");
-  console.log("  - Template: src/machines/supamoto/MACHINE_TEMPLATE.ts");
+  console.log("  - Template: docs/templates/MACHINE_TEMPLATE.ts");
   process.exit(1);
 } else {
   console.log(
