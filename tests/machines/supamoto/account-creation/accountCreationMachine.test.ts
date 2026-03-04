@@ -11,14 +11,6 @@ vi.mock("../../../services/ixo/background-ixo-creation.js", () => ({
   createIxoAccountBackground: vi.fn(() => Promise.resolve({ success: true })),
 }));
 
-// Mock the progressive data service
-vi.mock("../../../services/progressive-data.js", () => ({
-  progressiveDataService: {
-    createOrUpdatePhoneRecord: vi.fn(),
-    createCustomerRecord: vi.fn(),
-  },
-}));
-
 describe("Account Creation Machine", () => {
   const mockInput = {
     sessionId: "test-session-123",
