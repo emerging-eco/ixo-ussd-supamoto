@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Kysely } from "kysely";
 import { databaseManager } from "../services/database-manager.js";
 import { config, ENV } from "../config.js";
@@ -18,64 +17,12 @@ export const getDb = (): Kysely<Database> => {
   return databaseManager.getKysely();
 };
 
-// Export lazy db instance for backwards compatibility with full proxy support
+// Export lazy db instance for backwards compatibility
 export const db = new Proxy({} as Kysely<Database>, {
-  get(target, prop) {
+  get(_target, prop) {
     const kysely = databaseManager.getKysely();
     const value = (kysely as any)[prop];
     return typeof value === "function" ? value.bind(kysely) : value;
-  },
-
-  set(target, prop, value) {
-    const kysely = databaseManager.getKysely();
-    (kysely as any)[prop] = value;
-    return true;
-  },
-
-  deleteProperty(target, prop) {
-    const kysely = databaseManager.getKysely();
-    delete (kysely as any)[prop];
-    return true;
-  },
-
-  has(target, prop) {
-    const kysely = databaseManager.getKysely();
-    return prop in kysely;
-  },
-
-  ownKeys(target) {
-    const kysely = databaseManager.getKysely();
-    return Reflect.ownKeys(kysely);
-  },
-
-  getOwnPropertyDescriptor(target, prop) {
-    const kysely = databaseManager.getKysely();
-    return Reflect.getOwnPropertyDescriptor(kysely, prop);
-  },
-
-  defineProperty(target, prop, descriptor) {
-    const kysely = databaseManager.getKysely();
-    return Reflect.defineProperty(kysely, prop, descriptor);
-  },
-
-  getPrototypeOf(target) {
-    const kysely = databaseManager.getKysely();
-    return Reflect.getPrototypeOf(kysely);
-  },
-
-  setPrototypeOf(target, prototype) {
-    const kysely = databaseManager.getKysely();
-    return Reflect.setPrototypeOf(kysely, prototype);
-  },
-
-  isExtensible(target) {
-    const kysely = databaseManager.getKysely();
-    return Reflect.isExtensible(kysely);
-  },
-
-  preventExtensions(target) {
-    const kysely = databaseManager.getKysely();
-    return Reflect.preventExtensions(kysely);
   },
 });
 
