@@ -61,29 +61,24 @@ export const NavigationPatterns = {
     exitTarget: "routeToMain",
   } as NavigationOptions,
 
-  // For user services child machines - route back to main
-  userServicesChild: {
+  // Default child machine pattern - route back to main
+  defaultChild: {
     enableBack: true,
     enableExit: true,
     backTarget: "routeToMain",
     exitTarget: "routeToMain",
   } as NavigationOptions,
 
-  // For agent child machines - route back to main
-  agentChild: {
-    enableBack: true,
-    enableExit: true,
-    backTarget: "routeToMain",
-    exitTarget: "routeToMain",
-  } as NavigationOptions,
-
-  // For account creation child machines - cancel and route to main
-  accountMenuChild: {
-    enableBack: true,
-    enableExit: true,
-    backTarget: "routeToMain",
-    exitTarget: "routeToMain",
-  } as NavigationOptions,
+  // Aliases for backward compatibility
+  get userServicesChild() {
+    return this.defaultChild;
+  },
+  get agentChild() {
+    return this.defaultChild;
+  },
+  get accountMenuChild() {
+    return this.defaultChild;
+  },
 
   // For account creation child machines - cancel and route to main
   accountCreationChild: {

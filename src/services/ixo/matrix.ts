@@ -522,6 +522,7 @@ export async function loginOrRegisterMatrixAccount({
       },
       "Matrix registration with secp256k1 successful"
     );
+    return res;
   }
   res = await mxLogin({
     homeServerUrl,
@@ -660,24 +661,12 @@ export async function createMatrixClient({
 
 export async function logoutMatrixClient({
   mxClient,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  baseUrl: _baseUrl,
 }: {
   mxClient?: MatrixClient;
-  baseUrl?: string;
 }) {
   const client = mxClient;
   if (!client) {
-    // const homeServerUrl = secret.baseUrl;
-    // const accessToken = secret.accessToken;
-    // const userId = secret.userId;
-    // const deviceId = secret.deviceId;
-    // client = createClient({
-    //   baseUrl: homeServerUrl ?? baseUrl,
-    //   accessToken,
-    //   userId,
-    //   deviceId,
-    // });
+    return;
   }
   if (client) {
     client.stopClient();
@@ -794,17 +783,6 @@ export function generatePasswordFromMnemonic(mnemonic: string): string {
 }
 
 /**
- * Generates a recovery phrase from a mnemonic, used for matrix recovery, generated using the first 32 bytes of the base64 encoded sha256 hash of the mnemonic
- * @param {string} mnemonic - the mnemonic to generate the recovery phrase from
- * @returns {string} recoveryPhrase
- */
-export function generateRecoveryPhraseFromMnemonic(mnemonic: string): string {
-  const hash = sha256(new TextEncoder().encode(mnemonic.replace(/ /g, "")));
-  const base64 = Buffer.from(hash).toString("base64");
-  return base64.slice(0, 32);
-}
-
-/**
  * Extracts the home server URL from a user ID.
  * @param {string} userId - The user ID to extract the homeserver URL from.
  * @returns {string} The homeserver URL.
@@ -818,8 +796,8 @@ export function extractHomeServerUrlFromUserId(userId: string): string {
 }
 
 /**
- * Generates a recovery phrase from a mnemonic, used for matrix recovery, generated using the first 32 bytes of the base64 encoded sha256 hash of the mnemonic
- * @param {string} mnemonic - the mnemonic to generate the recovery phrase from
+ * Generates a passphrase from a mnemonic, used for matrix recovery, generated using the first 32 bytes of the base64 encoded sha256 hash of the mnemonic
+ * @param {string} mnemonic - the mnemonic to generate the passphrase from
  * @returns {string} passphrase
  */
 export function generatePassphraseFromMnemonic(mnemonic: string): string {
@@ -827,6 +805,12 @@ export function generatePassphraseFromMnemonic(mnemonic: string): string {
   const base64 = Buffer.from(hash).toString("base64");
   return base64.slice(0, 32);
 }
+
+/**
+ * Alias for generatePassphraseFromMnemonic for backward compatibility
+ */
+export const generateRecoveryPhraseFromMnemonic =
+  generatePassphraseFromMnemonic;
 
 /**
  * Cleans a home server URL by removing protocol and trailing slashes

@@ -15,7 +15,6 @@ src/machines/app/
 ├── index.ts                           # Main barrel export
 ├── types.ts                           # Shared types
 ├── appMachine.ts                      # Main orchestrator
-├── MACHINE_TEMPLATE.ts               # Developer template
 │
 ├── information/                      # Information request machines
 │   └── index.ts

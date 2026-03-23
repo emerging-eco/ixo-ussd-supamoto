@@ -281,12 +281,6 @@ export interface AddressSelectedEvent {
   addressIndex?: number;
 }
 
-export interface WalletVerifiedEvent {
-  type: "WALLET_VERIFIED";
-  walletId: string;
-  isActive: boolean;
-}
-
 export interface OrderCreatedEvent {
   type: "ORDER_CREATED";
   orderId: string;
@@ -389,20 +383,8 @@ export type SupamotoWalletEvent =
   | WithBase<RateLimitExceededEvent>;
 
 /**
- * State Machine Input - data passed when creating the machine actor
- */
-export interface SupamotoWalletInput {
-  phoneNumber: string;
-  sessionId?: string;
-  serviceCode?: string;
-  language?: string;
-}
-
-/**
  * Guard Function Types
  */
-export type ContextGuard = (context: AppTypesContext) => boolean;
-export type EventGuard = (event: SupamotoWalletEvent) => boolean;
 export type CombinedGuard = (
   context: AppTypesContext,
   event: SupamotoWalletEvent
