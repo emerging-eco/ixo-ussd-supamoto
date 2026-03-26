@@ -21,6 +21,7 @@
     "test:interactive": "NODE_OPTIONS='--loader ts-node/esm' ts-node --require dotenv/config tests/scripts/test-interactive.ts",
     "test:data": "NODE_OPTIONS='--loader ts-node/esm' ts-node --require dotenv/config tests/scripts/test-data.ts",
     "generate:test": "NODE_OPTIONS='--loader ts-node/esm' ts-node --require dotenv/config tests/scripts/test-generate-tests-from-logs.ts",
+    "record:flows": "NODE_OPTIONS='--loader ts-node/esm' ts-node tests/scripts/record-all-flows.ts",
     "test:integration": "NODE_OPTIONS='--loader ts-node/esm' ts-node tests/scripts/test-integration-flows.ts",
     "test:integration:flows": "NODE_OPTIONS='--loader ts-node/esm' ts-node tests/scripts/test-integration-flows.ts",
     "test:all": "pnpm format && pnpm lint && pnpm tsc --noEmit && pnpm build && pnpm validate:machines && pnpm test",
