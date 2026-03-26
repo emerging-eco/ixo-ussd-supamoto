@@ -2,19 +2,121 @@
 /**
  * Integration Flow Test Runner
  *
- * Starts the server, waits for it to be ready, runs all flow tests,
- * then shuts down the server.
+ * Full pipeline:
+ * 1. Spins up an ephemeral Postgres via testcontainers
+ * 2. Runs 000-init-all.sql to create the schema
+ * 3. Starts the USSD server pointing at the test database
+ * 4. Waits for /health to respond
+ * 5. Runs all flow tests via vitest
+ * 6. Tears down server + container
  *
- * Usage: pnpm test:integration:flows
+ * Usage: pnpm test:integration
  */
-import { spawn, ChildProcess } from "child_process";
+import { spawn, ChildProcess, execSync } from "child_process";
 import { setTimeout as delay } from "timers/promises";
+import { readFileSync } from "fs";
+import { resolve } from "path";
+import { GenericContainer, StartedTestContainer, Wait } from "testcontainers";
 
-const SERVER_URL =
-  process.env.USSD_TEST_SERVER_URL || "http://127.0.0.1:3005/api/ussd";
-const HEALTH_URL = SERVER_URL.replace("/api/ussd", "/api/health");
-const MAX_STARTUP_WAIT_MS = 30000;
-const HEALTH_CHECK_INTERVAL_MS = 1000;
+// ---------------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------------
+const SERVER_PORT = 3005;
+const SERVER_URL = `http://127.0.0.1:${SERVER_PORT}/api/ussd`;
+const HEALTH_URL = `http://127.0.0.1:${SERVER_PORT}/health`;
+const MAX_STARTUP_WAIT_MS = 60_000;
+const HEALTH_CHECK_INTERVAL_MS = 1_000;
+
+const PG_USER = "supamoto_user";
+const PG_PASSWORD = "supamoto_password";
+const PG_DATABASE = "ixo-ussd-dev";
+const PG_IMAGE = "postgres:16-alpine";
+
+// ---------------------------------------------------------------------------
+// Database lifecycle (testcontainers)
+// ---------------------------------------------------------------------------
+async function startDatabase(): Promise<StartedTestContainer> {
+  console.log("🐘 Starting ephemeral Postgres container...");
+
+  const container = await new GenericContainer(PG_IMAGE)
+    .withEnvironment({
+      POSTGRES_USER: PG_USER,
+      POSTGRES_PASSWORD: PG_PASSWORD,
+      POSTGRES_DB: PG_DATABASE,
+    })
+    .withExposedPorts(5432)
+    .withWaitStrategy(Wait.forLogMessage("database system is ready to accept connections", 2))
+    .withStartupTimeout(60_000)
+    .start();
+
+  const mappedPort = container.getMappedPort(5432);
+  const host = container.getHost();
+  console.log(`✅ Postgres running at ${host}:${mappedPort}`);
+
+  return container;
+}
+
+function getDatabaseUrl(container: StartedTestContainer): string {
+  const port = container.getMappedPort(5432);
+  const host = container.getHost();
+  return `postgres://${PG_USER}:${PG_PASSWORD}@${host}:${port}/${PG_DATABASE}`;
+}
+
+async function initSchema(databaseUrl: string): Promise<void> {
+  console.log("📜 Running 000-init-all.sql...");
+
+  const sqlPath = resolve(process.cwd(), "migrations/postgres/000-init-all.sql");
+  const sql = readFileSync(sqlPath, "utf-8");
+
+  // Use psql via the host to run the migration
+  // Parse the URL to get connection params
+  const url = new URL(databaseUrl);
+  const env = {
+    ...process.env,
+    PGPASSWORD: url.password,
+  };
+
+  execSync(
+    `psql -h ${url.hostname} -p ${url.port} -U ${url.username} -d ${url.pathname.slice(1)} -f "${sqlPath}"`,
+    { env, stdio: ["ignore", "pipe", "pipe"] }
+  );
+
+  console.log("✅ Schema initialised");
+}
+
+// ---------------------------------------------------------------------------
+// Server lifecycle
+// ---------------------------------------------------------------------------
+function buildServerEnv(databaseUrl: string): NodeJS.ProcessEnv {
+  // Parse DATABASE_URL into individual PG_* vars the server also reads
+  const url = new URL(databaseUrl);
+
+  return {
+    ...process.env,
+    // Core server config
+    NODE_ENV: "dev",
+    PORT: String(SERVER_PORT),
+    DATABASE_URL: databaseUrl,
+    PG_USER: url.username,
+    PG_PASSWORD: url.password,
+    PG_HOST: url.hostname,
+    PG_PORT: url.port,
+    PG_DATABASE: url.pathname.slice(1),
+    PG_SSL: "false",
+    PIN_ENCRYPTION_KEY: process.env.PIN_ENCRYPTION_KEY || "test-encryption-key-1234",
+    SMS_ENABLED: "false",
+    LOG_LEVEL: process.env.LOG_LEVEL || "error",
+    // Claims Bot env vars — pass through from host
+    CLAIMS_BOT_URL: process.env.CLAIMS_BOT_URL || "",
+    CLAIMS_BOT_ACCESS_TOKEN: process.env.CLAIMS_BOT_ACCESS_TOKEN || "",
+    CLAIMS_BOT_DB_HOST: process.env.CLAIMS_BOT_DB_HOST || "",
+    CLAIMS_BOT_DB_PORT: process.env.CLAIMS_BOT_DB_PORT || "",
+    CLAIMS_BOT_DB_USER: process.env.CLAIMS_BOT_DB_USER || "",
+    CLAIMS_BOT_DB_PASSWORD: process.env.CLAIMS_BOT_DB_PASSWORD || "",
+    CLAIMS_BOT_DB_NAME: process.env.CLAIMS_BOT_DB_NAME || "",
+    CLAIMS_BOT_DB_ENCRYPTION_KEY: process.env.CLAIMS_BOT_DB_ENCRYPTION_KEY || "",
+  };
+}
 
 async function waitForServer(): Promise<boolean> {
   const startTime = Date.now();
@@ -24,7 +126,7 @@ async function waitForServer(): Promise<boolean> {
     try {
       const response = await fetch(HEALTH_URL, {
         method: "GET",
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(5_000),
       });
 
       if (response.ok) {
@@ -42,14 +144,19 @@ async function waitForServer(): Promise<boolean> {
   return false;
 }
 
-function startServer(): ChildProcess {
+function startServer(databaseUrl: string): ChildProcess {
   console.log("🚀 Starting USSD server...");
 
-  const server = spawn("pnpm", ["dev"], {
-    stdio: ["ignore", "pipe", "pipe"],
-    shell: true,
-    env: { ...process.env, NODE_ENV: "dev" },
-  });
+  const server = spawn(
+    "node",
+    ["--loader", "ts-node/esm", "src/index.ts"],
+    {
+      stdio: ["ignore", "pipe", "pipe"],
+      shell: true,
+      detached: true,
+      env: buildServerEnv(databaseUrl),
+    }
+  );
 
   server.stdout?.on("data", (data: Buffer) => {
     const line = data.toString().trim();
@@ -64,6 +171,41 @@ function startServer(): ChildProcess {
   return server;
 }
 
+function killServer(server: ChildProcess): void {
+  if (!server.pid) return;
+  console.log("\n🛑 Stopping server...");
+
+  try {
+    process.kill(-server.pid, "SIGTERM");
+  } catch {
+    server.kill("SIGTERM");
+  }
+}
+
+async function waitForServerExit(server: ChildProcess): Promise<void> {
+  if (!server.pid) return;
+  const deadline = Date.now() + 5_000;
+
+  while (Date.now() < deadline) {
+    try {
+      process.kill(server.pid, 0);
+      await delay(100);
+    } catch {
+      return; // exited
+    }
+  }
+
+  // Force kill
+  try {
+    process.kill(-server.pid, "SIGKILL");
+  } catch {
+    try { server.kill("SIGKILL"); } catch { /* already dead */ }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Flow tests
+// ---------------------------------------------------------------------------
 async function runFlowTests(): Promise<number> {
   console.log("🧪 Running flow tests...\n");
 
@@ -87,61 +229,48 @@ async function runFlowTests(): Promise<number> {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
 async function main(): Promise<void> {
+  let container: StartedTestContainer | null = null;
   let server: ChildProcess | null = null;
   let exitCode = 1;
 
   try {
-    server = startServer();
+    // 1. Start database
+    container = await startDatabase();
+    const databaseUrl = getDatabaseUrl(container);
+    console.log(`📎 DATABASE_URL=${databaseUrl}`);
 
+    // 2. Init schema
+    await initSchema(databaseUrl);
+
+    // 3. Start server
+    server = startServer(databaseUrl);
+
+    // 4. Wait for health
     const serverReady = await waitForServer();
     if (!serverReady) {
       process.exit(1);
     }
 
+    // 5. Run flow tests
     exitCode = await runFlowTests();
   } catch (error) {
     console.error("❌ Error running integration tests:", error);
     exitCode = 1;
   } finally {
-    if (server && server.pid) {
-      console.log("\n🛑 Stopping server...");
+    // 6. Tear down
+    if (server) {
+      killServer(server);
+      await waitForServerExit(server);
+    }
 
-      // Kill the entire process group to ensure child processes are terminated
-      // Using negative PID kills the process group on Unix systems
-      try {
-        process.kill(-server.pid, "SIGTERM");
-      } catch {
-        // Process group kill not supported or already dead, try direct kill
-        server.kill("SIGTERM");
-      }
-
-      // Wait for graceful shutdown, then force kill if still running
-      const killTimeout = 3000;
-      const startTime = Date.now();
-
-      while (Date.now() - startTime < killTimeout) {
-        try {
-          // Check if process is still running (signal 0 doesn't kill, just checks)
-          process.kill(server.pid, 0);
-          await delay(100);
-        } catch {
-          // Process no longer exists
-          break;
-        }
-      }
-
-      // Force kill if still running
-      try {
-        process.kill(-server.pid, "SIGKILL");
-      } catch {
-        // Already dead or process group not supported
-        try {
-          server.kill("SIGKILL");
-        } catch {
-          // Already dead
-        }
-      }
+    if (container) {
+      console.log("🗑️  Stopping Postgres container...");
+      await container.stop();
+      console.log("✅ Container removed");
     }
   }
 
