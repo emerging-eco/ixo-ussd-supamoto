@@ -434,7 +434,7 @@ async function main(): Promise<void> {
         "1",              // Continue → services menu
         "0",              // Back → main menu
       ], "Successful login with correct credentials"),
-      metadata: { needsCustomerId: true, recordedCustomerId: customerId },
+      metadata: { needsCustomerId: true, recordedCustomerId: customerId, hasLoginSuccessResponse: true, hasRoleDependentMenu: true },
     });
 
     // Flow 9: login-wrong-pin
@@ -450,7 +450,7 @@ async function main(): Promise<void> {
         "1",              // Continue → services menu
         "0",              // Back → main menu
       ], "Login with wrong PIN then correct PIN"),
-      metadata: { needsCustomerId: true, recordedCustomerId: customerId },
+      metadata: { needsCustomerId: true, recordedCustomerId: customerId, hasLoginSuccessResponse: true, hasRoleDependentMenu: true },
     });
 
     // Flow 10: login-invalid-customer-id (no dynamic ID needed)
@@ -482,7 +482,7 @@ async function main(): Promise<void> {
         "1",              // Continue → customer tools menu
         "0",              // Back from customer tools → main menu
       ], "Login and browse customer tools menu"),
-      metadata: { needsCustomerId: true, recordedCustomerId: customerId! },
+      metadata: { needsCustomerId: true, recordedCustomerId: customerId!, hasLoginSuccessResponse: true, hasRoleDependentMenu: true },
     });
 
     // Flow 12: customer-confirm-beans
@@ -499,7 +499,7 @@ async function main(): Promise<void> {
         "1",              // Yes → processing/result
         "1",              // Continue/acknowledge → back to tools
       ], "Login and confirm bean receival"),
-      metadata: { needsCustomerId: true, recordedCustomerId: customerId! },
+      metadata: { needsCustomerId: true, recordedCustomerId: customerId!, hasLoginSuccessResponse: true, hasRoleDependentMenu: true },
     });
 
     // ════════════════════════════════════════════
@@ -535,6 +535,7 @@ async function main(): Promise<void> {
         needsCustomerId: true,
         needsLeadGeneratorPromotion: true,
         recordedCustomerId: customerId!,
+        hasLoginSuccessResponse: true,
       },
     });
 
@@ -559,6 +560,7 @@ async function main(): Promise<void> {
         needsLeadGeneratorPromotion: true,
         recordedCustomerId: customerId!,
         recordedSecondCustomerId: secondCustomerId || undefined,
+        hasLoginSuccessResponse: true,
       },
     });
 
@@ -595,6 +597,7 @@ async function main(): Promise<void> {
         needsLeadGeneratorPromotion: true,
         recordedCustomerId: customerId!,
         recordedSecondCustomerId: secondCustomerId || undefined,
+        hasLoginSuccessResponse: true,
       },
     });
 

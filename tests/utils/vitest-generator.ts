@@ -16,6 +16,10 @@ export interface FlowMetadata {
   recordedSecondCustomerId?: string;
   /** If true, response contains a generated Customer ID — use regex matching */
   hasCustomerIdInResponse?: boolean;
+  /** If true, login success responses use regex matching for customer name */
+  hasLoginSuccessResponse?: boolean;
+  /** If true, responses containing role-dependent menus use flexible matching */
+  hasRoleDependentMenu?: boolean;
 }
 
 /**
@@ -337,6 +341,26 @@ async function sendUssdRequest(text: string): Promise<string> {
   }
 
   /**
+   * Check whether a server reply is a login success message.
+   * These contain the customer name which varies depending on which account was created first.
+   * Pattern: "CON Welcome, <name>!\nLogin successful for Customer ID: <id>.\n1. Continue"
+   */
+  private isLoginSuccessResponse(reply: string, metadata?: FlowMetadata): boolean {
+    if (!metadata?.hasLoginSuccessResponse) return false;
+    return reply.includes("Welcome, ") && reply.includes("Login successful for Customer ID:");
+  }
+
+  /**
+   * Check whether a server reply contains a role-dependent menu heading.
+   * During replay, the customer role may differ from the recording if previous tests
+   * promoted the account. Use flexible matching for "Customer Tools" vs "Agent Tools".
+   */
+  private isRoleDependentMenu(reply: string, metadata?: FlowMetadata): boolean {
+    if (!metadata?.hasRoleDependentMenu) return false;
+    return /CON (Customer|Agent) Tools/.test(reply);
+  }
+
+  /**
    * Generate a single test case for a conversation turn
    */
   private generateTestCase(
@@ -360,6 +384,8 @@ async function sendUssdRequest(text: string): Promise<string> {
     const inputHasId = this.containsRecordedId(cumulativeText, metadata);
     const responseHasId = this.containsRecordedId(turn.serverReply, metadata);
     const responseHasDynamic = this.responseHasDynamicCustomerId(turn.serverReply, metadata);
+    const isLoginSuccess = this.isLoginSuccessResponse(turn.serverReply, metadata);
+    const isRoleMenu = this.isRoleDependentMenu(turn.serverReply, metadata);
 
     // Build the sendUssdRequest argument
     let requestArg: string;
@@ -397,6 +423,18 @@ async function sendUssdRequest(text: string): Promise<string> {
       }
       assertions.push(`  expect(response).toMatch(/Your Customer ID: C[0-9A-F]+/);`);
       assertionBlock = assertions.join("\n");
+    } else if (isLoginSuccess) {
+      // Login success response — customer name is dynamic (depends on which account was created first)
+      assertionBlock = `  // Login success — customer name and ID are dynamic
+  expect(response).toMatch(/CON Welcome, .+!\\nLogin successful for Customer ID: C[0-9A-F]+\\.\\n1\\. Continue/);`;
+    } else if (isRoleMenu) {
+      // Role-dependent menu — could be "Customer Tools" or "Agent Tools" depending on role state
+      // Extract menu items after the heading to still validate them
+      const menuBody = turn.serverReply.replace(/CON (Customer|Agent) Tools/, "").trim();
+      const escapedMenuBody = this.escapeString(menuBody);
+      assertionBlock = `  // Role-dependent menu heading — customer may have been promoted to lead_generator
+  expect(response).toMatch(/CON (Customer|Agent) Tools/);
+  expect(response).toContain("${escapedMenuBody}");`;
     } else if (responseHasId && metadata) {
       // Response contains a known Customer ID — substitute and use template literal
       const substituted = this.substituteCustomerIds(turn.serverReply, metadata);
