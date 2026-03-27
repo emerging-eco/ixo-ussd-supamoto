@@ -7,10 +7,12 @@
  * 2. Runs 000-init-all.sql to create the schema
  * 3. Starts the USSD server pointing at the test database
  * 4. Waits for /health to respond
- * 5. Runs all flow tests via vitest
+ * 5. Runs all flow tests via vitest (default) or records flows (--record)
  * 6. Tears down server + container
  *
- * Usage: pnpm test:integration
+ * Usage:
+ *   pnpm test:integration            # run flow tests
+ *   pnpm test:integration:record      # record all USSD flows
  */
 import { spawn, ChildProcess, execSync } from "child_process";
 import { setTimeout as delay } from "timers/promises";
@@ -26,6 +28,8 @@ const SERVER_URL = `http://127.0.0.1:${SERVER_PORT}/api/ussd`;
 const HEALTH_URL = `http://127.0.0.1:${SERVER_PORT}/health`;
 const MAX_STARTUP_WAIT_MS = 60_000;
 const HEALTH_CHECK_INTERVAL_MS = 1_000;
+
+const isRecordMode = process.argv.includes("--record");
 
 const PG_USER = "supamoto_user";
 const PG_PASSWORD = "supamoto_password";
@@ -204,6 +208,31 @@ async function waitForServerExit(server: ChildProcess): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Record flows
+// ---------------------------------------------------------------------------
+async function runRecordFlows(databaseUrl: string): Promise<number> {
+  console.log("🔴 Recording all USSD flows...\n");
+  return new Promise((resolve) => {
+    const recordProcess = spawn(
+      "node",
+      ["--loader", "ts-node/esm", "tests/scripts/record-all-flows.ts"],
+      {
+        stdio: "inherit",
+        shell: true,
+        env: {
+          ...process.env,
+          SERVER_URL: SERVER_URL,
+          DATABASE_URL: databaseUrl,
+        },
+      }
+    );
+    recordProcess.on("close", (code) => {
+      resolve(code ?? 1);
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Flow tests
 // ---------------------------------------------------------------------------
 async function runFlowTests(): Promise<number> {
@@ -255,8 +284,12 @@ async function main(): Promise<void> {
       process.exit(1);
     }
 
-    // 5. Run flow tests
-    exitCode = await runFlowTests();
+    // 5. Run flow tests or record flows
+    if (isRecordMode) {
+      exitCode = await runRecordFlows(databaseUrl);
+    } else {
+      exitCode = await runFlowTests();
+    }
   } catch (error) {
     console.error("❌ Error running integration tests:", error);
     exitCode = 1;
