@@ -1,0 +1,69 @@
+{
+  "flowName": "02-create-account-skip-national-id",
+  "timestamp": "2026-03-27T11:52:19.870Z",
+  "sessionId": "rec-02-create-account-skip-national-id-1774612333935-5",
+  "phoneNumber": "+260971230001",
+  "serviceCode": "*2233#",
+  "turns": [
+    {
+      "textSent": "",
+      "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
+      "sessionId": "rec-02-create-account-skip-national-id-1774612333935-5",
+      "timestamp": "2026-03-27T11:52:13.946Z"
+    },
+    {
+      "textSent": "2",
+      "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
+      "sessionId": "rec-02-create-account-skip-national-id-1774612333935-5",
+      "timestamp": "2026-03-27T11:52:14.549Z"
+    },
+    {
+      "textSent": "2",
+      "serverReply": "CON Welcome to USSD Supamoto App\nEnter your full name:\n0. Back",
+      "sessionId": "rec-02-create-account-skip-national-id-1774612333935-5",
+      "timestamp": "2026-03-27T11:52:15.152Z"
+    },
+    {
+      "textSent": "Bob Wilson",
+      "serverReply": "CON Enter your email address (optional):\n00. Skip\n0. Back",
+      "sessionId": "rec-02-create-account-skip-national-id-1774612333935-5",
+      "timestamp": "2026-03-27T11:52:15.755Z"
+    },
+    {
+      "textSent": "bob@test.com",
+      "serverReply": "CON Enter your National ID (format: 123456/12/1):\n00. Skip\n0. Back",
+      "sessionId": "rec-02-create-account-skip-national-id-1774612333935-5",
+      "timestamp": "2026-03-27T11:52:16.356Z"
+    },
+    {
+      "textSent": "00",
+      "serverReply": "CON Create a 5-digit PIN for your account:\n0. Back",
+      "sessionId": "rec-02-create-account-skip-national-id-1774612333935-5",
+      "timestamp": "2026-03-27T11:52:16.960Z"
+    },
+    {
+      "textSent": "12345",
+      "serverReply": "CON Confirm your 5-digit PIN:\n0. Back",
+      "sessionId": "rec-02-create-account-skip-national-id-1774612333935-5",
+      "timestamp": "2026-03-27T11:52:17.563Z"
+    },
+    {
+      "textSent": "12345",
+      "serverReply": "CON Creating your account...\n1. View your Customer ID",
+      "sessionId": "rec-02-create-account-skip-national-id-1774612333935-5",
+      "timestamp": "2026-03-27T11:52:18.165Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Account created successfully!\nYour Customer ID: C3BC0D857\nSave your Customer ID to access services.\n1. Back to Account Menu",
+      "sessionId": "rec-02-create-account-skip-national-id-1774612333935-5",
+      "timestamp": "2026-03-27T11:52:18.768Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
+      "sessionId": "rec-02-create-account-skip-national-id-1774612333935-5",
+      "timestamp": "2026-03-27T11:52:19.370Z"
+    }
+  ]
+}

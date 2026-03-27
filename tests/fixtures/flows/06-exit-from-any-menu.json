@@ -1,0 +1,33 @@
+{
+  "flowName": "06-exit-from-any-menu",
+  "timestamp": "2026-03-27T11:53:24.603Z",
+  "sessionId": "rec-06-exit-from-any-menu-1774612402283-16",
+  "phoneNumber": "+260971230001",
+  "serviceCode": "*2233#",
+  "turns": [
+    {
+      "textSent": "",
+      "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
+      "sessionId": "rec-06-exit-from-any-menu-1774612402283-16",
+      "timestamp": "2026-03-27T11:53:22.295Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON SupaMoto Info\n1. Get a stove\n2. Pellet prices\n3. Delivery info\n4. Stove repairs\n5. Performance\n6. Digital voucher\n7. Contract info\n0. Back",
+      "sessionId": "rec-06-exit-from-any-menu-1774612402283-16",
+      "timestamp": "2026-03-27T11:53:22.898Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON SMS sent successfully! Check your phone for details.\n1. Back to Main Menu\n0. Back",
+      "sessionId": "rec-06-exit-from-any-menu-1774612402283-16",
+      "timestamp": "2026-03-27T11:53:23.501Z"
+    },
+    {
+      "textSent": "*",
+      "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
+      "sessionId": "rec-06-exit-from-any-menu-1774612402283-16",
+      "timestamp": "2026-03-27T11:53:24.103Z"
+    }
+  ]
+}

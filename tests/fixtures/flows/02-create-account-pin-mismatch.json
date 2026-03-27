@@ -1,0 +1,81 @@
+{
+  "flowName": "02-create-account-pin-mismatch",
+  "timestamp": "2026-03-27T11:52:32.947Z",
+  "sessionId": "rec-02-create-account-pin-mismatch-1774612345803-7",
+  "phoneNumber": "+260971230001",
+  "serviceCode": "*2233#",
+  "turns": [
+    {
+      "textSent": "",
+      "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
+      "sessionId": "rec-02-create-account-pin-mismatch-1774612345803-7",
+      "timestamp": "2026-03-27T11:52:25.811Z"
+    },
+    {
+      "textSent": "2",
+      "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
+      "sessionId": "rec-02-create-account-pin-mismatch-1774612345803-7",
+      "timestamp": "2026-03-27T11:52:26.417Z"
+    },
+    {
+      "textSent": "2",
+      "serverReply": "CON Welcome to USSD Supamoto App\nEnter your full name:\n0. Back",
+      "sessionId": "rec-02-create-account-pin-mismatch-1774612345803-7",
+      "timestamp": "2026-03-27T11:52:27.020Z"
+    },
+    {
+      "textSent": "Charlie Davis",
+      "serverReply": "CON Enter your email address (optional):\n00. Skip\n0. Back",
+      "sessionId": "rec-02-create-account-pin-mismatch-1774612345803-7",
+      "timestamp": "2026-03-27T11:52:27.623Z"
+    },
+    {
+      "textSent": "00",
+      "serverReply": "CON Enter your National ID (format: 123456/12/1):\n00. Skip\n0. Back",
+      "sessionId": "rec-02-create-account-pin-mismatch-1774612345803-7",
+      "timestamp": "2026-03-27T11:52:28.226Z"
+    },
+    {
+      "textSent": "00",
+      "serverReply": "CON Create a 5-digit PIN for your account:\n0. Back",
+      "sessionId": "rec-02-create-account-pin-mismatch-1774612345803-7",
+      "timestamp": "2026-03-27T11:52:28.829Z"
+    },
+    {
+      "textSent": "12345",
+      "serverReply": "CON Confirm your 5-digit PIN:\n0. Back",
+      "sessionId": "rec-02-create-account-pin-mismatch-1774612345803-7",
+      "timestamp": "2026-03-27T11:52:29.431Z"
+    },
+    {
+      "textSent": "99999",
+      "serverReply": "CON Create a 5-digit PIN for your account:\n0. Back",
+      "sessionId": "rec-02-create-account-pin-mismatch-1774612345803-7",
+      "timestamp": "2026-03-27T11:52:30.034Z"
+    },
+    {
+      "textSent": "12345",
+      "serverReply": "CON Confirm your 5-digit PIN:\n0. Back",
+      "sessionId": "rec-02-create-account-pin-mismatch-1774612345803-7",
+      "timestamp": "2026-03-27T11:52:30.637Z"
+    },
+    {
+      "textSent": "12345",
+      "serverReply": "CON Creating your account...\n1. View your Customer ID",
+      "sessionId": "rec-02-create-account-pin-mismatch-1774612345803-7",
+      "timestamp": "2026-03-27T11:52:31.240Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Account created successfully!\nYour Customer ID: CB431001A\nSave your Customer ID to access services.\n1. Back to Account Menu",
+      "sessionId": "rec-02-create-account-pin-mismatch-1774612345803-7",
+      "timestamp": "2026-03-27T11:52:31.844Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
+      "sessionId": "rec-02-create-account-pin-mismatch-1774612345803-7",
+      "timestamp": "2026-03-27T11:52:32.447Z"
+    }
+  ]
+}

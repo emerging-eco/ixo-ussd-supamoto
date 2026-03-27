@@ -1,0 +1,147 @@
+{
+  "flowName": "05-agent-1000-day-survey",
+  "timestamp": "2026-03-27T11:53:22.283Z",
+  "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+  "phoneNumber": "+260971230001",
+  "serviceCode": "*2233#",
+  "turns": [
+    {
+      "textSent": "",
+      "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:08.520Z"
+    },
+    {
+      "textSent": "2",
+      "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:09.122Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Enter your National ID Number or Customer ID to log in:\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:09.723Z"
+    },
+    {
+      "textSent": "CBDAAD707",
+      "serverReply": "CON Enter your PIN:\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:10.326Z"
+    },
+    {
+      "textSent": "12345",
+      "serverReply": "CON Welcome, John Doe!\nLogin successful for Customer ID: CBDAAD707.\n1. Continue",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:10.928Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Agent Tools\n1. Confirm Receival of Beans\n2. Activate a Customer\n3. 1,000 Day Survey\n4. Register Intent to Deliver Beans\n5. Submit Customer OTP\n6. Confirm Bean Delivery\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:11.531Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:12.133Z"
+    },
+    {
+      "textSent": "3",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:12.736Z"
+    },
+    {
+      "textSent": "C9F481C55",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:13.339Z"
+    },
+    {
+      "textSent": "3",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:13.943Z"
+    },
+    {
+      "textSent": "12",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:14.546Z"
+    },
+    {
+      "textSent": "3",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:15.149Z"
+    },
+    {
+      "textSent": "500",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:15.751Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON No pending delivery confirmation found. Please contact your Lead Generator.\n\n1. Back\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:16.355Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:16.958Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON No pending delivery confirmation found. Please contact your Lead Generator.\n\n1. Back\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:17.563Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:18.166Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON No pending delivery confirmation found. Please contact your Lead Generator.\n\n1. Back\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:18.769Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:19.372Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON No pending delivery confirmation found. Please contact your Lead Generator.\n\n1. Back\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:19.974Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:20.576Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON No pending delivery confirmation found. Please contact your Lead Generator.\n\n1. Back\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:21.180Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-05-agent-1000-day-survey-1774612388513-15",
+      "timestamp": "2026-03-27T11:53:21.783Z"
+    }
+  ]
+}

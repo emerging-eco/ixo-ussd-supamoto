@@ -1,6 +1,28 @@
 import { SessionFixture } from "../helpers/session-recorder.js";
 
 /**
+ * Metadata that controls how generated tests handle dynamic values like Customer IDs.
+ */
+export interface FlowMetadata {
+  /** If true, this flow needs to query DB for customer ID before running */
+  needsCustomerId?: boolean;
+  /** If true, promote first customer to lead_generator before this flow */
+  needsLeadGeneratorPromotion?: boolean;
+  /** If true, this flow needs a second customer ID (for agent activation) */
+  needsSecondCustomerId?: boolean;
+  /** Placeholder customer ID used during recording (will be replaced at runtime) */
+  recordedCustomerId?: string;
+  /** Second placeholder customer ID used during recording */
+  recordedSecondCustomerId?: string;
+  /** If true, response contains a generated Customer ID — use regex matching */
+  hasCustomerIdInResponse?: boolean;
+  /** If true, login success responses use regex matching for customer name */
+  hasLoginSuccessResponse?: boolean;
+  /** If true, responses containing role-dependent menus use flexible matching */
+  hasRoleDependentMenu?: boolean;
+}
+
+/**
  * VitestGenerator generates Vitest test files from SessionFixture objects.
  *
  * The generated tests replay the session against a running USSD server via HTTP,
@@ -19,16 +41,22 @@ export class VitestGenerator {
    *
    * @param fixture - The session fixture containing conversation turns
    * @param flowName - Name of the flow (used for test suite name and filename)
+   * @param metadata - Optional metadata for dynamic value handling
    * @returns Complete TypeScript test file content as a string
    */
-  generateTestFile(fixture: SessionFixture, flowName: string): string {
+  generateTestFile(fixture: SessionFixture, flowName: string, metadata?: FlowMetadata): string {
     const parts: string[] = [];
 
     // Add file header comment
     parts.push(this.generateFileHeader(fixture, flowName));
 
     // Add imports
-    parts.push(this.generateImports());
+    parts.push(this.generateImports(metadata));
+
+    // Add DB-aware module-level variables
+    if (metadata?.needsCustomerId) {
+      parts.push(this.generateDbVariables(metadata));
+    }
 
     // Add test configuration constants
     parts.push(this.generateTestConfig(fixture));
@@ -37,7 +65,7 @@ export class VitestGenerator {
     parts.push(this.generateHttpHelper());
 
     // Add main test suite
-    parts.push(this.generateTestSuite(fixture, flowName));
+    parts.push(this.generateTestSuite(fixture, flowName, metadata));
 
     return parts.join("\n\n");
   }
@@ -91,10 +119,32 @@ export class VitestGenerator {
   }
 
   /**
+   * Generate DB-aware module-level variables
+   */
+  private generateDbVariables(metadata: FlowMetadata): string {
+    const lines: string[] = [];
+    lines.push(`// Dynamic Customer IDs — resolved from DB at runtime`);
+    lines.push(`let CUSTOMER_ID: string;`);
+    if (metadata.needsSecondCustomerId) {
+      lines.push(`let SECOND_CUSTOMER_ID: string;`);
+    }
+    return lines.join("\n");
+  }
+
+  /**
    * Generate import statements
    */
-  private generateImports(): string {
-    return `import { describe, it, expect, beforeAll, afterAll } from "vitest";`;
+  private generateImports(metadata?: FlowMetadata): string {
+    const lines: string[] = [];
+    lines.push(`import { describe, it, expect, beforeAll, afterAll } from "vitest";`);
+    if (metadata?.needsCustomerId) {
+      const helpers = ["getFirstCustomerId"];
+      if (metadata.needsSecondCustomerId) helpers.push("getCustomerIds");
+      if (metadata.needsLeadGeneratorPromotion) helpers.push("promoteToLeadGenerator");
+      helpers.push("closeDbPool");
+      lines.push(`import { ${helpers.join(", ")} } from "./setup.js";`);
+    }
+    return lines.join("\n");
   }
 
   /**
@@ -150,24 +200,24 @@ async function sendUssdRequest(text: string): Promise<string> {
   /**
    * Generate main test suite with all test cases
    */
-  private generateTestSuite(fixture: SessionFixture, flowName: string): string {
+  private generateTestSuite(fixture: SessionFixture, flowName: string, metadata?: FlowMetadata): string {
     const parts: string[] = [];
 
     // Start describe block
     parts.push(`describe("${flowName} - USSD Flow Test", () => {`);
 
     // Add beforeAll hook
-    parts.push(this.indent(this.generateBeforeAll(), 1));
+    parts.push(this.indent(this.generateBeforeAll(metadata), 1));
 
     // Add afterAll hook
-    parts.push(this.indent(this.generateAfterAll(), 1));
+    parts.push(this.indent(this.generateAfterAll(metadata), 1));
 
     // Generate test case for each turn with cumulative text
     fixture.turns.forEach((turn, index) => {
       // Build cumulative text from all previous turns
       const cumulativeText = this.buildCumulativeText(fixture.turns, index);
       parts.push(
-        this.indent(this.generateTestCase(turn, index, cumulativeText), 1)
+        this.indent(this.generateTestCase(turn, index, cumulativeText, metadata), 1)
       );
     });
 
@@ -195,28 +245,121 @@ async function sendUssdRequest(text: string): Promise<string> {
       }
     }
 
+    // Note: Exit input "*" becomes "prev*inputs**" in cumulative form.
+    // This is correct — parseInput handles "**" as an exit signal.
     return inputs.join("*");
   }
 
   /**
    * Generate beforeAll hook
    */
-  private generateBeforeAll(): string {
-    return `beforeAll(() => {
-  console.log("🚀 Starting USSD flow test");
-  console.log(\`📡 Server: \${SERVER_URL}\`);
-  console.log(\`📱 Phone: \${PHONE_NUMBER}\`);
-  console.log(\`🔢 Service: \${SERVICE_CODE}\`);
-});`;
+  private generateBeforeAll(metadata?: FlowMetadata): string {
+    const lines: string[] = [];
+    lines.push(`beforeAll(async () => {`);
+
+    if (metadata?.needsCustomerId) {
+      lines.push(`  CUSTOMER_ID = await getFirstCustomerId();`);
+      lines.push(`  console.log(\`🔑 Customer ID from DB: \${CUSTOMER_ID}\`);`);
+    }
+    if (metadata?.needsSecondCustomerId) {
+      lines.push(`  const ids = await getCustomerIds();`);
+      lines.push(`  SECOND_CUSTOMER_ID = ids[1];`);
+      lines.push(`  console.log(\`🔑 Second Customer ID from DB: \${SECOND_CUSTOMER_ID}\`);`);
+    }
+    if (metadata?.needsLeadGeneratorPromotion) {
+      lines.push(`  await promoteToLeadGenerator(CUSTOMER_ID);`);
+      lines.push(`  console.log(\`👑 Promoted \${CUSTOMER_ID} to lead_generator\`);`);
+    }
+
+    lines.push(`  console.log("🚀 Starting USSD flow test");`);
+    lines.push(`  console.log(\`📡 Server: \${SERVER_URL}\`);`);
+    lines.push(`  console.log(\`📱 Phone: \${PHONE_NUMBER}\`);`);
+    lines.push(`  console.log(\`🔢 Service: \${SERVICE_CODE}\`);`);
+    lines.push(`});`);
+    return lines.join("\n");
   }
 
   /**
    * Generate afterAll hook
    */
-  private generateAfterAll(): string {
+  private generateAfterAll(metadata?: FlowMetadata): string {
+    if (metadata?.needsCustomerId) {
+      return `afterAll(async () => {
+  await closeDbPool();
+  console.log("✅ USSD flow test completed");
+});`;
+    }
     return `afterAll(() => {
   console.log("✅ USSD flow test completed");
 });`;
+  }
+
+  /**
+   * Check if a string contains a recorded Customer ID that should be replaced
+   */
+  private containsRecordedId(text: string, metadata?: FlowMetadata): boolean {
+    if (!metadata) return false;
+    if (metadata.recordedCustomerId && text.includes(metadata.recordedCustomerId)) return true;
+    if (metadata.recordedSecondCustomerId && text.includes(metadata.recordedSecondCustomerId)) return true;
+    return false;
+  }
+
+  /**
+   * Replace recorded Customer IDs with template literal expressions.
+   * Returns the string with `${CUSTOMER_ID}` or `${SECOND_CUSTOMER_ID}` substituted.
+   */
+  private substituteCustomerIds(text: string, metadata: FlowMetadata): string {
+    let result = text;
+    if (metadata.recordedCustomerId) {
+      result = result.split(metadata.recordedCustomerId).join("${CUSTOMER_ID}");
+    }
+    if (metadata.recordedSecondCustomerId) {
+      result = result.split(metadata.recordedSecondCustomerId).join("${SECOND_CUSTOMER_ID}");
+    }
+    return result;
+  }
+
+  /**
+   * Escape a string for use inside a template literal (backtick-delimited).
+   * Only backticks and ${} need escaping (newlines etc. are still escaped for readability).
+   */
+  private escapeForTemplateLiteral(str: string): string {
+    return str
+      .replace(/\\/g, "\\\\")
+      .replace(/`/g, "\\`")
+      .replace(/\n/g, "\\n")
+      .replace(/\r/g, "\\r")
+      .replace(/\t/g, "\\t");
+  }
+
+  /**
+   * Check whether a server reply contains a newly generated Customer ID (account creation).
+   * These responses have a Customer ID we can't predict, so we use regex matching.
+   */
+  private responseHasDynamicCustomerId(reply: string, metadata?: FlowMetadata): boolean {
+    if (!metadata?.hasCustomerIdInResponse) return false;
+    // Check for the known pattern: "Your Customer ID: C..."
+    return /Your Customer ID: C[0-9A-F]+/.test(reply);
+  }
+
+  /**
+   * Check whether a server reply is a login success message.
+   * These contain the customer name which varies depending on which account was created first.
+   * Pattern: "CON Welcome, <name>!\nLogin successful for Customer ID: <id>.\n1. Continue"
+   */
+  private isLoginSuccessResponse(reply: string, metadata?: FlowMetadata): boolean {
+    if (!metadata?.hasLoginSuccessResponse) return false;
+    return reply.includes("Welcome, ") && reply.includes("Login successful for Customer ID:");
+  }
+
+  /**
+   * Check whether a server reply contains a role-dependent menu heading.
+   * During replay, the customer role may differ from the recording if previous tests
+   * promoted the account. Use flexible matching for "Customer Tools" vs "Agent Tools".
+   */
+  private isRoleDependentMenu(reply: string, metadata?: FlowMetadata): boolean {
+    if (!metadata?.hasRoleDependentMenu) return false;
+    return /CON (Customer|Agent) Tools/.test(reply);
   }
 
   /**
@@ -225,38 +368,99 @@ async function sendUssdRequest(text: string): Promise<string> {
   private generateTestCase(
     turn: { textSent: string; serverReply: string; timestamp: string },
     index: number,
-    cumulativeText: string
+    cumulativeText: string,
+    metadata?: FlowMetadata,
   ): string {
     const turnNumber = index + 1;
     const inputDescription =
       turn.textSent === "" ? "Initial dial" : `Input: "${turn.textSent}"`;
-    // Escape the input description for use in the test name
     const escapedDescription = this.escapeString(inputDescription);
-    const escapedCumulativeText = this.escapeString(cumulativeText);
-    const escapedExpected = this.escapeString(turn.serverReply);
 
-    // Add 2-second delay for all turns except the first (to simulate realistic user interaction)
-    // Turn 1 is the initial dial and doesn't need a delay
+    // Add 2-second delay for all turns except the first
     const delayCode =
       turnNumber > 1
         ? `\n  // Simulate realistic user interaction timing (2-second delay)\n  await new Promise(resolve => setTimeout(resolve, 2000));\n`
         : "";
 
-    // Add comment explaining cumulative text if not initial dial
+    // Determine whether we need template literals for dynamic Customer IDs
+    const inputHasId = this.containsRecordedId(cumulativeText, metadata);
+    const responseHasId = this.containsRecordedId(turn.serverReply, metadata);
+    const responseHasDynamic = this.responseHasDynamicCustomerId(turn.serverReply, metadata);
+    const isLoginSuccess = this.isLoginSuccessResponse(turn.serverReply, metadata);
+    const isRoleMenu = this.isRoleDependentMenu(turn.serverReply, metadata);
+
+    // Build the sendUssdRequest argument
+    let requestArg: string;
+    if (inputHasId && metadata) {
+      const substituted = this.substituteCustomerIds(cumulativeText, metadata);
+      const escaped = this.escapeForTemplateLiteral(substituted);
+      // Restore the ${...} expressions (they were not double-escaped because we used split/join)
+      requestArg = `\`${escaped}\``;
+    } else {
+      requestArg = `"${this.escapeString(cumulativeText)}"`;
+    }
+
+    // Build cumulative comment
     const cumulativeComment =
       cumulativeText !== "" && cumulativeText !== turn.textSent
-        ? `\n  // Cumulative USSD text: "${escapedCumulativeText}"`
+        ? `\n  // Cumulative USSD text: "${this.escapeString(cumulativeText)}"`
         : "";
 
-    return `it("Turn ${turnNumber}: ${escapedDescription}", async () => {${delayCode}${cumulativeComment}
-  // Send user input (USSD requires cumulative text)
-  const response = await sendUssdRequest("${escapedCumulativeText}");
+    // Build assertion
+    let assertionBlock: string;
 
-  // Expected server response
+    if (responseHasDynamic) {
+      // Account creation response — Customer ID is newly generated, use regex/contains
+      const parts = turn.serverReply.split(/C[0-9A-F]+/);
+      const assertions: string[] = [];
+      for (const part of parts) {
+        const trimmed = part.trim();
+        if (trimmed) {
+          // Use the first substantial chunk for toContain
+          const escapedPart = this.escapeString(trimmed.split("\n")[0]);
+          if (escapedPart.length > 5) {
+            assertions.push(`  expect(response).toContain("${escapedPart}");`);
+          }
+        }
+      }
+      assertions.push(`  expect(response).toMatch(/Your Customer ID: C[0-9A-F]+/);`);
+      assertionBlock = assertions.join("\n");
+    } else if (isLoginSuccess) {
+      // Login success response — customer name is dynamic (depends on which account was created first)
+      assertionBlock = `  // Login success — customer name and ID are dynamic
+  expect(response).toMatch(/CON Welcome, .+!\\nLogin successful for Customer ID: C[0-9A-F]+\\.\\n1\\. Continue/);`;
+    } else if (isRoleMenu) {
+      // Role-dependent menu — could be "Customer Tools" or "Agent Tools" depending on role state
+      // Extract menu items after the heading to still validate them
+      const menuBody = turn.serverReply.replace(/CON (Customer|Agent) Tools/, "").trim();
+      const escapedMenuBody = this.escapeString(menuBody);
+      assertionBlock = `  // Role-dependent menu heading — customer may have been promoted to lead_generator
+  expect(response).toMatch(/CON (Customer|Agent) Tools/);
+  expect(response).toContain("${escapedMenuBody}");`;
+    } else if (responseHasId && metadata) {
+      // Response contains a known Customer ID — substitute and use template literal
+      const substituted = this.substituteCustomerIds(turn.serverReply, metadata);
+      const escaped = this.escapeForTemplateLiteral(substituted);
+      assertionBlock = `  // Expected server response (with dynamic Customer ID)
+  const expected = \`${escaped}\`;
+
+  // Assert response matches expected
+  expect(response).toBe(expected);`;
+    } else {
+      // Static response — simple string comparison
+      const escapedExpected = this.escapeString(turn.serverReply);
+      assertionBlock = `  // Expected server response
   const expected = "${escapedExpected}";
 
   // Assert response matches expected
-  expect(response).toBe(expected);
+  expect(response).toBe(expected);`;
+    }
+
+    return `it("Turn ${turnNumber}: ${escapedDescription}", async () => {${delayCode}${cumulativeComment}
+  // Send user input (USSD requires cumulative text)
+  const response = await sendUssdRequest(${requestArg});
+
+${assertionBlock}
 }, 10000); // 10 second timeout for this test`;
   }
 

@@ -1,0 +1,63 @@
+{
+  "flowName": "03-login-wrong-pin",
+  "timestamp": "2026-03-27T11:52:43.043Z",
+  "sessionId": "rec-03-login-wrong-pin-1774612357710-9",
+  "phoneNumber": "+260971230001",
+  "serviceCode": "*2233#",
+  "turns": [
+    {
+      "textSent": "",
+      "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
+      "sessionId": "rec-03-login-wrong-pin-1774612357710-9",
+      "timestamp": "2026-03-27T11:52:37.716Z"
+    },
+    {
+      "textSent": "2",
+      "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
+      "sessionId": "rec-03-login-wrong-pin-1774612357710-9",
+      "timestamp": "2026-03-27T11:52:38.319Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Enter your National ID Number or Customer ID to log in:\n0. Back",
+      "sessionId": "rec-03-login-wrong-pin-1774612357710-9",
+      "timestamp": "2026-03-27T11:52:38.922Z"
+    },
+    {
+      "textSent": "CBDAAD707",
+      "serverReply": "CON Enter your PIN:\n0. Back",
+      "sessionId": "rec-03-login-wrong-pin-1774612357710-9",
+      "timestamp": "2026-03-27T11:52:39.525Z"
+    },
+    {
+      "textSent": "99999",
+      "serverReply": "CON 1 of 3 attempts - 2 left - account will be locked upon 3 incorrect attempts\n\nEnter your PIN:\n0. Back",
+      "sessionId": "rec-03-login-wrong-pin-1774612357710-9",
+      "timestamp": "2026-03-27T11:52:40.128Z"
+    },
+    {
+      "textSent": "12345",
+      "serverReply": "CON Welcome, John Doe!\nLogin successful for Customer ID: CBDAAD707.\n1. Continue",
+      "sessionId": "rec-03-login-wrong-pin-1774612357710-9",
+      "timestamp": "2026-03-27T11:52:40.730Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-03-login-wrong-pin-1774612357710-9",
+      "timestamp": "2026-03-27T11:52:41.334Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON No pending delivery confirmation found. Please contact your Lead Generator.\n\n1. Back\n0. Back",
+      "sessionId": "rec-03-login-wrong-pin-1774612357710-9",
+      "timestamp": "2026-03-27T11:52:41.939Z"
+    },
+    {
+      "textSent": "0",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-03-login-wrong-pin-1774612357710-9",
+      "timestamp": "2026-03-27T11:52:42.543Z"
+    }
+  ]
+}
