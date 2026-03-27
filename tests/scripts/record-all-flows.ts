@@ -71,6 +71,8 @@ function buildCumulativeText(inputs: string[], upToIndex: number): string {
       parts.push(inputs[i]);
     }
   }
+  // Note: Exit input "*" becomes "prev*inputs**" in cumulative form.
+  // This is correct — parseInput handles "**" as an exit signal.
   return parts.join("*");
 }
 

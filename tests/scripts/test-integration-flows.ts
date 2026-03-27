@@ -14,10 +14,11 @@
  *   pnpm test:integration            # run flow tests
  *   pnpm test:integration:record      # record all USSD flows
  */
-import { spawn, ChildProcess, execSync } from "child_process";
+import { spawn, ChildProcess } from "child_process";
 import { setTimeout as delay } from "timers/promises";
 import { readFileSync } from "fs";
 import { resolve } from "path";
+import pg from "pg";
 import { GenericContainer, StartedTestContainer, Wait } from "testcontainers";
 
 // ---------------------------------------------------------------------------
@@ -72,18 +73,12 @@ async function initSchema(databaseUrl: string): Promise<void> {
   const sqlPath = resolve(process.cwd(), "migrations/postgres/000-init-all.sql");
   const sql = readFileSync(sqlPath, "utf-8");
 
-  // Use psql via the host to run the migration
-  // Parse the URL to get connection params
-  const url = new URL(databaseUrl);
-  const env = {
-    ...process.env,
-    PGPASSWORD: url.password,
-  };
-
-  execSync(
-    `psql -h ${url.hostname} -p ${url.port} -U ${url.username} -d ${url.pathname.slice(1)} -f "${sqlPath}"`,
-    { env, stdio: ["ignore", "pipe", "pipe"] }
-  );
+  const pool = new pg.Pool({ connectionString: databaseUrl });
+  try {
+    await pool.query(sql);
+  } finally {
+    await pool.end();
+  }
 
   console.log("✅ Schema initialised");
 }
@@ -285,7 +280,7 @@ async function main(): Promise<void> {
     // 4. Wait for health
     const serverReady = await waitForServer();
     if (!serverReady) {
-      process.exit(1);
+      throw new Error("Server failed to become ready within timeout");
     }
 
     // 5. Run flow tests or record flows

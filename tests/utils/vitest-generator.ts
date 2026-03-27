@@ -245,6 +245,8 @@ async function sendUssdRequest(text: string): Promise<string> {
       }
     }
 
+    // Note: Exit input "*" becomes "prev*inputs**" in cumulative form.
+    // This is correct — parseInput handles "**" as an exit signal.
     return inputs.join("*");
   }
 
