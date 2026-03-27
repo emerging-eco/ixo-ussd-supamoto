@@ -23,6 +23,17 @@ export default defineConfig({
     // Use flow-specific setup that doesn't initialize mocks
     setupFiles: ["./tests/fixtures/flows/setup.ts"],
     testTimeout: 60_000, // 60s - longer timeout for real server requests
+    // Sequential execution: tests run in a single fork, alphabetically by filename.
+    // This ensures account-creation tests run before login tests (which need DB state).
+    pool: "forks",
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
+    sequence: {
+      concurrent: false,
+    },
     // Only include flow tests
     include: ["tests/fixtures/flows/**/*.test.ts"],
     // Exclude example tests

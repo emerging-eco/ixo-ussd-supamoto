@@ -22,7 +22,7 @@ import fs from "fs";
 import path from "path";
 import pg from "pg";
 import { SessionFixture } from "../helpers/session-recorder.js";
-import { VitestGenerator } from "../utils/vitest-generator.js";
+import { VitestGenerator, FlowMetadata } from "../utils/vitest-generator.js";
 
 // ──────────────────────────────────────────────
 // Configuration
@@ -225,7 +225,7 @@ async function recordFlow(
 /**
  * Save a fixture to JSON and generate its test file.
  */
-function saveFixtureAndTest(fixture: SessionFixture): void {
+function saveFixtureAndTest(fixture: SessionFixture, metadata?: FlowMetadata): void {
   // Ensure directory exists
   if (!fs.existsSync(FIXTURES_DIR)) {
     fs.mkdirSync(FIXTURES_DIR, { recursive: true });
@@ -238,7 +238,7 @@ function saveFixtureAndTest(fixture: SessionFixture): void {
 
   // Generate test file
   const generator = new VitestGenerator();
-  const testCode = generator.generateTestFile(fixture, fixture.flowName);
+  const testCode = generator.generateTestFile(fixture, fixture.flowName, metadata);
   const testPath = path.join(FIXTURES_DIR, `${fixture.flowName}.test.ts`);
   fs.writeFileSync(testPath, testCode);
   console.log(`   📝 Generated test: ${testPath}`);
@@ -281,7 +281,8 @@ async function main(): Promise<void> {
   // Step 0: Clean existing fixtures
   cleanFixturesDir();
 
-  const fixtures: SessionFixture[] = [];
+  // Track fixtures alongside their metadata for test generation
+  const recorded: Array<{ fixture: SessionFixture; metadata?: FlowMetadata }> = [];
   let customerId: string | null = null;
 
   try {
@@ -291,9 +292,8 @@ async function main(): Promise<void> {
     console.log("\n\n═══ Phase 1: Pre-auth flows ═══");
 
     // Flow 1: know-more-flow
-    // Dial → 1 (Know More) → 1 (How it works) → 0 (Back) → 4 (More Info) → 1 (Send SMS) → 0 (Back) → 0 (Back to main)
-    fixtures.push(
-      await recordFlow("know-more-flow", [
+    recorded.push({
+      fixture: await recordFlow("01-know-more-flow", [
         "",   // Initial dial → welcome menu
         "1",  // Know More → info menu
         "1",  // How it works → info page
@@ -302,13 +302,12 @@ async function main(): Promise<void> {
         "1",  // Yes, send SMS → confirmation
         "0",  // Back → info menu
         "0",  // Back → main menu
-      ], "Browse know more menu, send SMS, navigate back")
-    );
+      ], "Browse know more menu, send SMS, navigate back"),
+    });
 
     // Flow 2: know-more-back-navigation
-    // Dial → 1 → navigate into submenu → back out step by step
-    fixtures.push(
-      await recordFlow("know-more-back-navigation", [
+    recorded.push({
+      fixture: await recordFlow("01-know-more-back-navigation", [
         "",   // Initial dial → welcome menu
         "1",  // Know More → info menu
         "2",  // Why SupaMoto → info page
@@ -316,8 +315,8 @@ async function main(): Promise<void> {
         "3",  // Requirements → info page
         "0",  // Back → info menu
         "0",  // Back → main menu
-      ], "Navigate forward and back through know more menu")
-    );
+      ], "Navigate forward and back through know more menu"),
+    });
 
     // ════════════════════════════════════════════
     // Phase 2: Account creation flows (3-7)
@@ -325,9 +324,8 @@ async function main(): Promise<void> {
     console.log("\n\n═══ Phase 2: Account creation flows ═══");
 
     // Flow 3: create-account-full
-    // Dial → 2 (Account Menu) → 2 (Create) → name → email → national ID → PIN → confirm PIN → success → continue
-    fixtures.push(
-      await recordFlow("create-account-full", [
+    recorded.push({
+      fixture: await recordFlow("02-create-account-full", [
         "",                // Initial dial → welcome menu
         "2",               // Account Menu → account menu
         "2",               // Create Account → enter name
@@ -338,12 +336,13 @@ async function main(): Promise<void> {
         TEST_PIN,          // Confirm PIN → creating account...
         "1",               // View Customer ID → success page
         "1",               // Continue → main menu
-      ], "Full account creation with all fields")
-    );
+      ], "Full account creation with all fields"),
+      metadata: { hasCustomerIdInResponse: true },
+    });
 
     // Flow 4: create-account-skip-email
-    fixtures.push(
-      await recordFlow("create-account-skip-email", [
+    recorded.push({
+      fixture: await recordFlow("02-create-account-skip-email", [
         "",                // Initial dial
         "2",               // Account Menu
         "2",               // Create Account → enter name
@@ -354,12 +353,13 @@ async function main(): Promise<void> {
         TEST_PIN,          // Confirm PIN → creating account
         "1",               // View Customer ID
         "1",               // Continue
-      ], "Account creation skipping email")
-    );
+      ], "Account creation skipping email"),
+      metadata: { hasCustomerIdInResponse: true },
+    });
 
     // Flow 5: create-account-skip-national-id
-    fixtures.push(
-      await recordFlow("create-account-skip-national-id", [
+    recorded.push({
+      fixture: await recordFlow("02-create-account-skip-national-id", [
         "",                // Initial dial
         "2",               // Account Menu
         "2",               // Create Account → enter name
@@ -370,12 +370,13 @@ async function main(): Promise<void> {
         TEST_PIN,          // Confirm PIN → creating account
         "1",               // View Customer ID
         "1",               // Continue
-      ], "Account creation skipping national ID")
-    );
+      ], "Account creation skipping national ID"),
+      metadata: { hasCustomerIdInResponse: true },
+    });
 
     // Flow 6: create-account-skip-both
-    fixtures.push(
-      await recordFlow("create-account-skip-both", [
+    recorded.push({
+      fixture: await recordFlow("02-create-account-skip-both", [
         "",                // Initial dial
         "2",               // Account Menu
         "2",               // Create Account → enter name
@@ -386,12 +387,13 @@ async function main(): Promise<void> {
         TEST_PIN,          // Confirm PIN → creating account
         "1",               // View Customer ID
         "1",               // Continue
-      ], "Account creation skipping both email and national ID")
-    );
+      ], "Account creation skipping both email and national ID"),
+      metadata: { hasCustomerIdInResponse: true },
+    });
 
     // Flow 7: create-account-pin-mismatch
-    fixtures.push(
-      await recordFlow("create-account-pin-mismatch", [
+    recorded.push({
+      fixture: await recordFlow("02-create-account-pin-mismatch", [
         "",                // Initial dial
         "2",               // Account Menu
         "2",               // Create Account → enter name
@@ -404,8 +406,9 @@ async function main(): Promise<void> {
         TEST_PIN,          // Correct confirm PIN → creating account
         "1",               // View Customer ID
         "1",               // Continue
-      ], "Account creation with PIN mismatch then correct")
-    );
+      ], "Account creation with PIN mismatch then correct"),
+      metadata: { hasCustomerIdInResponse: true },
+    });
 
     // ════════════════════════════════════════════
     // Phase 3: Login flows (8-10) — Uses accounts from Phase 2
@@ -420,9 +423,8 @@ async function main(): Promise<void> {
     console.log(`  🔑 Using customer ID from DB: ${customerId}`);
 
     // Flow 8: login-success
-    // Dial → 2 (Account Menu) → 1 (Login) → customer ID → PIN → verifying → success → continue
-    fixtures.push(
-      await recordFlow("login-success", [
+    recorded.push({
+      fixture: await recordFlow("03-login-success", [
         "",               // Initial dial → welcome menu
         "2",              // Account Menu
         "1",              // Login → enter customer ID
@@ -431,13 +433,13 @@ async function main(): Promise<void> {
         "1",              // Continue → login success message
         "1",              // Continue → services menu
         "0",              // Back → main menu
-      ], "Successful login with correct credentials")
-    );
+      ], "Successful login with correct credentials"),
+      metadata: { needsCustomerId: true, recordedCustomerId: customerId },
+    });
 
     // Flow 9: login-wrong-pin
-    // Dial → 2 → 1 → customer ID → wrong PIN → retry with correct PIN
-    fixtures.push(
-      await recordFlow("login-wrong-pin", [
+    recorded.push({
+      fixture: await recordFlow("03-login-wrong-pin", [
         "",               // Initial dial
         "2",              // Account Menu
         "1",              // Login → enter customer ID
@@ -447,21 +449,21 @@ async function main(): Promise<void> {
         "1",              // Continue → success
         "1",              // Continue → services menu
         "0",              // Back → main menu
-      ], "Login with wrong PIN then correct PIN")
-    );
+      ], "Login with wrong PIN then correct PIN"),
+      metadata: { needsCustomerId: true, recordedCustomerId: customerId },
+    });
 
-    // Flow 10: login-invalid-customer-id
-    // Dial → 2 → 1 → non-existent customer ID → error
-    fixtures.push(
-      await recordFlow("login-invalid-customer-id", [
+    // Flow 10: login-invalid-customer-id (no dynamic ID needed)
+    recorded.push({
+      fixture: await recordFlow("03-login-invalid-customer-id", [
         "",               // Initial dial
         "2",              // Account Menu
         "1",              // Login → enter customer ID
         "CNOTEXIST99",    // Invalid customer ID → enter PIN (format valid)
         TEST_PIN,         // PIN → verifying → customer not found error
         "1",              // Continue/acknowledge error
-      ], "Login attempt with non-existent customer ID")
-    );
+      ], "Login attempt with non-existent customer ID"),
+    });
 
     // ════════════════════════════════════════════
     // Phase 4: Customer services flows (11-12)
@@ -469,9 +471,8 @@ async function main(): Promise<void> {
     console.log("\n\n═══ Phase 4: Customer services flows ═══");
 
     // Flow 11: customer-tools-menu
-    // Login → customer tools menu → browse → back
-    fixtures.push(
-      await recordFlow("customer-tools-menu", [
+    recorded.push({
+      fixture: await recordFlow("04-customer-tools-menu", [
         "",               // Initial dial
         "2",              // Account Menu
         "1",              // Login
@@ -480,13 +481,13 @@ async function main(): Promise<void> {
         "1",              // Continue → success
         "1",              // Continue → customer tools menu
         "0",              // Back from customer tools → main menu
-      ], "Login and browse customer tools menu")
-    );
+      ], "Login and browse customer tools menu"),
+      metadata: { needsCustomerId: true, recordedCustomerId: customerId! },
+    });
 
     // Flow 12: customer-confirm-beans
-    // Login → customer tools → 1 (Confirm Receival) → answer question
-    fixtures.push(
-      await recordFlow("customer-confirm-beans", [
+    recorded.push({
+      fixture: await recordFlow("04-customer-confirm-beans", [
         "",               // Initial dial
         "2",              // Account Menu
         "1",              // Login
@@ -497,8 +498,9 @@ async function main(): Promise<void> {
         "1",              // Confirm Receival of Beans → receipt question
         "1",              // Yes → processing/result
         "1",              // Continue/acknowledge → back to tools
-      ], "Login and confirm bean receival")
-    );
+      ], "Login and confirm bean receival"),
+      metadata: { needsCustomerId: true, recordedCustomerId: customerId! },
+    });
 
     // ════════════════════════════════════════════
     // Phase 4.5: SQL UPDATE — Change one account's role to 'lead_generator'
@@ -518,9 +520,8 @@ async function main(): Promise<void> {
     console.log(`  🔑 Target customer ID for activation: ${secondCustomerId || "none"}`);
 
     // Flow 13: agent-tools-menu
-    // Login as LG → see agent tools menu → back
-    fixtures.push(
-      await recordFlow("agent-tools-menu", [
+    recorded.push({
+      fixture: await recordFlow("05-agent-tools-menu", [
         "",               // Initial dial
         "2",              // Account Menu
         "1",              // Login
@@ -529,13 +530,17 @@ async function main(): Promise<void> {
         "1",              // Continue → success
         "1",              // Continue → agent tools menu
         "0",              // Back → main menu
-      ], "Login as lead generator and browse agent tools menu")
-    );
+      ], "Login as lead generator and browse agent tools menu"),
+      metadata: {
+        needsCustomerId: true,
+        needsLeadGeneratorPromotion: true,
+        recordedCustomerId: customerId!,
+      },
+    });
 
     // Flow 14: agent-activate-customer
-    // Login as LG → 2 (Activate Customer) → enter customer ID → enter phone → SMS sent
-    fixtures.push(
-      await recordFlow("agent-activate-customer", [
+    recorded.push({
+      fixture: await recordFlow("05-agent-activate-customer", [
         "",               // Initial dial
         "2",              // Account Menu
         "1",              // Login
@@ -547,13 +552,19 @@ async function main(): Promise<void> {
         secondCustomerId || "CNOTEXIST99", // Target customer ID → enter phone
         "+260971230002",  // Phone number → SMS sending/result
         "1",              // Continue → back to agent tools
-      ], "Agent activates a customer via LG flow")
-    );
+      ], "Agent activates a customer via LG flow"),
+      metadata: {
+        needsCustomerId: true,
+        needsSecondCustomerId: true,
+        needsLeadGeneratorPromotion: true,
+        recordedCustomerId: customerId!,
+        recordedSecondCustomerId: secondCustomerId || undefined,
+      },
+    });
 
     // Flow 15: agent-1000-day-survey
-    // Login as LG → 3 (1,000 Day Survey) → walk through survey questions
-    fixtures.push(
-      await recordFlow("agent-1000-day-survey", [
+    recorded.push({
+      fixture: await recordFlow("05-agent-1000-day-survey", [
         "",               // Initial dial
         "2",              // Account Menu
         "1",              // Login
@@ -577,8 +588,15 @@ async function main(): Promise<void> {
         "1",              // Yes (antenatal card verified) → submitting claim
         "1",              // Continue → claim submitted
         "1",              // Back to agent tools
-      ], "Agent completes 1000-day survey for a customer")
-    );
+      ], "Agent completes 1000-day survey for a customer"),
+      metadata: {
+        needsCustomerId: true,
+        needsSecondCustomerId: true,
+        needsLeadGeneratorPromotion: true,
+        recordedCustomerId: customerId!,
+        recordedSecondCustomerId: secondCustomerId || undefined,
+      },
+    });
 
     // ════════════════════════════════════════════
     // Phase 6: Navigation edge cases (16-17)
@@ -586,21 +604,18 @@ async function main(): Promise<void> {
     console.log("\n\n═══ Phase 6: Navigation edge cases ═══");
 
     // Flow 16: exit-from-any-menu
-    // Test exit ("*") from various menu depths — uses ** in cumulative text
-    // Note: Sending "*" as a standalone input triggers exit detection in USSDInputService
-    fixtures.push(
-      await recordFlow("exit-from-any-menu", [
+    recorded.push({
+      fixture: await recordFlow("06-exit-from-any-menu", [
         "",               // Initial dial → welcome menu
         "1",              // Know More → info menu
         "1",              // How it works → info page
         "*",              // Exit from depth 3 → goodbye/end
-      ], "Test exit from deep menu via * input")
-    );
+      ], "Test exit from deep menu via * input"),
+    });
 
     // Flow 17: back-navigation-chain
-    // Navigate deep then back out step by step
-    fixtures.push(
-      await recordFlow("back-navigation-chain", [
+    recorded.push({
+      fixture: await recordFlow("06-back-navigation-chain", [
         "",               // Initial dial → welcome menu
         "2",              // Account Menu → account menu
         "0",              // Back → welcome menu
@@ -612,27 +627,27 @@ async function main(): Promise<void> {
         "2",              // Create Account → name entry
         "0",              // Back → account menu (back from name entry)
         "0",              // Back → welcome menu
-      ], "Navigate deep and back out through multiple menus")
-    );
+      ], "Navigate deep and back out through multiple menus"),
+    });
 
     // ════════════════════════════════════════════
     // Save all fixtures and generate tests
     // ════════════════════════════════════════════
     console.log("\n\n═══ Saving fixtures and generating tests ═══");
 
-    for (const fixture of fixtures) {
-      saveFixtureAndTest(fixture);
+    for (const { fixture, metadata } of recorded) {
+      saveFixtureAndTest(fixture, metadata);
     }
 
     // ════════════════════════════════════════════
     // Summary
     // ════════════════════════════════════════════
     console.log("\n\n═══════════════════════════════════════════════════════════════");
-    console.log(`  ✅ Successfully recorded ${fixtures.length} flows`);
+    console.log(`  ✅ Successfully recorded ${recorded.length} flows`);
     console.log(`  📁 Fixtures saved to: ${FIXTURES_DIR}`);
     console.log("═══════════════════════════════════════════════════════════════");
 
-    for (const fixture of fixtures) {
+    for (const { fixture } of recorded) {
       const turnCount = fixture.turns.length;
       const lastReply = fixture.turns[turnCount - 1]?.serverReply || "";
       const ended = lastReply.startsWith("END ") ? "🔚" : "📱";

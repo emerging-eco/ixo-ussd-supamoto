@@ -237,7 +237,7 @@ async function runRecordFlows(databaseUrl: string): Promise<number> {
 // ---------------------------------------------------------------------------
 // Flow tests
 // ---------------------------------------------------------------------------
-async function runFlowTests(): Promise<number> {
+async function runFlowTests(databaseUrl: string): Promise<number> {
   console.log("🧪 Running flow tests...\n");
   const { NODE_OPTIONS: _nodeOpts2, ...cleanEnv2 } = process.env;
 
@@ -251,6 +251,7 @@ async function runFlowTests(): Promise<number> {
         env: {
           ...cleanEnv2,
           USSD_TEST_SERVER_URL: SERVER_URL,
+          DATABASE_URL: databaseUrl,
         },
       }
     );
@@ -291,7 +292,7 @@ async function main(): Promise<void> {
     if (isRecordMode) {
       exitCode = await runRecordFlows(databaseUrl);
     } else {
-      exitCode = await runFlowTests();
+      exitCode = await runFlowTests(databaseUrl);
     }
   } catch (error) {
     console.error("❌ Error running integration tests:", error);

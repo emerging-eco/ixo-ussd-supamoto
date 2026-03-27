@@ -15,6 +15,7 @@
 
 import dotenv from "dotenv";
 import path from "path";
+import pg from "pg";
 
 // Load environment variables from .env file (not .env.test)
 // This allows flow tests to use the same configuration as the running server
@@ -47,3 +48,42 @@ console.log(
 );
 console.log("   Start server with: pnpm dev");
 console.log("");
+
+// ──────────────────────────────────────────────
+// Database helpers for dynamic Customer ID resolution
+// ──────────────────────────────────────────────
+let _pool: pg.Pool | null = null;
+
+function getPool(): pg.Pool {
+  if (!_pool) {
+    const dbUrl = process.env.DATABASE_URL;
+    if (!dbUrl) throw new Error("DATABASE_URL not set — cannot query DB for dynamic values");
+    _pool = new pg.Pool({ connectionString: dbUrl });
+  }
+  return _pool;
+}
+
+export async function getFirstCustomerId(): Promise<string> {
+  const pool = getPool();
+  const result = await pool.query("SELECT customer_id FROM customers ORDER BY created_at ASC LIMIT 1");
+  if (result.rows.length === 0) throw new Error("No customers found in DB");
+  return result.rows[0].customer_id;
+}
+
+export async function getCustomerIds(): Promise<string[]> {
+  const pool = getPool();
+  const result = await pool.query("SELECT customer_id FROM customers ORDER BY created_at ASC");
+  return result.rows.map((r: any) => r.customer_id);
+}
+
+export async function promoteToLeadGenerator(customerId: string): Promise<void> {
+  const pool = getPool();
+  await pool.query("UPDATE customers SET role = $1 WHERE customer_id = $2", ["lead_generator", customerId]);
+}
+
+export async function closeDbPool(): Promise<void> {
+  if (_pool) {
+    await _pool.end();
+    _pool = null;
+  }
+}
