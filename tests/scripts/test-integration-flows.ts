@@ -95,8 +95,9 @@ function buildServerEnv(databaseUrl: string): NodeJS.ProcessEnv {
   // Parse DATABASE_URL into individual PG_* vars the server also reads
   const url = new URL(databaseUrl);
 
+  const { NODE_OPTIONS, ...cleanEnv } = process.env;
   return {
-    ...process.env,
+    ...cleanEnv,
     // Core server config
     NODE_ENV: "dev",
     PORT: String(SERVER_PORT),
@@ -212,6 +213,7 @@ async function waitForServerExit(server: ChildProcess): Promise<void> {
 // ---------------------------------------------------------------------------
 async function runRecordFlows(databaseUrl: string): Promise<number> {
   console.log("🔴 Recording all USSD flows...\n");
+  const { NODE_OPTIONS: _nodeOpts1, ...cleanEnv1 } = process.env;
   return new Promise((resolve) => {
     const recordProcess = spawn(
       "node",
@@ -220,7 +222,7 @@ async function runRecordFlows(databaseUrl: string): Promise<number> {
         stdio: "inherit",
         shell: true,
         env: {
-          ...process.env,
+          ...cleanEnv1,
           SERVER_URL: SERVER_URL,
           DATABASE_URL: databaseUrl,
         },
@@ -237,6 +239,7 @@ async function runRecordFlows(databaseUrl: string): Promise<number> {
 // ---------------------------------------------------------------------------
 async function runFlowTests(): Promise<number> {
   console.log("🧪 Running flow tests...\n");
+  const { NODE_OPTIONS: _nodeOpts2, ...cleanEnv2 } = process.env;
 
   return new Promise((resolve) => {
     const testProcess = spawn(
@@ -246,7 +249,7 @@ async function runFlowTests(): Promise<number> {
         stdio: "inherit",
         shell: true,
         env: {
-          ...process.env,
+          ...cleanEnv2,
           USSD_TEST_SERVER_URL: SERVER_URL,
         },
       }
