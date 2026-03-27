@@ -1,0 +1,57 @@
+{
+  "flowName": "01-know-more-flow",
+  "timestamp": "2026-03-27T10:45:05.654Z",
+  "sessionId": "rec-01-know-more-flow-1774608300875-1",
+  "phoneNumber": "+260971230001",
+  "serviceCode": "*2233#",
+  "turns": [
+    {
+      "textSent": "",
+      "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
+      "sessionId": "rec-01-know-more-flow-1774608300875-1",
+      "timestamp": "2026-03-27T10:45:00.923Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON SupaMoto Info\n1. Get a stove\n2. Pellet prices\n3. Delivery info\n4. Stove repairs\n5. Performance\n6. Digital voucher\n7. Contract info\n0. Back",
+      "sessionId": "rec-01-know-more-flow-1774608300875-1",
+      "timestamp": "2026-03-27T10:45:01.530Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON SMS sent successfully! Check your phone for details.\n1. Back to Main Menu\n0. Back",
+      "sessionId": "rec-01-know-more-flow-1774608300875-1",
+      "timestamp": "2026-03-27T10:45:02.134Z"
+    },
+    {
+      "textSent": "0",
+      "serverReply": "CON SupaMoto Info\n1. Get a stove\n2. Pellet prices\n3. Delivery info\n4. Stove repairs\n5. Performance\n6. Digital voucher\n7. Contract info\n0. Back",
+      "sessionId": "rec-01-know-more-flow-1774608300875-1",
+      "timestamp": "2026-03-27T10:45:02.738Z"
+    },
+    {
+      "textSent": "4",
+      "serverReply": "CON SMS sent successfully! Check your phone for details.\n1. Back to Main Menu\n0. Back",
+      "sessionId": "rec-01-know-more-flow-1774608300875-1",
+      "timestamp": "2026-03-27T10:45:03.343Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
+      "sessionId": "rec-01-know-more-flow-1774608300875-1",
+      "timestamp": "2026-03-27T10:45:03.947Z"
+    },
+    {
+      "textSent": "0",
+      "serverReply": "CON Invalid selection. Please choose 1 or 2.\n\nWelcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
+      "sessionId": "rec-01-know-more-flow-1774608300875-1",
+      "timestamp": "2026-03-27T10:45:04.549Z"
+    },
+    {
+      "textSent": "0",
+      "serverReply": "CON Invalid selection. Please choose 1 or 2.\n\nWelcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
+      "sessionId": "rec-01-know-more-flow-1774608300875-1",
+      "timestamp": "2026-03-27T10:45:05.153Z"
+    }
+  ]
+}

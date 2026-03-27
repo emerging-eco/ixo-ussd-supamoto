@@ -1,0 +1,57 @@
+{
+  "flowName": "05-agent-tools-menu",
+  "timestamp": "2026-03-27T10:46:09.664Z",
+  "sessionId": "rec-05-agent-tools-menu-1774608364940-13",
+  "phoneNumber": "+260971230001",
+  "serviceCode": "*2233#",
+  "turns": [
+    {
+      "textSent": "",
+      "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
+      "sessionId": "rec-05-agent-tools-menu-1774608364940-13",
+      "timestamp": "2026-03-27T10:46:04.943Z"
+    },
+    {
+      "textSent": "2",
+      "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
+      "sessionId": "rec-05-agent-tools-menu-1774608364940-13",
+      "timestamp": "2026-03-27T10:46:05.545Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Enter your National ID Number or Customer ID to log in:\n0. Back",
+      "sessionId": "rec-05-agent-tools-menu-1774608364940-13",
+      "timestamp": "2026-03-27T10:46:06.148Z"
+    },
+    {
+      "textSent": "CCDDE6B04",
+      "serverReply": "CON Enter your PIN:\n0. Back",
+      "sessionId": "rec-05-agent-tools-menu-1774608364940-13",
+      "timestamp": "2026-03-27T10:46:06.750Z"
+    },
+    {
+      "textSent": "12345",
+      "serverReply": "CON Welcome, John Doe!\nLogin successful for Customer ID: CCDDE6B04.\n1. Continue",
+      "sessionId": "rec-05-agent-tools-menu-1774608364940-13",
+      "timestamp": "2026-03-27T10:46:07.353Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Agent Tools\n1. Confirm Receival of Beans\n2. Activate a Customer\n3. 1,000 Day Survey\n4. Register Intent to Deliver Beans\n5. Submit Customer OTP\n6. Confirm Bean Delivery\n0. Back",
+      "sessionId": "rec-05-agent-tools-menu-1774608364940-13",
+      "timestamp": "2026-03-27T10:46:07.957Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-05-agent-tools-menu-1774608364940-13",
+      "timestamp": "2026-03-27T10:46:08.561Z"
+    },
+    {
+      "textSent": "0",
+      "serverReply": "CON Agent Tools\n1. Confirm Receival of Beans\n2. Activate a Customer\n3. 1,000 Day Survey\n4. Register Intent to Deliver Beans\n5. Submit Customer OTP\n6. Confirm Bean Delivery\n0. Back",
+      "sessionId": "rec-05-agent-tools-menu-1774608364940-13",
+      "timestamp": "2026-03-27T10:46:09.164Z"
+    }
+  ]
+}

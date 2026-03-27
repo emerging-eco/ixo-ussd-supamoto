@@ -1,0 +1,69 @@
+{
+  "flowName": "04-customer-confirm-beans",
+  "timestamp": "2026-03-27T10:46:04.923Z",
+  "sessionId": "rec-04-customer-confirm-beans-1774608358991-12",
+  "phoneNumber": "+260971230001",
+  "serviceCode": "*2233#",
+  "turns": [
+    {
+      "textSent": "",
+      "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
+      "sessionId": "rec-04-customer-confirm-beans-1774608358991-12",
+      "timestamp": "2026-03-27T10:45:58.999Z"
+    },
+    {
+      "textSent": "2",
+      "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
+      "sessionId": "rec-04-customer-confirm-beans-1774608358991-12",
+      "timestamp": "2026-03-27T10:45:59.602Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Enter your National ID Number or Customer ID to log in:\n0. Back",
+      "sessionId": "rec-04-customer-confirm-beans-1774608358991-12",
+      "timestamp": "2026-03-27T10:46:00.205Z"
+    },
+    {
+      "textSent": "CCDDE6B04",
+      "serverReply": "CON Enter your PIN:\n0. Back",
+      "sessionId": "rec-04-customer-confirm-beans-1774608358991-12",
+      "timestamp": "2026-03-27T10:46:00.807Z"
+    },
+    {
+      "textSent": "12345",
+      "serverReply": "CON Welcome, John Doe!\nLogin successful for Customer ID: CCDDE6B04.\n1. Continue",
+      "sessionId": "rec-04-customer-confirm-beans-1774608358991-12",
+      "timestamp": "2026-03-27T10:46:01.410Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-04-customer-confirm-beans-1774608358991-12",
+      "timestamp": "2026-03-27T10:46:02.013Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON No pending delivery confirmation found. Please contact your Lead Generator.\n\n1. Back\n0. Back",
+      "sessionId": "rec-04-customer-confirm-beans-1774608358991-12",
+      "timestamp": "2026-03-27T10:46:02.616Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-04-customer-confirm-beans-1774608358991-12",
+      "timestamp": "2026-03-27T10:46:03.219Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON No pending delivery confirmation found. Please contact your Lead Generator.\n\n1. Back\n0. Back",
+      "sessionId": "rec-04-customer-confirm-beans-1774608358991-12",
+      "timestamp": "2026-03-27T10:46:03.821Z"
+    },
+    {
+      "textSent": "1",
+      "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
+      "sessionId": "rec-04-customer-confirm-beans-1774608358991-12",
+      "timestamp": "2026-03-27T10:46:04.424Z"
+    }
+  ]
+}
