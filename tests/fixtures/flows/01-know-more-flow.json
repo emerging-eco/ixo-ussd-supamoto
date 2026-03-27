@@ -1,57 +1,57 @@
 {
   "flowName": "01-know-more-flow",
-  "timestamp": "2026-03-27T10:45:05.654Z",
-  "sessionId": "rec-01-know-more-flow-1774608300875-1",
+  "timestamp": "2026-03-27T11:51:57.925Z",
+  "sessionId": "rec-01-know-more-flow-1774612313132-1",
   "phoneNumber": "+260971230001",
   "serviceCode": "*2233#",
   "turns": [
     {
       "textSent": "",
       "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
-      "sessionId": "rec-01-know-more-flow-1774608300875-1",
-      "timestamp": "2026-03-27T10:45:00.923Z"
+      "sessionId": "rec-01-know-more-flow-1774612313132-1",
+      "timestamp": "2026-03-27T11:51:53.191Z"
     },
     {
       "textSent": "1",
       "serverReply": "CON SupaMoto Info\n1. Get a stove\n2. Pellet prices\n3. Delivery info\n4. Stove repairs\n5. Performance\n6. Digital voucher\n7. Contract info\n0. Back",
-      "sessionId": "rec-01-know-more-flow-1774608300875-1",
-      "timestamp": "2026-03-27T10:45:01.530Z"
+      "sessionId": "rec-01-know-more-flow-1774612313132-1",
+      "timestamp": "2026-03-27T11:51:53.802Z"
     },
     {
       "textSent": "1",
       "serverReply": "CON SMS sent successfully! Check your phone for details.\n1. Back to Main Menu\n0. Back",
-      "sessionId": "rec-01-know-more-flow-1774608300875-1",
-      "timestamp": "2026-03-27T10:45:02.134Z"
+      "sessionId": "rec-01-know-more-flow-1774612313132-1",
+      "timestamp": "2026-03-27T11:51:54.408Z"
     },
     {
       "textSent": "0",
       "serverReply": "CON SupaMoto Info\n1. Get a stove\n2. Pellet prices\n3. Delivery info\n4. Stove repairs\n5. Performance\n6. Digital voucher\n7. Contract info\n0. Back",
-      "sessionId": "rec-01-know-more-flow-1774608300875-1",
-      "timestamp": "2026-03-27T10:45:02.738Z"
+      "sessionId": "rec-01-know-more-flow-1774612313132-1",
+      "timestamp": "2026-03-27T11:51:55.012Z"
     },
     {
       "textSent": "4",
       "serverReply": "CON SMS sent successfully! Check your phone for details.\n1. Back to Main Menu\n0. Back",
-      "sessionId": "rec-01-know-more-flow-1774608300875-1",
-      "timestamp": "2026-03-27T10:45:03.343Z"
+      "sessionId": "rec-01-know-more-flow-1774612313132-1",
+      "timestamp": "2026-03-27T11:51:55.615Z"
     },
     {
       "textSent": "1",
       "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
-      "sessionId": "rec-01-know-more-flow-1774608300875-1",
-      "timestamp": "2026-03-27T10:45:03.947Z"
+      "sessionId": "rec-01-know-more-flow-1774612313132-1",
+      "timestamp": "2026-03-27T11:51:56.218Z"
     },
     {
       "textSent": "0",
       "serverReply": "CON Invalid selection. Please choose 1 or 2.\n\nWelcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
-      "sessionId": "rec-01-know-more-flow-1774608300875-1",
-      "timestamp": "2026-03-27T10:45:04.549Z"
+      "sessionId": "rec-01-know-more-flow-1774612313132-1",
+      "timestamp": "2026-03-27T11:51:56.821Z"
     },
     {
       "textSent": "0",
       "serverReply": "CON Invalid selection. Please choose 1 or 2.\n\nWelcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
-      "sessionId": "rec-01-know-more-flow-1774608300875-1",
-      "timestamp": "2026-03-27T10:45:05.153Z"
+      "sessionId": "rec-01-know-more-flow-1774612313132-1",
+      "timestamp": "2026-03-27T11:51:57.425Z"
     }
   ]
 }

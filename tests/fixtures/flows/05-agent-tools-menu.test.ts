@@ -5,10 +5,10 @@
  *
  * Session Details:
  * - Flow: 05-agent-tools-menu
- * - Session ID: rec-05-agent-tools-menu-1774608364940-13
+ * - Session ID: rec-05-agent-tools-menu-1774612377246-13
  * - Phone: +260971230001
  * - Service Code: *2233#
- * - Recorded: 2026-03-27T10:46:09.664Z
+ * - Recorded: 2026-03-27T11:53:01.973Z
  * - Turns: 8
  *
  * ⚠️  IMPORTANT: How to run this test
@@ -137,11 +137,11 @@ describe("05-agent-tools-menu - USSD Flow Test", () => {
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it("Turn 4: Input: \"CCDDE6B04\"", async () => {
+  it("Turn 4: Input: \"CBDAAD707\"", async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*CCDDE6B04"
+    // Cumulative USSD text: "2*1*CBDAAD707"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(`2*1*${CUSTOMER_ID}`);
 
@@ -156,7 +156,7 @@ describe("05-agent-tools-menu - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*CCDDE6B04*12345"
+    // Cumulative USSD text: "2*1*CBDAAD707*12345"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(`2*1*${CUSTOMER_ID}*12345`);
 
@@ -168,7 +168,7 @@ describe("05-agent-tools-menu - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*CCDDE6B04*12345*1"
+    // Cumulative USSD text: "2*1*CBDAAD707*12345*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(`2*1*${CUSTOMER_ID}*12345*1`);
 
@@ -183,7 +183,7 @@ describe("05-agent-tools-menu - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*CCDDE6B04*12345*1*1"
+    // Cumulative USSD text: "2*1*CBDAAD707*12345*1*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(`2*1*${CUSTOMER_ID}*12345*1*1`);
 
@@ -198,7 +198,7 @@ describe("05-agent-tools-menu - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*CCDDE6B04*12345*1*1*0"
+    // Cumulative USSD text: "2*1*CBDAAD707*12345*1*1*0"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(`2*1*${CUSTOMER_ID}*12345*1*1*0`);
 

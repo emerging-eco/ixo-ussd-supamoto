@@ -1,57 +1,57 @@
 {
   "flowName": "03-login-success",
-  "timestamp": "2026-03-27T10:45:45.411Z",
-  "sessionId": "rec-03-login-success-1774608340686-8",
+  "timestamp": "2026-03-27T11:52:37.710Z",
+  "sessionId": "rec-03-login-success-1774612352982-8",
   "phoneNumber": "+260971230001",
   "serviceCode": "*2233#",
   "turns": [
     {
       "textSent": "",
       "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
-      "sessionId": "rec-03-login-success-1774608340686-8",
-      "timestamp": "2026-03-27T10:45:40.689Z"
+      "sessionId": "rec-03-login-success-1774612352982-8",
+      "timestamp": "2026-03-27T11:52:32.986Z"
     },
     {
       "textSent": "2",
       "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
-      "sessionId": "rec-03-login-success-1774608340686-8",
-      "timestamp": "2026-03-27T10:45:41.293Z"
+      "sessionId": "rec-03-login-success-1774612352982-8",
+      "timestamp": "2026-03-27T11:52:33.590Z"
     },
     {
       "textSent": "1",
       "serverReply": "CON Enter your National ID Number or Customer ID to log in:\n0. Back",
-      "sessionId": "rec-03-login-success-1774608340686-8",
-      "timestamp": "2026-03-27T10:45:41.895Z"
+      "sessionId": "rec-03-login-success-1774612352982-8",
+      "timestamp": "2026-03-27T11:52:34.193Z"
     },
     {
-      "textSent": "CCDDE6B04",
+      "textSent": "CBDAAD707",
       "serverReply": "CON Enter your PIN:\n0. Back",
-      "sessionId": "rec-03-login-success-1774608340686-8",
-      "timestamp": "2026-03-27T10:45:42.499Z"
+      "sessionId": "rec-03-login-success-1774612352982-8",
+      "timestamp": "2026-03-27T11:52:34.796Z"
     },
     {
       "textSent": "12345",
-      "serverReply": "CON Welcome, John Doe!\nLogin successful for Customer ID: CCDDE6B04.\n1. Continue",
-      "sessionId": "rec-03-login-success-1774608340686-8",
-      "timestamp": "2026-03-27T10:45:43.103Z"
+      "serverReply": "CON Welcome, John Doe!\nLogin successful for Customer ID: CBDAAD707.\n1. Continue",
+      "sessionId": "rec-03-login-success-1774612352982-8",
+      "timestamp": "2026-03-27T11:52:35.400Z"
     },
     {
       "textSent": "1",
       "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
-      "sessionId": "rec-03-login-success-1774608340686-8",
-      "timestamp": "2026-03-27T10:45:43.705Z"
+      "sessionId": "rec-03-login-success-1774612352982-8",
+      "timestamp": "2026-03-27T11:52:36.003Z"
     },
     {
       "textSent": "1",
       "serverReply": "CON No pending delivery confirmation found. Please contact your Lead Generator.\n\n1. Back\n0. Back",
-      "sessionId": "rec-03-login-success-1774608340686-8",
-      "timestamp": "2026-03-27T10:45:44.308Z"
+      "sessionId": "rec-03-login-success-1774612352982-8",
+      "timestamp": "2026-03-27T11:52:36.607Z"
     },
     {
       "textSent": "0",
       "serverReply": "CON Customer Tools\n1. Confirm Receival of Beans\n0. Back",
-      "sessionId": "rec-03-login-success-1774608340686-8",
-      "timestamp": "2026-03-27T10:45:44.910Z"
+      "sessionId": "rec-03-login-success-1774612352982-8",
+      "timestamp": "2026-03-27T11:52:37.210Z"
     }
   ]
 }

@@ -5,10 +5,10 @@
  *
  * Session Details:
  * - Flow: 02-create-account-skip-email
- * - Session ID: rec-02-create-account-skip-email-1774608315718-4
+ * - Session ID: rec-02-create-account-skip-email-1774612327999-4
  * - Phone: +260971230001
  * - Service Code: *2233#
- * - Recorded: 2026-03-27T10:45:21.653Z
+ * - Recorded: 2026-03-27T11:52:13.935Z
  * - Turns: 10
  *
  * ⚠️  IMPORTANT: How to run this test

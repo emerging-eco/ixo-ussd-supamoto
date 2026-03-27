@@ -5,10 +5,10 @@
  *
  * Session Details:
  * - Flow: 02-create-account-full
- * - Session ID: rec-02-create-account-full-1774608309783-3
+ * - Session ID: rec-02-create-account-full-1774612322058-3
  * - Phone: +260971230001
  * - Service Code: *2233#
- * - Recorded: 2026-03-27T10:45:15.718Z
+ * - Recorded: 2026-03-27T11:52:07.998Z
  * - Turns: 10
  *
  * ⚠️  IMPORTANT: How to run this test

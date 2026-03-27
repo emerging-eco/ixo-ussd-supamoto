@@ -5,10 +5,10 @@
  *
  * Session Details:
  * - Flow: 03-login-wrong-pin
- * - Session ID: rec-03-login-wrong-pin-1774608345411-9
+ * - Session ID: rec-03-login-wrong-pin-1774612357710-9
  * - Phone: +260971230001
  * - Service Code: *2233#
- * - Recorded: 2026-03-27T10:45:50.739Z
+ * - Recorded: 2026-03-27T11:52:43.043Z
  * - Turns: 9
  *
  * ⚠️  IMPORTANT: How to run this test
@@ -135,11 +135,11 @@ describe("03-login-wrong-pin - USSD Flow Test", () => {
     expect(response).toBe(expected);
   }, 10000); // 10 second timeout for this test
 
-  it("Turn 4: Input: \"CCDDE6B04\"", async () => {
+  it("Turn 4: Input: \"CBDAAD707\"", async () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*CCDDE6B04"
+    // Cumulative USSD text: "2*1*CBDAAD707"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(`2*1*${CUSTOMER_ID}`);
 
@@ -154,7 +154,7 @@ describe("03-login-wrong-pin - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*CCDDE6B04*99999"
+    // Cumulative USSD text: "2*1*CBDAAD707*99999"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(`2*1*${CUSTOMER_ID}*99999`);
 
@@ -169,7 +169,7 @@ describe("03-login-wrong-pin - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*CCDDE6B04*99999*12345"
+    // Cumulative USSD text: "2*1*CBDAAD707*99999*12345"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(`2*1*${CUSTOMER_ID}*99999*12345`);
 
@@ -181,7 +181,7 @@ describe("03-login-wrong-pin - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*CCDDE6B04*99999*12345*1"
+    // Cumulative USSD text: "2*1*CBDAAD707*99999*12345*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(`2*1*${CUSTOMER_ID}*99999*12345*1`);
 
@@ -194,7 +194,7 @@ describe("03-login-wrong-pin - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*CCDDE6B04*99999*12345*1*1"
+    // Cumulative USSD text: "2*1*CBDAAD707*99999*12345*1*1"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(`2*1*${CUSTOMER_ID}*99999*12345*1*1`);
 
@@ -209,7 +209,7 @@ describe("03-login-wrong-pin - USSD Flow Test", () => {
     // Simulate realistic user interaction timing (2-second delay)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Cumulative USSD text: "2*1*CCDDE6B04*99999*12345*1*1*0"
+    // Cumulative USSD text: "2*1*CBDAAD707*99999*12345*1*1*0"
     // Send user input (USSD requires cumulative text)
     const response = await sendUssdRequest(`2*1*${CUSTOMER_ID}*99999*12345*1*1*0`);
 

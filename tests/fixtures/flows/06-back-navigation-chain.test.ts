@@ -5,10 +5,10 @@
  *
  * Session Details:
  * - Flow: 06-back-navigation-chain
- * - Session ID: rec-06-back-navigation-chain-1774608392284-17
+ * - Session ID: rec-06-back-navigation-chain-1774612404603-17
  * - Phone: +260971230001
  * - Service Code: *2233#
- * - Recorded: 2026-03-27T10:46:38.817Z
+ * - Recorded: 2026-03-27T11:53:31.139Z
  * - Turns: 11
  *
  * ⚠️  IMPORTANT: How to run this test

@@ -1,75 +1,75 @@
 {
   "flowName": "06-back-navigation-chain",
-  "timestamp": "2026-03-27T10:46:38.817Z",
-  "sessionId": "rec-06-back-navigation-chain-1774608392284-17",
+  "timestamp": "2026-03-27T11:53:31.139Z",
+  "sessionId": "rec-06-back-navigation-chain-1774612404603-17",
   "phoneNumber": "+260971230001",
   "serviceCode": "*2233#",
   "turns": [
     {
       "textSent": "",
       "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
-      "sessionId": "rec-06-back-navigation-chain-1774608392284-17",
-      "timestamp": "2026-03-27T10:46:32.289Z"
+      "sessionId": "rec-06-back-navigation-chain-1774612404603-17",
+      "timestamp": "2026-03-27T11:53:24.610Z"
     },
     {
       "textSent": "2",
       "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
-      "sessionId": "rec-06-back-navigation-chain-1774608392284-17",
-      "timestamp": "2026-03-27T10:46:32.892Z"
+      "sessionId": "rec-06-back-navigation-chain-1774612404603-17",
+      "timestamp": "2026-03-27T11:53:25.213Z"
     },
     {
       "textSent": "0",
       "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
-      "sessionId": "rec-06-back-navigation-chain-1774608392284-17",
-      "timestamp": "2026-03-27T10:46:33.495Z"
+      "sessionId": "rec-06-back-navigation-chain-1774612404603-17",
+      "timestamp": "2026-03-27T11:53:25.816Z"
     },
     {
       "textSent": "1",
       "serverReply": "CON SupaMoto Info\n1. Get a stove\n2. Pellet prices\n3. Delivery info\n4. Stove repairs\n5. Performance\n6. Digital voucher\n7. Contract info\n0. Back",
-      "sessionId": "rec-06-back-navigation-chain-1774608392284-17",
-      "timestamp": "2026-03-27T10:46:34.097Z"
+      "sessionId": "rec-06-back-navigation-chain-1774612404603-17",
+      "timestamp": "2026-03-27T11:53:26.419Z"
     },
     {
       "textSent": "1",
       "serverReply": "CON SMS sent successfully! Check your phone for details.\n1. Back to Main Menu\n0. Back",
-      "sessionId": "rec-06-back-navigation-chain-1774608392284-17",
-      "timestamp": "2026-03-27T10:46:34.699Z"
+      "sessionId": "rec-06-back-navigation-chain-1774612404603-17",
+      "timestamp": "2026-03-27T11:53:27.022Z"
     },
     {
       "textSent": "0",
       "serverReply": "CON SupaMoto Info\n1. Get a stove\n2. Pellet prices\n3. Delivery info\n4. Stove repairs\n5. Performance\n6. Digital voucher\n7. Contract info\n0. Back",
-      "sessionId": "rec-06-back-navigation-chain-1774608392284-17",
-      "timestamp": "2026-03-27T10:46:35.302Z"
+      "sessionId": "rec-06-back-navigation-chain-1774612404603-17",
+      "timestamp": "2026-03-27T11:53:27.624Z"
     },
     {
       "textSent": "0",
       "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
-      "sessionId": "rec-06-back-navigation-chain-1774608392284-17",
-      "timestamp": "2026-03-27T10:46:35.905Z"
+      "sessionId": "rec-06-back-navigation-chain-1774612404603-17",
+      "timestamp": "2026-03-27T11:53:28.227Z"
     },
     {
       "textSent": "2",
       "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
-      "sessionId": "rec-06-back-navigation-chain-1774608392284-17",
-      "timestamp": "2026-03-27T10:46:36.508Z"
+      "sessionId": "rec-06-back-navigation-chain-1774612404603-17",
+      "timestamp": "2026-03-27T11:53:28.830Z"
     },
     {
       "textSent": "2",
       "serverReply": "CON Welcome to USSD Supamoto App\nEnter your full name:\n0. Back",
-      "sessionId": "rec-06-back-navigation-chain-1774608392284-17",
-      "timestamp": "2026-03-27T10:46:37.110Z"
+      "sessionId": "rec-06-back-navigation-chain-1774612404603-17",
+      "timestamp": "2026-03-27T11:53:29.433Z"
     },
     {
       "textSent": "0",
       "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
-      "sessionId": "rec-06-back-navigation-chain-1774608392284-17",
-      "timestamp": "2026-03-27T10:46:37.714Z"
+      "sessionId": "rec-06-back-navigation-chain-1774612404603-17",
+      "timestamp": "2026-03-27T11:53:30.036Z"
     },
     {
       "textSent": "0",
       "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
-      "sessionId": "rec-06-back-navigation-chain-1774608392284-17",
-      "timestamp": "2026-03-27T10:46:38.317Z"
+      "sessionId": "rec-06-back-navigation-chain-1774612404603-17",
+      "timestamp": "2026-03-27T11:53:30.639Z"
     }
   ]
 }

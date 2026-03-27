@@ -5,10 +5,10 @@
  *
  * Session Details:
  * - Flow: 06-exit-from-any-menu
- * - Session ID: rec-06-exit-from-any-menu-1774608389971-16
+ * - Session ID: rec-06-exit-from-any-menu-1774612402283-16
  * - Phone: +260971230001
  * - Service Code: *2233#
- * - Recorded: 2026-03-27T10:46:32.284Z
+ * - Recorded: 2026-03-27T11:53:24.603Z
  * - Turns: 4
  *
  * ⚠️  IMPORTANT: How to run this test

@@ -1,69 +1,69 @@
 {
   "flowName": "02-create-account-full",
-  "timestamp": "2026-03-27T10:45:15.718Z",
-  "sessionId": "rec-02-create-account-full-1774608309783-3",
+  "timestamp": "2026-03-27T11:52:07.998Z",
+  "sessionId": "rec-02-create-account-full-1774612322058-3",
   "phoneNumber": "+260971230001",
   "serviceCode": "*2233#",
   "turns": [
     {
       "textSent": "",
       "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
-      "sessionId": "rec-02-create-account-full-1774608309783-3",
-      "timestamp": "2026-03-27T10:45:09.790Z"
+      "sessionId": "rec-02-create-account-full-1774612322058-3",
+      "timestamp": "2026-03-27T11:52:02.068Z"
     },
     {
       "textSent": "2",
       "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
-      "sessionId": "rec-02-create-account-full-1774608309783-3",
-      "timestamp": "2026-03-27T10:45:10.393Z"
+      "sessionId": "rec-02-create-account-full-1774612322058-3",
+      "timestamp": "2026-03-27T11:52:02.671Z"
     },
     {
       "textSent": "2",
       "serverReply": "CON Welcome to USSD Supamoto App\nEnter your full name:\n0. Back",
-      "sessionId": "rec-02-create-account-full-1774608309783-3",
-      "timestamp": "2026-03-27T10:45:10.997Z"
+      "sessionId": "rec-02-create-account-full-1774612322058-3",
+      "timestamp": "2026-03-27T11:52:03.274Z"
     },
     {
       "textSent": "John Doe",
       "serverReply": "CON Enter your email address (optional):\n00. Skip\n0. Back",
-      "sessionId": "rec-02-create-account-full-1774608309783-3",
-      "timestamp": "2026-03-27T10:45:11.600Z"
+      "sessionId": "rec-02-create-account-full-1774612322058-3",
+      "timestamp": "2026-03-27T11:52:03.878Z"
     },
     {
       "textSent": "john@test.com",
       "serverReply": "CON Enter your National ID (format: 123456/12/1):\n00. Skip\n0. Back",
-      "sessionId": "rec-02-create-account-full-1774608309783-3",
-      "timestamp": "2026-03-27T10:45:12.202Z"
+      "sessionId": "rec-02-create-account-full-1774612322058-3",
+      "timestamp": "2026-03-27T11:52:04.482Z"
     },
     {
       "textSent": "123456/12/1",
       "serverReply": "CON Create a 5-digit PIN for your account:\n0. Back",
-      "sessionId": "rec-02-create-account-full-1774608309783-3",
-      "timestamp": "2026-03-27T10:45:12.806Z"
+      "sessionId": "rec-02-create-account-full-1774612322058-3",
+      "timestamp": "2026-03-27T11:52:05.085Z"
     },
     {
       "textSent": "12345",
       "serverReply": "CON Confirm your 5-digit PIN:\n0. Back",
-      "sessionId": "rec-02-create-account-full-1774608309783-3",
-      "timestamp": "2026-03-27T10:45:13.408Z"
+      "sessionId": "rec-02-create-account-full-1774612322058-3",
+      "timestamp": "2026-03-27T11:52:05.688Z"
     },
     {
       "textSent": "12345",
       "serverReply": "CON Creating your account...\n1. View your Customer ID",
-      "sessionId": "rec-02-create-account-full-1774608309783-3",
-      "timestamp": "2026-03-27T10:45:14.011Z"
+      "sessionId": "rec-02-create-account-full-1774612322058-3",
+      "timestamp": "2026-03-27T11:52:06.292Z"
     },
     {
       "textSent": "1",
-      "serverReply": "CON Account created successfully!\nYour Customer ID: CCDDE6B04\nSave your Customer ID to access services.\n1. Back to Account Menu",
-      "sessionId": "rec-02-create-account-full-1774608309783-3",
-      "timestamp": "2026-03-27T10:45:14.615Z"
+      "serverReply": "CON Account created successfully!\nYour Customer ID: CBDAAD707\nSave your Customer ID to access services.\n1. Back to Account Menu",
+      "sessionId": "rec-02-create-account-full-1774612322058-3",
+      "timestamp": "2026-03-27T11:52:06.895Z"
     },
     {
       "textSent": "1",
       "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
-      "sessionId": "rec-02-create-account-full-1774608309783-3",
-      "timestamp": "2026-03-27T10:45:15.218Z"
+      "sessionId": "rec-02-create-account-full-1774612322058-3",
+      "timestamp": "2026-03-27T11:52:07.499Z"
     }
   ]
 }

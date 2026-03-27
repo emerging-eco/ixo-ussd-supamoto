@@ -5,10 +5,10 @@
  *
  * Session Details:
  * - Flow: 03-login-invalid-customer-id
- * - Session ID: rec-03-login-invalid-customer-id-1774608350739-10
+ * - Session ID: rec-03-login-invalid-customer-id-1774612363043-10
  * - Phone: +260971230001
  * - Service Code: *2233#
- * - Recorded: 2026-03-27T10:45:54.261Z
+ * - Recorded: 2026-03-27T11:52:46.566Z
  * - Turns: 6
  *
  * ⚠️  IMPORTANT: How to run this test

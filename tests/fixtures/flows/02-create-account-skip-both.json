@@ -1,69 +1,69 @@
 {
   "flowName": "02-create-account-skip-both",
-  "timestamp": "2026-03-27T10:45:33.518Z",
-  "sessionId": "rec-02-create-account-skip-both-1774608327585-6",
+  "timestamp": "2026-03-27T11:52:25.803Z",
+  "sessionId": "rec-02-create-account-skip-both-1774612339870-6",
   "phoneNumber": "+260971230001",
   "serviceCode": "*2233#",
   "turns": [
     {
       "textSent": "",
       "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
-      "sessionId": "rec-02-create-account-skip-both-1774608327585-6",
-      "timestamp": "2026-03-27T10:45:27.595Z"
+      "sessionId": "rec-02-create-account-skip-both-1774612339870-6",
+      "timestamp": "2026-03-27T11:52:19.878Z"
     },
     {
       "textSent": "2",
       "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
-      "sessionId": "rec-02-create-account-skip-both-1774608327585-6",
-      "timestamp": "2026-03-27T10:45:28.197Z"
+      "sessionId": "rec-02-create-account-skip-both-1774612339870-6",
+      "timestamp": "2026-03-27T11:52:20.481Z"
     },
     {
       "textSent": "2",
       "serverReply": "CON Welcome to USSD Supamoto App\nEnter your full name:\n0. Back",
-      "sessionId": "rec-02-create-account-skip-both-1774608327585-6",
-      "timestamp": "2026-03-27T10:45:28.800Z"
+      "sessionId": "rec-02-create-account-skip-both-1774612339870-6",
+      "timestamp": "2026-03-27T11:52:21.083Z"
     },
     {
       "textSent": "Alice Brown",
       "serverReply": "CON Enter your email address (optional):\n00. Skip\n0. Back",
-      "sessionId": "rec-02-create-account-skip-both-1774608327585-6",
-      "timestamp": "2026-03-27T10:45:29.402Z"
+      "sessionId": "rec-02-create-account-skip-both-1774612339870-6",
+      "timestamp": "2026-03-27T11:52:21.685Z"
     },
     {
       "textSent": "00",
       "serverReply": "CON Enter your National ID (format: 123456/12/1):\n00. Skip\n0. Back",
-      "sessionId": "rec-02-create-account-skip-both-1774608327585-6",
-      "timestamp": "2026-03-27T10:45:30.004Z"
+      "sessionId": "rec-02-create-account-skip-both-1774612339870-6",
+      "timestamp": "2026-03-27T11:52:22.288Z"
     },
     {
       "textSent": "00",
       "serverReply": "CON Create a 5-digit PIN for your account:\n0. Back",
-      "sessionId": "rec-02-create-account-skip-both-1774608327585-6",
-      "timestamp": "2026-03-27T10:45:30.607Z"
+      "sessionId": "rec-02-create-account-skip-both-1774612339870-6",
+      "timestamp": "2026-03-27T11:52:22.890Z"
     },
     {
       "textSent": "12345",
       "serverReply": "CON Confirm your 5-digit PIN:\n0. Back",
-      "sessionId": "rec-02-create-account-skip-both-1774608327585-6",
-      "timestamp": "2026-03-27T10:45:31.210Z"
+      "sessionId": "rec-02-create-account-skip-both-1774612339870-6",
+      "timestamp": "2026-03-27T11:52:23.494Z"
     },
     {
       "textSent": "12345",
       "serverReply": "CON Creating your account...\n1. View your Customer ID",
-      "sessionId": "rec-02-create-account-skip-both-1774608327585-6",
-      "timestamp": "2026-03-27T10:45:31.812Z"
+      "sessionId": "rec-02-create-account-skip-both-1774612339870-6",
+      "timestamp": "2026-03-27T11:52:24.097Z"
     },
     {
       "textSent": "1",
-      "serverReply": "CON Account created successfully!\nYour Customer ID: C4744E273\nSave your Customer ID to access services.\n1. Back to Account Menu",
-      "sessionId": "rec-02-create-account-skip-both-1774608327585-6",
-      "timestamp": "2026-03-27T10:45:32.415Z"
+      "serverReply": "CON Account created successfully!\nYour Customer ID: C6749133A\nSave your Customer ID to access services.\n1. Back to Account Menu",
+      "sessionId": "rec-02-create-account-skip-both-1774612339870-6",
+      "timestamp": "2026-03-27T11:52:24.699Z"
     },
     {
       "textSent": "1",
       "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
-      "sessionId": "rec-02-create-account-skip-both-1774608327585-6",
-      "timestamp": "2026-03-27T10:45:33.019Z"
+      "sessionId": "rec-02-create-account-skip-both-1774612339870-6",
+      "timestamp": "2026-03-27T11:52:25.303Z"
     }
   ]
 }

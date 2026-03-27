@@ -1,45 +1,45 @@
 {
   "flowName": "03-login-invalid-customer-id",
-  "timestamp": "2026-03-27T10:45:54.261Z",
-  "sessionId": "rec-03-login-invalid-customer-id-1774608350739-10",
+  "timestamp": "2026-03-27T11:52:46.566Z",
+  "sessionId": "rec-03-login-invalid-customer-id-1774612363043-10",
   "phoneNumber": "+260971230001",
   "serviceCode": "*2233#",
   "turns": [
     {
       "textSent": "",
       "serverReply": "CON Welcome to USSD Supamoto App\n1. Know More\n2. Account Menu\n*. Exit",
-      "sessionId": "rec-03-login-invalid-customer-id-1774608350739-10",
-      "timestamp": "2026-03-27T10:45:50.746Z"
+      "sessionId": "rec-03-login-invalid-customer-id-1774612363043-10",
+      "timestamp": "2026-03-27T11:52:43.050Z"
     },
     {
       "textSent": "2",
       "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
-      "sessionId": "rec-03-login-invalid-customer-id-1774608350739-10",
-      "timestamp": "2026-03-27T10:45:51.348Z"
+      "sessionId": "rec-03-login-invalid-customer-id-1774612363043-10",
+      "timestamp": "2026-03-27T11:52:43.653Z"
     },
     {
       "textSent": "1",
       "serverReply": "CON Enter your National ID Number or Customer ID to log in:\n0. Back",
-      "sessionId": "rec-03-login-invalid-customer-id-1774608350739-10",
-      "timestamp": "2026-03-27T10:45:51.952Z"
+      "sessionId": "rec-03-login-invalid-customer-id-1774612363043-10",
+      "timestamp": "2026-03-27T11:52:44.255Z"
     },
     {
       "textSent": "CNOTEXIST99",
       "serverReply": "CON Enter your PIN:\n0. Back",
-      "sessionId": "rec-03-login-invalid-customer-id-1774608350739-10",
-      "timestamp": "2026-03-27T10:45:52.555Z"
+      "sessionId": "rec-03-login-invalid-customer-id-1774612363043-10",
+      "timestamp": "2026-03-27T11:52:44.859Z"
     },
     {
       "textSent": "12345",
       "serverReply": "CON Account Menu\n\nDo you have an existing account?\n1. Yes, log me in\n2. No, create my account\n0. Back",
-      "sessionId": "rec-03-login-invalid-customer-id-1774608350739-10",
-      "timestamp": "2026-03-27T10:45:53.158Z"
+      "sessionId": "rec-03-login-invalid-customer-id-1774612363043-10",
+      "timestamp": "2026-03-27T11:52:45.462Z"
     },
     {
       "textSent": "1",
       "serverReply": "CON Enter your National ID Number or Customer ID to log in:\n0. Back",
-      "sessionId": "rec-03-login-invalid-customer-id-1774608350739-10",
-      "timestamp": "2026-03-27T10:45:53.760Z"
+      "sessionId": "rec-03-login-invalid-customer-id-1774612363043-10",
+      "timestamp": "2026-03-27T11:52:46.065Z"
     }
   ]
 }

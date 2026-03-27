@@ -5,10 +5,10 @@
  *
  * Session Details:
  * - Flow: 02-create-account-pin-mismatch
- * - Session ID: rec-02-create-account-pin-mismatch-1774608333519-7
+ * - Session ID: rec-02-create-account-pin-mismatch-1774612345803-7
  * - Phone: +260971230001
  * - Service Code: *2233#
- * - Recorded: 2026-03-27T10:45:40.654Z
+ * - Recorded: 2026-03-27T11:52:32.947Z
  * - Turns: 12
  *
  * ⚠️  IMPORTANT: How to run this test

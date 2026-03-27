@@ -5,10 +5,10 @@
  *
  * Session Details:
  * - Flow: 01-know-more-back-navigation
- * - Session ID: rec-01-know-more-back-navigation-1774608305654-2
+ * - Session ID: rec-01-know-more-back-navigation-1774612317925-2
  * - Phone: +260971230001
  * - Service Code: *2233#
- * - Recorded: 2026-03-27T10:45:09.783Z
+ * - Recorded: 2026-03-27T11:52:02.058Z
  * - Turns: 7
  *
  * ⚠️  IMPORTANT: How to run this test
